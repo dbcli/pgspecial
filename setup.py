@@ -1,0 +1,43 @@
+import re
+import ast
+from setuptools import setup, find_packages
+
+_version_re = re.compile(r'__version__\s+=\s+(.*)')
+
+with open('pgspecial/__init__.py', 'rb') as f:
+    version = str(ast.literal_eval(_version_re.search(
+        f.read().decode('utf-8')).group(1)))
+
+description = 'Meta-commands handler for Postgres Database.'
+
+
+setup(
+        name='pgspecial',
+        author='Amjith Ramanujam',
+        author_email='amjith[dot]r[at]gmail.com',
+        version=version,
+        license='LICENSE.txt',
+        url='http://pgcli.com',
+        packages=find_packages(),
+        description=description,
+        long_description=open('README.rst').read(),
+        install_requires=[
+            'click >= 4.1',
+            ],
+        classifiers=[
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: BSD License',
+            'Operating System :: Unix',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 2.6',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.3',
+            'Programming Language :: Python :: 3.4',
+            'Programming Language :: SQL',
+            'Topic :: Database',
+            'Topic :: Database :: Front-Ends',
+            'Topic :: Software Development',
+            'Topic :: Software Development :: Libraries :: Python Modules',
+            ],
+        )
