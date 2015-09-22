@@ -58,9 +58,19 @@ https://github.com/dbcli/pgspecial/blob/master/DEVELOP.rst
 Please feel free to reach out to me if you need help.
 My email: amjith.r@gmail.com, Twitter: `@amjithr <http://twitter.com/amjithr>`_
 
+Projects using it:
+------------------
+
+This module is being used by pgcli_: A REPL for Postgres.
+
+If you find this module useful and include it in your project, I'll be happy
+to know about it and list it here.
+
 .. |BuildStatus| image:: https://api.travis-ci.org/dbcli/pgspecial.svg?branch=master
     :target: https://travis-ci.org/dbcli/pgspecial
 
 .. |PyPI| image:: https://pypip.in/version/pgspecial/badge.svg
     :target: https://pypi.python.org/pypi/pgspecial/
     :alt: Latest Version
+
+.. _pgcli: https://github.com/dbcli/pgcli
