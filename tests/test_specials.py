@@ -1,5 +1,6 @@
 from dbutils import dbtest
 
+
 @dbtest
 def test_slash_d(executor):
     results = executor('\d')
@@ -11,6 +12,7 @@ def test_slash_d(executor):
     status = 'SELECT 3'
     expected = [title, rows, headers, status]
     assert results == expected
+
 
 @dbtest
 def test_slash_dn(executor):
@@ -25,6 +27,7 @@ def test_slash_dn(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+
 @dbtest
 def test_slash_dt(executor):
     """List all tables in public schema."""
@@ -37,6 +40,7 @@ def test_slash_dt(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+
 @dbtest
 def test_slash_dT(executor):
     """List all datatypes."""
@@ -47,6 +51,7 @@ def test_slash_dT(executor):
     status = 'SELECT 1'
     expected = [title, rows, headers, status]
     assert results == expected
+
 
 @dbtest
 def test_slash_df(executor):

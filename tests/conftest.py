@@ -1,6 +1,6 @@
 import pytest
 from dbutils import (create_db, db_connection, setup_db, teardown_db)
-from pgcli.packages.pgspecial import PGSpecial
+from pgspecial.main import PGSpecial
 
 
 @pytest.yield_fixture(scope='module')

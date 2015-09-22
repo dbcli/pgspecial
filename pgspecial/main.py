@@ -10,8 +10,11 @@ NO_QUERY = 0
 PARSED_QUERY = 1
 RAW_QUERY = 2
 
-SpecialCommand = namedtuple('SpecialCommand',
-        ['handler', 'syntax', 'description', 'arg_type', 'hidden', 'case_sensitive'])
+SpecialCommand = namedtuple(
+    'SpecialCommand',
+    ['handler', 'syntax', 'description', 'arg_type', 'hidden',
+     'case_sensitive'])
+
 
 @export
 class CommandNotFound(Exception):

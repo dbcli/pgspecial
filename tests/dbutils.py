@@ -8,7 +8,7 @@ POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
 
 def db_connection(dbname=None):
     conn = psycopg2.connect(user=POSTGRES_USER, host=POSTGRES_HOST,
-            database=dbname)
+        database=dbname)
     conn.autocommit = True
     return conn
 
@@ -24,7 +24,9 @@ except:
 
 dbtest = pytest.mark.skipif(
     not CAN_CONNECT_TO_DB,
-    reason="Need a postgres instance at localhost accessible by user 'postgres'")
+    reason="Need a postgres instance at localhost accessible by user "
+           "'postgres'")
+
 
 def create_db(dbname):
     with db_connection().cursor() as cur:
@@ -32,6 +34,7 @@ def create_db(dbname):
             cur.execute('''CREATE DATABASE _test_db''')
         except:
             pass
+
 
 def setup_db(conn):
     with conn.cursor() as cur:
