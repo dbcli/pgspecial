@@ -69,7 +69,7 @@ to know about it and list it here.
 .. |BuildStatus| image:: https://api.travis-ci.org/dbcli/pgspecial.svg?branch=master
     :target: https://travis-ci.org/dbcli/pgspecial
 
-.. |PyPI| image:: https://pypip.in/version/pgspecial/badge.svg
+.. |PyPI| image:: https://badge.fury.io/py/pgspecial.svg
     :target: https://pypi.python.org/pypi/pgspecial/
     :alt: Latest Version
 
