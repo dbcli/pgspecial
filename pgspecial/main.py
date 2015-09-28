@@ -91,6 +91,7 @@ class PGSpecial(object):
 
     def show_command_help(self, pattern, **_):
         command = pattern.strip().upper()
+        message = ""
 
         if not command:
             return self.show_command_help_listing()
