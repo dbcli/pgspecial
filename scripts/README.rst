@@ -18,4 +18,4 @@ Grab a copy of this directory on your local system.
 ::
     pip install beautifulsoup4
     # From root of project
-    echo -n "helpcommands = " > pgspecial/help/commands.py; python scripts/docparser.py ~/Projects/postgres/ref/ | python -mjson.tool | sed 's/"\: null/": None/g' >> pgspecial/help/commands.py
+    echo -n "helpcommands = " > pgspecial/help/commands.py; python scripts/docparser.py ref/ | python -mjson.tool | sed 's/"\: null/": None/g' >> pgspecial/help/commands.py

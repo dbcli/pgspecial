@@ -22,10 +22,13 @@ def get_description(doc):
 def parse(file_name):
     with open(file_name, "r") as file:
         doc = BeautifulSoup(file.read(), "html.parser")
-        return {
-            "description": get_description(doc),
-            "synopsis": get_section(doc, "synopsis")
-        }
+        desc = get_description(doc)
+        synopsis = get_section(doc, "synopsis")
+        if desc and synopsis:
+            return {
+                "description": desc,
+                "synopsis": synopsis
+            }
 
 
 if __name__ == "__main__":
@@ -43,5 +46,7 @@ if __name__ == "__main__":
         if file_name.endswith(".sgml"):
             path = dir.rstrip("/") + "/" + file_name
             command = file_name[:-5].replace("_", " ")
-            docs[command.upper()] = parse(path)
+            parsed = parse(path)
+            if parsed:
+                docs[command.upper()] = parsed
     print(json.dumps(docs))

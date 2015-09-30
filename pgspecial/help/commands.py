@@ -3,10 +3,6 @@ helpcommands = {
         "description": "Description\nABORT rolls back the current transaction and causes",
         "synopsis": "\nABORT [ WORK | TRANSACTION ]\n"
     },
-    "ALLFILES": {
-        "description": None,
-        "synopsis": None
-    },
     "ALTER AGGREGATE": {
         "description": "Description\nALTER AGGREGATE changes the definition of an",
         "synopsis": "\nALTER AGGREGATE name ( aggregate_signature ) RENAME TO new_name\nALTER AGGREGATE name ( aggregate_signature )\n                OWNER TO { new_owner | CURRENT_USER | SESSION_USER }\nALTER AGGREGATE name ( aggregate_signature ) SET SCHEMA new_schema\nwhere aggregate_signature is:\n\n* |\n[ argmode ] [ argname ] argtype [ , ... ] |\n[ [ argmode ] [ argname ] argtype [ , ... ] ] ORDER BY [ argmode ] [ argname ] argtype [ , ... ]\n"
@@ -175,10 +171,6 @@ helpcommands = {
         "description": "Description\nCLUSTER instructs PostgreSQL",
         "synopsis": "\nCLUSTER [VERBOSE] table_name [ USING index_name ]\nCLUSTER [VERBOSE]\n"
     },
-    "CLUSTERDB": {
-        "description": "Description\nclusterdb is a utility for reclustering tables",
-        "synopsis": None
-    },
     "COMMENT": {
         "description": "Description\nCOMMENT stores a comment about a database object.",
         "synopsis": "\nCOMMENT ON\n{\n  AGGREGATE aggregate_name ( aggregate_signature ) |\n  CAST (source_type AS target_type) |\n  COLLATION object_name |\n  COLUMN relation_name.column_name |\n  CONSTRAINT constraint_name ON table_name |\n  CONSTRAINT constraint_name ON DOMAIN domain_name |\n  CONVERSION object_name |\n  DATABASE object_name |\n  DOMAIN object_name |\n  EXTENSION object_name |\n  EVENT TRIGGER object_name |\n  FOREIGN DATA WRAPPER object_name |\n  FOREIGN TABLE object_name |\n  FUNCTION function_name ( [ [ argmode ] [ argname ] argtype [, ...] ] ) |\n  INDEX object_name |\n  LARGE OBJECT large_object_oid |\n  MATERIALIZED VIEW object_name |\n  OPERATOR operator_name (left_type, right_type) |\n  OPERATOR CLASS object_name USING index_method |\n  OPERATOR FAMILY object_name USING index_method |\n  POLICY policy_name ON table_name |\n  [ PROCEDURAL ] LANGUAGE object_name |\n  ROLE object_name |\n  RULE rule_name ON table_name |\n  SCHEMA object_name |\n  SEQUENCE object_name |\n  SERVER object_name |\n  TABLE object_name |\n  TABLESPACE object_name |\n  TEXT SEARCH CONFIGURATION object_name |\n  TEXT SEARCH DICTIONARY object_name |\n  TEXT SEARCH PARSER object_name |\n  TEXT SEARCH TEMPLATE object_name |\n  TRANSFORM FOR type_name LANGUAGE lang_name |\n  TRIGGER trigger_name ON table_name |\n  TYPE object_name |\n  VIEW object_name\n} IS 'text'\n\nwhere aggregate_signature is:\n\n* |\n[ argmode ] [ argname ] argtype [ , ... ] |\n[ [ argmode ] [ argname ] argtype [ , ... ] ] ORDER BY [ argmode ] [ argname ] argtype [ , ... ]\n"
@@ -342,18 +334,6 @@ helpcommands = {
     "CREATE VIEW": {
         "description": "Description\nCREATE VIEW defines a view of a query.  The view",
         "synopsis": "\nCREATE [ OR REPLACE ] [ TEMP | TEMPORARY ] [ RECURSIVE ] VIEW name [ ( column_name [, ...] ) ]\n    [ WITH ( view_option_name [= view_option_value] [, ... ] ) ]\n    AS query\n    [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]\n"
-    },
-    "CREATEDB": {
-        "description": None,
-        "synopsis": None
-    },
-    "CREATELANG": {
-        "description": "Description\ncreatelang is a utility for adding a",
-        "synopsis": None
-    },
-    "CREATEUSER": {
-        "description": "Description\ncreateuser creates a",
-        "synopsis": None
     },
     "DEALLOCATE": {
         "description": "Description\nDEALLOCATE is used to deallocate a previously",
@@ -523,22 +503,6 @@ helpcommands = {
         "description": "Description\nDROP VIEW drops an existing view.  To execute",
         "synopsis": "\nDROP VIEW [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]\n"
     },
-    "DROPDB": {
-        "description": "Description\ndropdb destroys an existing",
-        "synopsis": None
-    },
-    "DROPLANG": {
-        "description": None,
-        "synopsis": None
-    },
-    "DROPUSER": {
-        "description": "Description\ndropuser removes an existing",
-        "synopsis": None
-    },
-    "ECPG-REF": {
-        "description": "Description\necpg is the embedded SQL preprocessor for C",
-        "synopsis": None
-    },
     "END": {
         "description": "Description\nEND commits the current transaction. All changes",
         "synopsis": "\nEND [ WORK | TRANSACTION ]\n"
@@ -562,10 +526,6 @@ helpcommands = {
     "IMPORT FOREIGN SCHEMA": {
         "description": "Description\nIMPORT FOREIGN SCHEMA creates foreign tables that",
         "synopsis": "\nIMPORT FOREIGN SCHEMA remote_schema\n    [ { LIMIT TO | EXCEPT } ( table_name [, ...] ) ]\n    FROM SERVER server_name\n    INTO local_schema\n    [ OPTIONS ( option 'value' [, ... ] ) ]\n"
-    },
-    "INITDB": {
-        "description": None,
-        "synopsis": None
     },
     "INSERT": {
         "description": "Description\nINSERT inserts new rows into a table.",
@@ -591,85 +551,9 @@ helpcommands = {
         "description": "Description\n   The NOTIFY command sends a notification event together",
         "synopsis": "\nNOTIFY channel [ , payload ]\n"
     },
-    "PG BASEBACKUP": {
-        "description": None,
-        "synopsis": None
-    },
-    "PG CONFIG-REF": {
-        "description": "Description\n   The pg_config utility prints configuration parameters",
-        "synopsis": None
-    },
-    "PG CONTROLDATA": {
-        "description": "Description\npg_controldata prints information initialized during",
-        "synopsis": None
-    },
-    "PG CTL-REF": {
-        "description": "Description\npg_ctl is a utility for initializing a",
-        "synopsis": None
-    },
-    "PG DUMP": {
-        "description": None,
-        "synopsis": None
-    },
-    "PG DUMPALL": {
-        "description": "Description\npg_dumpall is a utility for writing out",
-        "synopsis": None
-    },
-    "PG ISREADY": {
-        "description": "Description\npg_isready is a utility for checking the connection",
-        "synopsis": None
-    },
-    "PG RECEIVEXLOG": {
-        "description": None,
-        "synopsis": None
-    },
-    "PG RECVLOGICAL": {
-        "description": "Description\npg_recvlogical controls logical decoding replication",
-        "synopsis": None
-    },
-    "PG RESETXLOG": {
-        "description": "Description\npg_resetxlog clears the write-ahead log (WAL) and",
-        "synopsis": None
-    },
-    "PG RESTORE": {
-        "description": "Description\npg_restore is a utility for restoring a",
-        "synopsis": None
-    },
-    "PG REWIND": {
-        "description": "Description\npg_rewind is a tool for synchronizing a PostgreSQL cluster",
-        "synopsis": None
-    },
-    "PG XLOGDUMP": {
-        "description": "Description\npg_xlogdump displays the write-ahead log (WAL) and is mainly",
-        "synopsis": None
-    },
-    "PGARCHIVECLEANUP": {
-        "description": "Description\npg_archivecleanup is designed to be used as an",
-        "synopsis": None
-    },
     "PGBENCH": {
         "description": "Description\npgbench is a simple program for running benchmark",
         "synopsis": "\nclient_id transaction_no time file_no time_epoch time_us schedule_lag\n"
-    },
-    "PGTESTFSYNC": {
-        "description": "Description\npg_test_fsync is intended to give you a reasonable",
-        "synopsis": None
-    },
-    "PGTESTTIMING": {
-        "description": "Description\npg_test_timing is a tool to measure the timing overhead",
-        "synopsis": None
-    },
-    "PGUPGRADE": {
-        "description": "Description\npg_upgrade (formerly called pg_migrator) allows data",
-        "synopsis": None
-    },
-    "POSTGRES-REF": {
-        "description": "Description\npostgres is the",
-        "synopsis": None
-    },
-    "POSTMASTER": {
-        "description": "Description\npostmaster is a deprecated alias of postgres.",
-        "synopsis": None
     },
     "PREPARE": {
         "description": "Description\nPREPARE creates a prepared statement. A prepared",
@@ -678,10 +562,6 @@ helpcommands = {
     "PREPARE TRANSACTION": {
         "description": "Description\nPREPARE TRANSACTION prepares the current transaction",
         "synopsis": "\nPREPARE TRANSACTION transaction_id\n"
-    },
-    "PSQL-REF": {
-        "description": "Description\npsql is a terminal-based front-end to",
-        "synopsis": None
     },
     "REASSIGN OWNED": {
         "description": "Description\nREASSIGN OWNED instructs the system to change",
@@ -694,10 +574,6 @@ helpcommands = {
     "REINDEX": {
         "description": "Description\nREINDEX rebuilds an index using the data",
         "synopsis": "\nREINDEX [ ( { VERBOSE } [, ...] ) ] { INDEX | TABLE | SCHEMA | DATABASE | SYSTEM } name\n"
-    },
-    "REINDEXDB": {
-        "description": "Description\nreindexdb is a utility for rebuilding indexes",
-        "synopsis": None
     },
     "RELEASE SAVEPOINT": {
         "description": "Description\nRELEASE SAVEPOINT destroys a savepoint previously defined",
@@ -782,10 +658,6 @@ helpcommands = {
     "VACUUM": {
         "description": "Description\nVACUUM reclaims storage occupied by dead tuples.",
         "synopsis": "\nVACUUM [ ( { FULL | FREEZE | VERBOSE | ANALYZE } [, ...] ) ] [ table_name [ (column_name [, ...] ) ] ]\nVACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] [ table_name ]\nVACUUM [ FULL ] [ FREEZE ] [ VERBOSE ] ANALYZE [ table_name [ (column_name [, ...] ) ] ]\n"
-    },
-    "VACUUMDB": {
-        "description": "Description\nvacuumdb is a utility for cleaning a",
-        "synopsis": None
     },
     "VALUES": {
         "description": "Description\nVALUES computes a row value or set of row values",

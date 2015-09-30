@@ -28,6 +28,9 @@ def executor(connection):
     def query_runner(sql):
         results = []
         for title, rows, headers, status in pgspecial.execute(cur=cur, sql=sql):
-            results.extend((title, list(rows), headers, status))
+            if rows:
+                results.extend((title, list(rows), headers, status))
+            else:
+                results.extend((title, None, headers, status))
         return results
     return query_runner
