@@ -36,14 +36,14 @@ class PGSpecial(object):
         self.auto_expand = False
         self.pager = os.environ.get('PAGER', '')
 
-        self.register(self.show_help, '\\?', '\\?', 'Show Help.',
+        self.register(self.show_help, '\\?', '\\?', 'Show Commands.',
                       arg_type=NO_QUERY)
 
         self.register(self.toggle_expanded_output, '\\x', '\\x',
                       'Toggle expanded output.', arg_type=PARSED_QUERY)
 
         self.register(self.show_command_help, '\\h', '\\h',
-                      'Help.', arg_type=PARSED_QUERY)
+                      'Show SQL syntax and help.', arg_type=PARSED_QUERY)
 
         self.register(self.toggle_timing, '\\timing', '\\timing',
                       'Toggle timing of commands.', arg_type=NO_QUERY)
