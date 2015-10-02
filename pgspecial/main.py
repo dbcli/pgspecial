@@ -37,7 +37,7 @@ class PGSpecial(object):
         self.pager = os.environ.get('PAGER', '')
 
         self.register(self.show_help, '\\?', '\\?', 'Show Commands.',
-                      arg_type=NO_QUERY)
+                      arg_type=PARSED_QUERY)
 
         self.register(self.toggle_expanded_output, '\\x', '\\x',
                       'Toggle expanded output.', arg_type=PARSED_QUERY)
@@ -76,7 +76,10 @@ class PGSpecial(object):
         elif special_cmd.arg_type == RAW_QUERY:
             return special_cmd.handler(cur=cur, query=sql)
 
-    def show_help(self):
+    def show_help(self, pattern, **_):
+        if pattern.strip():
+            return self.show_command_help(pattern)
+
         headers = ['Command', 'Description']
         result = []
 
