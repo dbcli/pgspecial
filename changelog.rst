@@ -1,11 +1,11 @@
 1.2.0
 =====
 
-* Add support for ``\h``. (Thanks: `stuartquin`_)
-  Users can now run ``\h [keyword]`` to checkout the help for a keyboard.
-
 Features:
 ---------
+
+* Add support for ``\h``. (Thanks: `stuartquin`_)
+  Users can now run ``\h [keyword]`` to checkout the help for a keyboard.
 
 1.1.0
 =====
