@@ -11,6 +11,16 @@ NO_QUERY = 0
 PARSED_QUERY = 1
 RAW_QUERY = 2
 
+PAGER_ALWAYS = 2
+PAGER_LONG_OUTPUT = 1
+PAGER_OFF = 0
+
+PAGER_MSG = {
+    PAGER_OFF: "Pager usage is off.",
+    PAGER_LONG_OUTPUT: "Pager is used for long output.",
+    PAGER_ALWAYS: "Pager is always used."
+    }
+
 SpecialCommand = namedtuple('SpecialCommand',
         ['handler', 'syntax', 'description', 'arg_type', 'hidden', 'case_sensitive'])
 
@@ -30,10 +40,10 @@ class PGSpecial(object):
         self.timing_enabled = True
 
         self.commands = self.default_commands.copy()
-
         self.timing_enabled = False
         self.expanded_output = False
         self.auto_expand = False
+        self.pager_config = PAGER_ALWAYS
         self.pager = os.environ.get('PAGER', '')
 
         self.register(self.show_help, '\\?', '\\?', 'Show Commands.',
@@ -41,6 +51,9 @@ class PGSpecial(object):
 
         self.register(self.toggle_expanded_output, '\\x', '\\x',
                       'Toggle expanded output.', arg_type=PARSED_QUERY)
+
+        self.register(self.call_pset, '\\pset', '\\pset [key] [value]',
+                      'A limited version of tradtional \pset', arg_type=PARSED_QUERY)
 
         self.register(self.show_command_help, '\\h', '\\h',
                       'Show SQL syntax and help.', arg_type=PARSED_QUERY)
@@ -137,6 +150,28 @@ class PGSpecial(object):
         message = "Timing is "
         message += "on." if self.timing_enabled else "off."
         return [(None, None, None, message)]
+
+    def call_pset(self, pattern, **_):
+        pattern = pattern.split(' ', 2)
+        val = pattern[1] if len(pattern) > 1 else ''
+        key = pattern[0]
+        if hasattr(self, 'pset_' + key):
+            return getattr(self, 'pset_' + key)(val)
+        else:
+            return [(None, None, None, "'%s' is currently not supported by pset" % key)]
+
+    def pset_pager(self, value):
+        if value == 'always':
+            self.pager_config = PAGER_ALWAYS
+        elif value == 'off':
+            self.pager_config = PAGER_OFF
+        elif value == 'on':
+            self.pager_config = PAGER_LONG_OUTPUT
+        elif self.pager_config == PAGER_LONG_OUTPUT:
+            self.pager_config = PAGER_OFF
+        else:
+            self.pager_config = PAGER_LONG_OUTPUT
+        return [(None, None, None, '%s' % PAGER_MSG[self.pager_config])]
 
     def set_pager(self, pattern, **_):
         if not pattern:
