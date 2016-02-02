@@ -885,7 +885,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
             # /* Print per-table FDW options, if any */
             if (row[1]):
-                status.append("FDW Options: (%s)\n" % ftoptions)
+                status.append("FDW Options: (%s)\n" % row[1])
 
         #/* print inherited tables */
         sql = ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c, "
