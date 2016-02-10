@@ -25,16 +25,40 @@ def list_roles(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
     """
-    sql = '''SELECT r.rolname, r.rolsuper, r.rolinherit,
-    r.rolcreaterole, r.rolcreatedb, r.rolcanlogin,
-    r.rolconnlimit, r.rolvaliduntil,
-    ARRAY(SELECT b.rolname
-    FROM pg_catalog.pg_auth_members m
-    JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)
-    WHERE m.member = r.oid) as memberof''' + (''',
-    pg_catalog.shobj_description(r.oid, 'pg_authid') AS description'''
-    if verbose else '') + """, r.rolreplication
-    FROM pg_catalog.pg_roles r """
+
+    if cur.connection.server_version > 90000:
+        sql = '''
+            SELECT r.rolname,
+                r.rolsuper,
+                r.rolinherit,
+                r.rolcreaterole,
+                r.rolcreatedb,
+                r.rolcanlogin,
+                r.rolconnlimit,
+                r.rolvaliduntil,
+                ARRAY(SELECT b.rolname FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid) WHERE m.member = r.oid) as memberof,
+            '''
+        if verbose:
+            sql += '''
+                pg_catalog.shobj_description(r.oid, 'pg_authid') AS description,
+            '''
+        sql += '''
+            r.rolreplication
+        FROM pg_catalog.pg_roles r
+        '''
+    else:
+        sql = '''
+            SELECT u.usename AS rolname,
+                u.usesuper AS rolsuper,
+                true AS rolinherit,
+                false AS rolcreaterole,
+                u.usecreatedb AS rolcreatedb,
+                true AS rolcanlogin,
+                -1 AS rolconnlimit,
+                u.valuntil as rolvaliduntil,
+                ARRAY(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = ANY(g.grolist)) as memberof
+            FROM pg_catalog.pg_user u
+            '''
 
     params = []
     if pattern:
@@ -177,24 +201,41 @@ def list_functions(cur, pattern, verbose):
     else:
         verbose_columns = verbose_table = ''
 
-    sql = '''
-        SELECT  n.nspname as "Schema",
-                p.proname as "Name",
-                pg_catalog.pg_get_function_result(p.oid)
-                  as "Result data type",
-                pg_catalog.pg_get_function_arguments(p.oid)
-                  as "Argument data types",
-                 CASE
-                    WHEN p.proisagg THEN 'agg'
-                    WHEN p.proiswindow THEN 'window'
-                    WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
-                        THEN 'trigger'
-                    ELSE 'normal'
-                END as "Type" ''' + verbose_columns + '''
-        FROM    pg_catalog.pg_proc p
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-                        ''' + verbose_table + '''
-        WHERE  '''
+    if cur.connection.server_version > 90000:
+        sql = '''
+            SELECT  n.nspname as "Schema",
+                    p.proname as "Name",
+                    pg_catalog.pg_get_function_result(p.oid)
+                      as "Result data type",
+                    pg_catalog.pg_get_function_arguments(p.oid)
+                      as "Argument data types",
+                     CASE
+                        WHEN p.proisagg THEN 'agg'
+                        WHEN p.proiswindow THEN 'window'
+                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
+                            THEN 'trigger'
+                        ELSE 'normal'
+                    END as "Type" ''' + verbose_columns + '''
+            FROM    pg_catalog.pg_proc p
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                            ''' + verbose_table + '''
+            WHERE  '''
+    else:
+        sql = '''
+            SELECT  n.nspname as "Schema",
+                    p.proname as "Name",
+                    pg_catalog.format_type(p.prorettype, NULL) as "Result data type",
+                    pg_catalog.oidvectortypes(p.proargtypes) as "Argument data types",
+                     CASE
+                        WHEN p.proisagg THEN 'agg'
+                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+                        ELSE 'normal'
+                    END as "Type" ''' + verbose_columns + '''
+            FROM    pg_catalog.pg_proc p
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                            ''' + verbose_table + '''
+            WHERE  '''
+
 
     schema_pattern, func_pattern = sql_name_pattern(pattern)
     params = []
@@ -253,18 +294,27 @@ def list_datatypes(cur, pattern, verbose):
         sql += '''  pg_catalog.obj_description(t.oid, 'pg_type')
                         as "Description" '''
 
-    sql += '''  FROM    pg_catalog.pg_type t
-                        LEFT JOIN pg_catalog.pg_namespace n
-                          ON n.oid = t.typnamespace
-                WHERE   (t.typrelid = 0 OR
-                          ( SELECT c.relkind = 'c'
-                            FROM pg_catalog.pg_class c
-                            WHERE c.oid = t.typrelid))
-                        AND NOT EXISTS(
-                            SELECT 1
-                            FROM pg_catalog.pg_type el
-                            WHERE el.oid = t.typelem
-                                  AND el.typarray = t.oid) '''
+    if cur.connection.server_version > 90000:
+        sql += '''  FROM    pg_catalog.pg_type t
+                            LEFT JOIN pg_catalog.pg_namespace n
+                              ON n.oid = t.typnamespace
+                    WHERE   (t.typrelid = 0 OR
+                              ( SELECT c.relkind = 'c'
+                                FROM pg_catalog.pg_class c
+                                WHERE c.oid = t.typrelid))
+                            AND NOT EXISTS(
+                                SELECT 1
+                                FROM pg_catalog.pg_type el
+                                WHERE el.oid = t.typelem
+                                      AND el.typarray = t.oid) '''
+    else:
+        sql += '''  FROM    pg_catalog.pg_type t
+                            LEFT JOIN pg_catalog.pg_namespace n
+                              ON n.oid = t.typnamespace
+                    WHERE   (t.typrelid = 0 OR
+                              ( SELECT c.relkind = 'c'
+                                FROM pg_catalog.pg_class c
+                                WHERE c.oid = t.typrelid)) '''
 
     schema_pattern, type_pattern = sql_name_pattern(pattern)
     params = []
