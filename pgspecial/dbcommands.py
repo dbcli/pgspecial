@@ -420,17 +420,32 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     else:
         suffix = "''"
 
-    sql ="""SELECT c.relchecks, c.relkind, c.relhasindex,
-                c.relhasrules, c.relhastriggers, c.relhasoids,
-                %s,
-                c.reltablespace,
-                CASE WHEN c.reloftype = 0 THEN ''
-                    ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
-                END,
-                c.relpersistence
-            FROM pg_catalog.pg_class c
-            LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-            WHERE c.oid = '%s'""" % (suffix, oid)
+    if cur.connection.server_version > 90000:
+        sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
+                    c.relhasrules, c.relhastriggers, c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    CASE WHEN c.reloftype = 0 THEN ''
+                        ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+                    END,
+                    c.relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
+    else:
+        sql = """SELECT c.relchecks,
+                    c.relkind,
+                    c.relhasindex,
+                    c.relhasrules,
+                    c.reltriggers > 0 AS relhastriggers,
+                    c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    0 AS reloftype,
+                    'p' AS relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
 
     # Create a namedtuple called tableinfo and match what's in describe.c
 
@@ -453,13 +468,42 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         seq_values = cur.fetchone()
 
     # Get column info
-    sql = """SELECT a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
-        (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
-        FROM pg_catalog.pg_attrdef d WHERE d.adrelid = a.attrelid AND d.adnum =
-        a.attnum AND a.atthasdef), a.attnotnull, a.attnum, (SELECT c.collname
-        FROM pg_catalog.pg_collation c, pg_catalog.pg_type t WHERE c.oid =
-        a.attcollation AND t.oid = a.atttypid AND a.attcollation <>
-        t.typcollation) AS attcollation"""
+    if cur.connection.server_version > 90000:
+        sql = """SELECT a.attname,
+                    pg_catalog.format_type(a.atttypid, a.atttypmod),
+                    (
+                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
+                        FROM pg_catalog.pg_attrdef d
+                        WHERE d.adrelid = a.attrelid
+                            AND d.adnum = a.attnum
+                            AND a.atthasdef
+                    ),
+                    a.attnotnull,
+                    a.attnum,
+                    (
+                        SELECT c.collname
+                        FROM pg_catalog.pg_collation c,
+                            pg_catalog.pg_type t
+                        WHERE c.oid = a.attcollation
+                            AND t.oid = a.atttypid
+                            AND a.attcollation <> t.typcollation
+                    ) AS attcollation
+                """
+    else:
+        sql = """SELECT a.attname,
+                    pg_catalog.format_type(a.atttypid, a.atttypmod),
+                    (
+                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
+                        FROM pg_catalog.pg_attrdef d
+                        WHERE d.adrelid = a.attrelid
+                            AND d.adnum = a.attnum
+                            AND a.atthasdef
+                    ),
+                    a.attnotnull,
+                    a.attnum,
+                    NULL AS attcollation
+                """
+
 
     if tableinfo.relkind == 'i':
         sql += """, pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE)
@@ -595,17 +639,58 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if (tableinfo.relkind == 'i'):
         # /* Footer information about an index */
 
-        sql = """SELECT i.indisunique, i.indisprimary, i.indisclustered,
-        i.indisvalid, (NOT i.indimmediate) AND EXISTS (SELECT 1 FROM
-        pg_catalog.pg_constraint WHERE conrelid = i.indrelid AND conindid =
-        i.indexrelid AND contype IN ('p','u','x') AND condeferrable) AS
-        condeferrable, (NOT i.indimmediate) AND EXISTS (SELECT 1 FROM
-        pg_catalog.pg_constraint WHERE conrelid = i.indrelid AND conindid =
-        i.indexrelid AND contype IN ('p','u','x') AND condeferred) AS
-        condeferred, a.amname, c2.relname, pg_catalog.pg_get_expr(i.indpred,
-        i.indrelid, true) FROM pg_catalog.pg_index i, pg_catalog.pg_class c,
-        pg_catalog.pg_class c2, pg_catalog.pg_am a WHERE i.indexrelid = c.oid
-        AND c.oid = '%s' AND c.relam = a.oid AND i.indrelid = c2.oid;""" % oid
+        if cur.connection.server_version > 90000:
+            sql = """SELECT i.indisunique,
+                        i.indisprimary,
+                        i.indisclustered,
+                        i.indisvalid,
+                        (NOT i.indimmediate) AND EXISTS (
+                            SELECT 1
+                            FROM pg_catalog.pg_constraint
+                            WHERE conrelid = i.indrelid
+                                AND conindid = i.indexrelid
+                                AND contype IN ('p','u','x')
+                                AND condeferrable
+                        ) AS condeferrable,
+                        (NOT i.indimmediate) AND EXISTS (
+                            SELECT 1
+                            FROM pg_catalog.pg_constraint
+                            WHERE conrelid = i.indrelid
+                                AND conindid = i.indexrelid
+                                AND contype IN ('p','u','x')
+                                AND condeferred
+                        ) AS condeferred,
+                        a.amname,
+                        c2.relname,
+                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
+                        FROM pg_catalog.pg_index i,
+                            pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_am a
+                        WHERE i.indexrelid = c.oid
+                            AND c.oid = '%s'
+                            AND c.relam = a.oid
+                            AND i.indrelid = c2.oid;
+                """ % oid
+        else:
+            sql = """SELECT i.indisunique,
+                        i.indisprimary,
+                        i.indisclustered,
+                        't' AS indisvalid,
+                        'f' AS condeferrable,
+                        'f' AS condeferred,
+                        a.amname,
+                        c2.relname,
+                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
+                        FROM pg_catalog.pg_index i,
+                            pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_am a
+                        WHERE i.indexrelid = c.oid
+                            AND c.oid = '%s'
+                            AND c.relam = a.oid
+                            AND i.indrelid = c2.oid;
+                """ % oid
 
         log.debug(sql)
         cur.execute(sql)
@@ -674,17 +759,57 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         #/* Footer information about a table */
 
         if (tableinfo.hasindex):
-            sql = "SELECT c2.relname, i.indisprimary, i.indisunique, i.indisclustered, "
-            sql += "i.indisvalid, "
-            sql += "pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),\n  "
-            sql += ("pg_catalog.pg_get_constraintdef(con.oid, true), "
-                    "contype, condeferrable, condeferred")
-            sql += ", c2.reltablespace"
-            sql += ("\nFROM pg_catalog.pg_class c, pg_catalog.pg_class c2, "
-                    "pg_catalog.pg_index i\n")
-            sql += "  LEFT JOIN pg_catalog.pg_constraint con ON (conrelid = i.indrelid AND conindid = i.indexrelid AND contype IN ('p','u','x'))\n"
-            sql += ("WHERE c.oid = '%s' AND c.oid = i.indrelid AND i.indexrelid = c2.oid\n"
-                    "ORDER BY i.indisprimary DESC, i.indisunique DESC, c2.relname;") % oid
+            if cur.connection.server_version > 90000:
+                sql = """SELECT c2.relname,
+                                i.indisprimary,
+                                i.indisunique,
+                                i.indisclustered,
+                                i.indisvalid,
+                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
+                                pg_catalog.pg_get_constraintdef(con.oid, true),
+                                contype,
+                                condeferrable,
+                                condeferred,
+                                c2.reltablespace,
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_index i
+                        LEFT JOIN pg_catalog.pg_constraint con
+                        ON conrelid = i.indrelid
+                            AND conindid = i.indexrelid
+                            AND contype IN ('p','u','x')
+                        WHERE c.oid = '%s'
+                            AND c.oid = i.indrelid
+                            AND i.indexrelid = c2.oid
+                        ORDER BY i.indisprimary DESC,
+                            i.indisunique DESC,
+                            c2.relname;
+                    """ % oid
+            else:
+                sql = """SELECT c2.relname,
+                                i.indisprimary,
+                                i.indisunique,
+                                i.indisclustered,
+                                't' AS indisvalid,
+                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
+                                pg_catalog.pg_get_constraintdef(con.oid, true),
+                                contype,
+                                condeferrable,
+                                condeferred,
+                                c2.reltablespace
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_index i
+                        LEFT JOIN pg_catalog.pg_constraint con
+                        ON conrelid = i.indrelid
+                            AND contype IN ('p','u','x')
+                        WHERE c.oid = '%s'
+                            AND c.oid = i.indrelid
+                            AND i.indexrelid = c2.oid
+                        ORDER BY i.indisprimary DESC,
+                            i.indisunique DESC,
+                            c2.relname;
+                    """ % oid
 
             log.debug(sql)
             result = cur.execute(sql)
@@ -953,10 +1078,22 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             spacer = ' ' * len('Inherits')
 
         #/* print child tables */
-        sql =  ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c,"
-            " pg_catalog.pg_inherits i WHERE c.oid=i.inhrelid AND"
-            " i.inhparent = '%s' ORDER BY"
-            " c.oid::pg_catalog.regclass::pg_catalog.text;" % oid)
+        if cur.connection.server_version > 90000:
+            sql =  """SELECT c.oid::pg_catalog.regclass
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_inherits i
+                        WHERE c.oid = i.inhrelid
+                            AND i.inhparent = '%s'
+                        ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text;
+                    """ % oid
+        else:
+            sql =  """SELECT c.oid::pg_catalog.regclass
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_inherits i
+                        WHERE c.oid = i.inhrelid
+                            AND i.inhparent = '%s'
+                        ORDER BY c.oid;
+                    """ % oid
 
         log.debug(sql)
         cur.execute(sql)
