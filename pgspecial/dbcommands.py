@@ -432,6 +432,20 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
                  WHERE c.oid = '%s'""" % (suffix, oid)
+    elif cur.connection.server_version >= 84000:
+        sql = """SELECT c.relchecks,
+                    c.relkind,
+                    c.relhasindex,
+                    c.relhasrules,
+                    c.relhastriggers,
+                    c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    0 AS reloftype,
+                    'p' AS relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
     else:
         sql = """SELECT c.relchecks,
                     c.relkind,
@@ -974,14 +988,22 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # * could apply to either a table or a view.
     # */
     if tableinfo.hastriggers:
-        sql = ( "SELECT t.tgname, "
-                "pg_catalog.pg_get_triggerdef(t.oid, true), "
-                "t.tgenabled\n"
-                "FROM pg_catalog.pg_trigger t\n"
-                "WHERE t.tgrelid = '%s' AND " % oid);
-
-        sql += "NOT t.tgisinternal"
-        sql += "\nORDER BY 1;"
+        if cur.connection.server_version > 90000:
+            sql = """SELECT t.tgname,
+                        pg_catalog.pg_get_triggerdef(t.oid, true),
+                        t.tgenabled
+                   FROM pg_catalog.pg_trigger t
+                   WHERE t.tgrelid = '%s' AND NOT t.tgisinternal
+                   ORDER BY 1
+                """ % oid
+        else:
+            sql = """SELECT t.tgname,
+                        pg_catalog.pg_get_triggerdef(t.oid),
+                        t.tgenabled
+                   FROM pg_catalog.pg_trigger t
+                   WHERE t.tgrelid = '%s'
+                   ORDER BY 1
+                """ % oid
 
         log.debug(sql)
         cur.execute(sql)
