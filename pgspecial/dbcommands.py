@@ -432,7 +432,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
                  WHERE c.oid = '%s'""" % (suffix, oid)
-    elif cur.connection.server_version >= 84000:
+    elif cur.connection.server_version >= 80400:
         sql = """SELECT c.relchecks,
                     c.relkind,
                     c.relhasindex,
