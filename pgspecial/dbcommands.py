@@ -25,16 +25,40 @@ def list_roles(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
     """
-    sql = '''SELECT r.rolname, r.rolsuper, r.rolinherit,
-    r.rolcreaterole, r.rolcreatedb, r.rolcanlogin,
-    r.rolconnlimit, r.rolvaliduntil,
-    ARRAY(SELECT b.rolname
-    FROM pg_catalog.pg_auth_members m
-    JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)
-    WHERE m.member = r.oid) as memberof''' + (''',
-    pg_catalog.shobj_description(r.oid, 'pg_authid') AS description'''
-    if verbose else '') + """, r.rolreplication
-    FROM pg_catalog.pg_roles r """
+
+    if cur.connection.server_version > 90000:
+        sql = '''
+            SELECT r.rolname,
+                r.rolsuper,
+                r.rolinherit,
+                r.rolcreaterole,
+                r.rolcreatedb,
+                r.rolcanlogin,
+                r.rolconnlimit,
+                r.rolvaliduntil,
+                ARRAY(SELECT b.rolname FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid) WHERE m.member = r.oid) as memberof,
+            '''
+        if verbose:
+            sql += '''
+                pg_catalog.shobj_description(r.oid, 'pg_authid') AS description,
+            '''
+        sql += '''
+            r.rolreplication
+        FROM pg_catalog.pg_roles r
+        '''
+    else:
+        sql = '''
+            SELECT u.usename AS rolname,
+                u.usesuper AS rolsuper,
+                true AS rolinherit,
+                false AS rolcreaterole,
+                u.usecreatedb AS rolcreatedb,
+                true AS rolcanlogin,
+                -1 AS rolconnlimit,
+                u.valuntil as rolvaliduntil,
+                ARRAY(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = ANY(g.grolist)) as memberof
+            FROM pg_catalog.pg_user u
+            '''
 
     params = []
     if pattern:
@@ -177,24 +201,41 @@ def list_functions(cur, pattern, verbose):
     else:
         verbose_columns = verbose_table = ''
 
-    sql = '''
-        SELECT  n.nspname as "Schema",
-                p.proname as "Name",
-                pg_catalog.pg_get_function_result(p.oid)
-                  as "Result data type",
-                pg_catalog.pg_get_function_arguments(p.oid)
-                  as "Argument data types",
-                 CASE
-                    WHEN p.proisagg THEN 'agg'
-                    WHEN p.proiswindow THEN 'window'
-                    WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
-                        THEN 'trigger'
-                    ELSE 'normal'
-                END as "Type" ''' + verbose_columns + '''
-        FROM    pg_catalog.pg_proc p
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-                        ''' + verbose_table + '''
-        WHERE  '''
+    if cur.connection.server_version > 90000:
+        sql = '''
+            SELECT  n.nspname as "Schema",
+                    p.proname as "Name",
+                    pg_catalog.pg_get_function_result(p.oid)
+                      as "Result data type",
+                    pg_catalog.pg_get_function_arguments(p.oid)
+                      as "Argument data types",
+                     CASE
+                        WHEN p.proisagg THEN 'agg'
+                        WHEN p.proiswindow THEN 'window'
+                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
+                            THEN 'trigger'
+                        ELSE 'normal'
+                    END as "Type" ''' + verbose_columns + '''
+            FROM    pg_catalog.pg_proc p
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                            ''' + verbose_table + '''
+            WHERE  '''
+    else:
+        sql = '''
+            SELECT  n.nspname as "Schema",
+                    p.proname as "Name",
+                    pg_catalog.format_type(p.prorettype, NULL) as "Result data type",
+                    pg_catalog.oidvectortypes(p.proargtypes) as "Argument data types",
+                     CASE
+                        WHEN p.proisagg THEN 'agg'
+                        WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+                        ELSE 'normal'
+                    END as "Type" ''' + verbose_columns + '''
+            FROM    pg_catalog.pg_proc p
+                    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                            ''' + verbose_table + '''
+            WHERE  '''
+
 
     schema_pattern, func_pattern = sql_name_pattern(pattern)
     params = []
@@ -253,18 +294,27 @@ def list_datatypes(cur, pattern, verbose):
         sql += '''  pg_catalog.obj_description(t.oid, 'pg_type')
                         as "Description" '''
 
-    sql += '''  FROM    pg_catalog.pg_type t
-                        LEFT JOIN pg_catalog.pg_namespace n
-                          ON n.oid = t.typnamespace
-                WHERE   (t.typrelid = 0 OR
-                          ( SELECT c.relkind = 'c'
-                            FROM pg_catalog.pg_class c
-                            WHERE c.oid = t.typrelid))
-                        AND NOT EXISTS(
-                            SELECT 1
-                            FROM pg_catalog.pg_type el
-                            WHERE el.oid = t.typelem
-                                  AND el.typarray = t.oid) '''
+    if cur.connection.server_version > 90000:
+        sql += '''  FROM    pg_catalog.pg_type t
+                            LEFT JOIN pg_catalog.pg_namespace n
+                              ON n.oid = t.typnamespace
+                    WHERE   (t.typrelid = 0 OR
+                              ( SELECT c.relkind = 'c'
+                                FROM pg_catalog.pg_class c
+                                WHERE c.oid = t.typrelid))
+                            AND NOT EXISTS(
+                                SELECT 1
+                                FROM pg_catalog.pg_type el
+                                WHERE el.oid = t.typelem
+                                      AND el.typarray = t.oid) '''
+    else:
+        sql += '''  FROM    pg_catalog.pg_type t
+                            LEFT JOIN pg_catalog.pg_namespace n
+                              ON n.oid = t.typnamespace
+                    WHERE   (t.typrelid = 0 OR
+                              ( SELECT c.relkind = 'c'
+                                FROM pg_catalog.pg_class c
+                                WHERE c.oid = t.typrelid)) '''
 
     schema_pattern, type_pattern = sql_name_pattern(pattern)
     params = []
@@ -370,17 +420,46 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     else:
         suffix = "''"
 
-    sql ="""SELECT c.relchecks, c.relkind, c.relhasindex,
-                c.relhasrules, c.relhastriggers, c.relhasoids,
-                %s,
-                c.reltablespace,
-                CASE WHEN c.reloftype = 0 THEN ''
-                    ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
-                END,
-                c.relpersistence
-            FROM pg_catalog.pg_class c
-            LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-            WHERE c.oid = '%s'""" % (suffix, oid)
+    if cur.connection.server_version > 90000:
+        sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
+                    c.relhasrules, c.relhastriggers, c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    CASE WHEN c.reloftype = 0 THEN ''
+                        ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+                    END,
+                    c.relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
+    elif cur.connection.server_version >= 80400:
+        sql = """SELECT c.relchecks,
+                    c.relkind,
+                    c.relhasindex,
+                    c.relhasrules,
+                    c.relhastriggers,
+                    c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    0 AS reloftype,
+                    'p' AS relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
+    else:
+        sql = """SELECT c.relchecks,
+                    c.relkind,
+                    c.relhasindex,
+                    c.relhasrules,
+                    c.reltriggers > 0 AS relhastriggers,
+                    c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    0 AS reloftype,
+                    'p' AS relpersistence
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
 
     # Create a namedtuple called tableinfo and match what's in describe.c
 
@@ -403,13 +482,42 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         seq_values = cur.fetchone()
 
     # Get column info
-    sql = """SELECT a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
-        (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
-        FROM pg_catalog.pg_attrdef d WHERE d.adrelid = a.attrelid AND d.adnum =
-        a.attnum AND a.atthasdef), a.attnotnull, a.attnum, (SELECT c.collname
-        FROM pg_catalog.pg_collation c, pg_catalog.pg_type t WHERE c.oid =
-        a.attcollation AND t.oid = a.atttypid AND a.attcollation <>
-        t.typcollation) AS attcollation"""
+    if cur.connection.server_version > 90000:
+        sql = """SELECT a.attname,
+                    pg_catalog.format_type(a.atttypid, a.atttypmod),
+                    (
+                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
+                        FROM pg_catalog.pg_attrdef d
+                        WHERE d.adrelid = a.attrelid
+                            AND d.adnum = a.attnum
+                            AND a.atthasdef
+                    ),
+                    a.attnotnull,
+                    a.attnum,
+                    (
+                        SELECT c.collname
+                        FROM pg_catalog.pg_collation c,
+                            pg_catalog.pg_type t
+                        WHERE c.oid = a.attcollation
+                            AND t.oid = a.atttypid
+                            AND a.attcollation <> t.typcollation
+                    ) AS attcollation
+                """
+    else:
+        sql = """SELECT a.attname,
+                    pg_catalog.format_type(a.atttypid, a.atttypmod),
+                    (
+                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
+                        FROM pg_catalog.pg_attrdef d
+                        WHERE d.adrelid = a.attrelid
+                            AND d.adnum = a.attnum
+                            AND a.atthasdef
+                    ),
+                    a.attnotnull,
+                    a.attnum,
+                    NULL AS attcollation
+                """
+
 
     if tableinfo.relkind == 'i':
         sql += """, pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE)
@@ -545,17 +653,58 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if (tableinfo.relkind == 'i'):
         # /* Footer information about an index */
 
-        sql = """SELECT i.indisunique, i.indisprimary, i.indisclustered,
-        i.indisvalid, (NOT i.indimmediate) AND EXISTS (SELECT 1 FROM
-        pg_catalog.pg_constraint WHERE conrelid = i.indrelid AND conindid =
-        i.indexrelid AND contype IN ('p','u','x') AND condeferrable) AS
-        condeferrable, (NOT i.indimmediate) AND EXISTS (SELECT 1 FROM
-        pg_catalog.pg_constraint WHERE conrelid = i.indrelid AND conindid =
-        i.indexrelid AND contype IN ('p','u','x') AND condeferred) AS
-        condeferred, a.amname, c2.relname, pg_catalog.pg_get_expr(i.indpred,
-        i.indrelid, true) FROM pg_catalog.pg_index i, pg_catalog.pg_class c,
-        pg_catalog.pg_class c2, pg_catalog.pg_am a WHERE i.indexrelid = c.oid
-        AND c.oid = '%s' AND c.relam = a.oid AND i.indrelid = c2.oid;""" % oid
+        if cur.connection.server_version > 90000:
+            sql = """SELECT i.indisunique,
+                        i.indisprimary,
+                        i.indisclustered,
+                        i.indisvalid,
+                        (NOT i.indimmediate) AND EXISTS (
+                            SELECT 1
+                            FROM pg_catalog.pg_constraint
+                            WHERE conrelid = i.indrelid
+                                AND conindid = i.indexrelid
+                                AND contype IN ('p','u','x')
+                                AND condeferrable
+                        ) AS condeferrable,
+                        (NOT i.indimmediate) AND EXISTS (
+                            SELECT 1
+                            FROM pg_catalog.pg_constraint
+                            WHERE conrelid = i.indrelid
+                                AND conindid = i.indexrelid
+                                AND contype IN ('p','u','x')
+                                AND condeferred
+                        ) AS condeferred,
+                        a.amname,
+                        c2.relname,
+                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
+                        FROM pg_catalog.pg_index i,
+                            pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_am a
+                        WHERE i.indexrelid = c.oid
+                            AND c.oid = '%s'
+                            AND c.relam = a.oid
+                            AND i.indrelid = c2.oid;
+                """ % oid
+        else:
+            sql = """SELECT i.indisunique,
+                        i.indisprimary,
+                        i.indisclustered,
+                        't' AS indisvalid,
+                        'f' AS condeferrable,
+                        'f' AS condeferred,
+                        a.amname,
+                        c2.relname,
+                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
+                        FROM pg_catalog.pg_index i,
+                            pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_am a
+                        WHERE i.indexrelid = c.oid
+                            AND c.oid = '%s'
+                            AND c.relam = a.oid
+                            AND i.indrelid = c2.oid;
+                """ % oid
 
         log.debug(sql)
         cur.execute(sql)
@@ -624,17 +773,57 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         #/* Footer information about a table */
 
         if (tableinfo.hasindex):
-            sql = "SELECT c2.relname, i.indisprimary, i.indisunique, i.indisclustered, "
-            sql += "i.indisvalid, "
-            sql += "pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),\n  "
-            sql += ("pg_catalog.pg_get_constraintdef(con.oid, true), "
-                    "contype, condeferrable, condeferred")
-            sql += ", c2.reltablespace"
-            sql += ("\nFROM pg_catalog.pg_class c, pg_catalog.pg_class c2, "
-                    "pg_catalog.pg_index i\n")
-            sql += "  LEFT JOIN pg_catalog.pg_constraint con ON (conrelid = i.indrelid AND conindid = i.indexrelid AND contype IN ('p','u','x'))\n"
-            sql += ("WHERE c.oid = '%s' AND c.oid = i.indrelid AND i.indexrelid = c2.oid\n"
-                    "ORDER BY i.indisprimary DESC, i.indisunique DESC, c2.relname;") % oid
+            if cur.connection.server_version > 90000:
+                sql = """SELECT c2.relname,
+                                i.indisprimary,
+                                i.indisunique,
+                                i.indisclustered,
+                                i.indisvalid,
+                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
+                                pg_catalog.pg_get_constraintdef(con.oid, true),
+                                contype,
+                                condeferrable,
+                                condeferred,
+                                c2.reltablespace,
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_index i
+                        LEFT JOIN pg_catalog.pg_constraint con
+                        ON conrelid = i.indrelid
+                            AND conindid = i.indexrelid
+                            AND contype IN ('p','u','x')
+                        WHERE c.oid = '%s'
+                            AND c.oid = i.indrelid
+                            AND i.indexrelid = c2.oid
+                        ORDER BY i.indisprimary DESC,
+                            i.indisunique DESC,
+                            c2.relname;
+                    """ % oid
+            else:
+                sql = """SELECT c2.relname,
+                                i.indisprimary,
+                                i.indisunique,
+                                i.indisclustered,
+                                't' AS indisvalid,
+                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
+                                pg_catalog.pg_get_constraintdef(con.oid, true),
+                                contype,
+                                condeferrable,
+                                condeferred,
+                                c2.reltablespace
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_class c2,
+                            pg_catalog.pg_index i
+                        LEFT JOIN pg_catalog.pg_constraint con
+                        ON conrelid = i.indrelid
+                            AND contype IN ('p','u','x')
+                        WHERE c.oid = '%s'
+                            AND c.oid = i.indrelid
+                            AND i.indexrelid = c2.oid
+                        ORDER BY i.indisprimary DESC,
+                            i.indisunique DESC,
+                            c2.relname;
+                    """ % oid
 
             log.debug(sql)
             result = cur.execute(sql)
@@ -799,14 +988,22 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # * could apply to either a table or a view.
     # */
     if tableinfo.hastriggers:
-        sql = ( "SELECT t.tgname, "
-                "pg_catalog.pg_get_triggerdef(t.oid, true), "
-                "t.tgenabled\n"
-                "FROM pg_catalog.pg_trigger t\n"
-                "WHERE t.tgrelid = '%s' AND " % oid);
-
-        sql += "NOT t.tgisinternal"
-        sql += "\nORDER BY 1;"
+        if cur.connection.server_version > 90000:
+            sql = """SELECT t.tgname,
+                        pg_catalog.pg_get_triggerdef(t.oid, true),
+                        t.tgenabled
+                   FROM pg_catalog.pg_trigger t
+                   WHERE t.tgrelid = '%s' AND NOT t.tgisinternal
+                   ORDER BY 1
+                """ % oid
+        else:
+            sql = """SELECT t.tgname,
+                        pg_catalog.pg_get_triggerdef(t.oid),
+                        t.tgenabled
+                   FROM pg_catalog.pg_trigger t
+                   WHERE t.tgrelid = '%s'
+                   ORDER BY 1
+                """ % oid
 
         log.debug(sql)
         cur.execute(sql)
@@ -903,10 +1100,22 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             spacer = ' ' * len('Inherits')
 
         #/* print child tables */
-        sql =  ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c,"
-            " pg_catalog.pg_inherits i WHERE c.oid=i.inhrelid AND"
-            " i.inhparent = '%s' ORDER BY"
-            " c.oid::pg_catalog.regclass::pg_catalog.text;" % oid)
+        if cur.connection.server_version > 90000:
+            sql =  """SELECT c.oid::pg_catalog.regclass
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_inherits i
+                        WHERE c.oid = i.inhrelid
+                            AND i.inhparent = '%s'
+                        ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text;
+                    """ % oid
+        else:
+            sql =  """SELECT c.oid::pg_catalog.regclass
+                        FROM pg_catalog.pg_class c,
+                            pg_catalog.pg_inherits i
+                        WHERE c.oid = i.inhrelid
+                            AND i.inhparent = '%s'
+                        ORDER BY c.oid;
+                    """ % oid
 
         log.debug(sql)
         cur.execute(sql)
