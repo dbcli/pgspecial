@@ -43,7 +43,7 @@ def setup_db(conn):
         cur.execute('create schema schema2')
 
         # tables
-        cur.execute('create table tbl1(id1 integer, txt1 text)')
+        cur.execute('create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))')
         cur.execute('create table tbl2(id2 integer, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
 

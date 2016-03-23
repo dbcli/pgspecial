@@ -784,7 +784,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                                 contype,
                                 condeferrable,
                                 condeferred,
-                                c2.reltablespace,
+                                c2.reltablespace
                         FROM pg_catalog.pg_class c,
                             pg_catalog.pg_class c2,
                             pg_catalog.pg_index i

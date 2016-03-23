@@ -16,6 +16,19 @@ def test_slash_d(executor):
 
 
 @dbtest
+def test_slash_d_table(executor):
+    results = executor('\d tbl1')
+    title = None
+    rows = [['id1', 'integer', ' not null'],
+            ['txt1', 'text', ' not null'],
+            ]
+    headers = ['Column', 'Type', 'Modifiers']
+    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dn(executor):
     """List all schemas."""
     results = executor('\dn')
