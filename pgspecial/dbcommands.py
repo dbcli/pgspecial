@@ -102,6 +102,81 @@ def list_schemas(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
+@special_command('\\dx', '\\dx[+] [pattern]', 'List extensions.')
+def list_extensions(cur, pattern, verbose):
+
+    # Note: psql \dx command seems to ignore schema patterns
+    _, name_pattern = sql_name_pattern(pattern)
+
+    if verbose:
+        extensions = _find_extensions(cur, name_pattern)
+
+        if not extensions:
+            msg = 'Did not find any extension named "%s"' % pattern
+            return [(None, cur, [], msg)]
+
+        results = []
+        for ext_name, oid in extensions:
+            title = 'Objects in extension "%s"' % ext_name
+            cur, headers, status = _describe_extension(cur, oid)
+            results.append((title, cur, headers, status))
+
+        return results
+
+    sql = '''
+      SELECT e.extname AS "Name",
+             e.extversion AS "Version",
+             n.nspname AS "Schema",
+             c.description AS "Description"
+      FROM pg_catalog.pg_extension e
+           LEFT JOIN pg_catalog.pg_namespace n
+             ON n.oid = e.extnamespace
+           LEFT JOIN pg_catalog.pg_description c
+             ON c.objoid = e.oid
+                AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+      '''
+
+    if name_pattern:
+        sql = cur.mogrify(sql + ' WHERE e.extname ~ %s', [name_pattern])
+
+    sql += ' ORDER BY 1'
+
+    log.debug(sql)
+    cur.execute(sql)
+    headers = [x[0] for x in cur.description]
+    return [(None, cur, headers, cur.statusmessage)]
+
+
+def _find_extensions(cur, pattern):
+    sql = 'SELECT e.extname, e.oid FROM pg_catalog.pg_extension e'
+
+    if pattern:
+        sql = cur.mogrify(sql + ' WHERE e.extname ~ %s', [pattern])
+
+    sql += ' ORDER BY 1'
+
+    log.debug(sql)
+    cur.execute(sql)
+    return cur.fetchall()
+
+
+def _describe_extension(cur, oid):
+    sql = '''
+        SELECT 	pg_catalog.pg_describe_object(classid, objid, 0)
+                  AS "Object Description"
+        FROM 	pg_catalog.pg_depend
+        WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+                AND refobjid = %s
+                AND deptype = 'e'
+        ORDER BY 1 '''
+    sql = cur.mogrify(sql, [oid])
+    log.debug(sql)
+    cur.execute(sql)
+
+    headers = [x[0] for x in cur.description]
+    return cur, headers, cur.statusmessage
+
+
 def list_objects(cur, pattern, verbose, relkinds):
     """
         Returns (title, rows, header, status)
