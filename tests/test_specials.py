@@ -1,5 +1,9 @@
 from dbutils import dbtest
+import os.path
+import os
+import tempfile
 import itertools
+from contextlib import contextmanager
 
 
 @dbtest
@@ -101,3 +105,56 @@ def test_slash_h_alias(executor):
     h_results = executor('\h SELECT')
     results = executor('\? SELECT')
     assert results[3] == h_results[3]
+
+
+@contextmanager
+def temp_filepath(filename):
+    try:
+        temp_directory = tempfile.mkdtemp()
+        result = os.path.join(temp_directory, filename)
+        yield result
+    finally:
+        os.unlink(result)
+        os.rmdir(temp_directory)
+
+
+@dbtest
+def test_slash_copy_to_tsv(executor):
+    with temp_filepath('pycons.tsv') as filepath:
+        executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{}' "
+                 .format(filepath))
+        with open(filepath, 'r') as infile:
+            contents = infile.read()
+            assert len(contents.splitlines()) == 1
+            assert 'Montréal' in contents
+
+
+@dbtest
+def test_slash_copy_to_stdout(executor, capsys):
+    executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO stdout")
+    (out, err) = capsys.readouterr()
+    assert out == 'Montréal\tPortland\tCleveland\n'
+
+
+@dbtest
+def test_slash_copy_to_csv(executor):
+    with temp_filepath('pycons.csv') as filepath:
+        executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{}' WITH csv"
+                 .format(filepath))
+        with open(filepath, 'r') as infile:
+            contents = infile.read()
+            assert len(contents.splitlines()) == 1
+            assert 'Montréal' in contents
+            assert ',' in contents
+
+
+@dbtest
+def test_slash_copy_from_csv(executor, connection):
+    with temp_filepath('tbl1.csv') as filepath:
+        executor("\copy (SELECT 22, 'elephant') TO '{}' WITH csv"
+                 .format(filepath))
+        executor("\copy tbl1 FROM '{}' WITH csv".format(filepath))
+        cur = connection.cursor()
+        cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
+        row = cur.fetchone()
+        assert row[1] == 'elephant'
