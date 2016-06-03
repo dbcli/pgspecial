@@ -23,6 +23,7 @@ setup(
         long_description=open('README.rst').read(),
         install_requires=[
             'click >= 4.1',
+            'sqlparse >= 0.1.19',
             ],
         classifiers=[
             'Intended Audience :: Developers',
