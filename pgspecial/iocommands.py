@@ -113,8 +113,8 @@ def copy(cur, pattern, verbose):
 
     direction = tokenlist[idx-2].value.upper()
     replacement_file_name = 'STDIN' if direction == 'FROM' else 'STDOUT'
-    query = '{} {} {}'.format(before_file_name, replacement_file_name,
-                              after_file_name)
+    query = u'{0} {1} {2}'.format(before_file_name, replacement_file_name,
+                                  after_file_name)
     open_mode = 'r' if direction == 'FROM' else 'w'
     if file_name.startswith("'") and file_name.endswith("'"):
         file = open(file_name.strip("'"), open_mode)
