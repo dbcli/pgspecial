@@ -1,3 +1,12 @@
+1.4.0
+=====
+
+Features:
+---------
+
+* Add support for `\copy` command. (Thanks: `Catherine Devlin`_)
+* Add support for `\dx` command. (Thanks: `Darik Gamble`_)
+
 1.3.0
 =====
 
@@ -46,3 +55,5 @@ Features:
 .. _`Timothy Cleaver`: Timothy Cleaver
 .. _`François Pietka`: https://github.com/fpietka
 .. _`pik`: https://github.com/pik
+.. _`Catherine Devlin`: https://github.com/catherinedevlin
+.. _`Darik Gamble`: https://github.com/darikg
