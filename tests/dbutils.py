@@ -2,6 +2,7 @@ import pytest
 import psycopg2
 import psycopg2.extras
 
+
 # TODO: should this be somehow be divined from environment?
 POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
 

@@ -1,7 +1,11 @@
+from contextlib import contextmanager
 import re
+import sys
 import logging
 import click
 import io
+import sqlparse
+import psycopg2
 from os.path import expanduser
 from .namedqueries import NamedQueries
 from . import export
@@ -75,6 +79,60 @@ def read_from_file(path):
     with io.open(expanduser(path), encoding='utf-8') as f:
         contents = f.read()
     return contents
+
+
+@contextmanager
+def _paused_thread():
+    try:
+        thread = psycopg2.extensions.get_wait_callback()
+        psycopg2.extensions.set_wait_callback(None)
+        yield
+    finally:
+        psycopg2.extensions.set_wait_callback(thread)
+
+
+def _index_of_file_name(tokenlist):
+    for (idx, token) in reversed(list(enumerate(tokenlist[:-2]))):
+        if token.is_keyword and token.value.upper() in ('TO', 'FROM'):
+            return idx + 2
+    return None
+
+
+@special_command('\\copy', '\\copy [tablename] to/from [filename]',
+                 'Copy data between a file and a table.')
+def copy(cur, pattern, verbose):
+    """Copies table data to/from files"""
+
+    # Replace the specified file destination with STDIN or STDOUT
+    parsed = sqlparse.parse(pattern)
+    tokenlist = parsed[0].tokens
+    idx = _index_of_file_name(tokenlist)
+    file_name = tokenlist[idx].value
+    before_file_name = ''.join(t.value for t in tokenlist[:idx])
+    after_file_name = ''.join(t.value for t in tokenlist[idx+1:])
+
+    direction = tokenlist[idx-2].value.upper()
+    replacement_file_name = 'STDIN' if direction == 'FROM' else 'STDOUT'
+    query = u'{0} {1} {2}'.format(before_file_name, replacement_file_name,
+                                  after_file_name)
+    open_mode = 'r' if direction == 'FROM' else 'w'
+    if file_name.startswith("'") and file_name.endswith("'"):
+        file = open(file_name.strip("'"), open_mode)
+    elif 'stdin' in file_name.lower():
+        file = sys.stdin
+    elif 'stdout' in file_name.lower():
+        file = sys.stdout
+    else:
+        raise Exception('Enclose filename in single quotes')
+
+    with _paused_thread():
+        cur.copy_expert('copy ' + query, file)
+
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+    else:
+        return [(None, None, None, cur.statusmessage)]
 
 
 @special_command('\\n', '\\n[+] [name]', 'List or execute named queries.')
