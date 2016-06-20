@@ -2,11 +2,7 @@
   # -*- coding: utf-8 -*-
 
 from dbutils import dbtest
-import os.path
-import os
-import tempfile
 import itertools
-from contextlib import contextmanager
 from codecs import open
 
 
@@ -111,26 +107,15 @@ def test_slash_h_alias(executor):
     assert results[3] == h_results[3]
 
 
-@contextmanager
-def temp_filepath(filename):
-    try:
-        temp_directory = tempfile.mkdtemp()
-        result = os.path.join(temp_directory, filename)
-        yield result
-    finally:
-        os.unlink(result)
-        os.rmdir(temp_directory)
-
-
 @dbtest
-def test_slash_copy_to_tsv(executor):
-    with temp_filepath('pycons.tsv') as filepath:
-        executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' "
-                 .format(filepath))
-        with open(filepath, 'r', 'utf-8') as infile:
-            contents = infile.read()
-            assert len(contents.splitlines()) == 1
-            assert u'Montréal' in contents
+def test_slash_copy_to_tsv(executor, tmpdir):
+    filepath = tmpdir.join('pycons.tsv')
+    executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' "
+             .format(filepath))
+    infile = filepath.open(encoding='utf-8')
+    contents = infile.read()
+    assert len(contents.splitlines()) == 1
+    assert u'Montréal' in contents
 
 
 @dbtest
@@ -141,24 +126,24 @@ def test_slash_copy_to_stdout(executor, capsys):
 
 
 @dbtest
-def test_slash_copy_to_csv(executor):
-    with temp_filepath('pycons.csv') as filepath:
-        executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv"
-                 .format(filepath))
-        with open(filepath, 'r', 'utf-8') as infile:
-            contents = infile.read()
-            assert len(contents.splitlines()) == 1
-            assert u'Montréal' in contents
-            assert u',' in contents
+def test_slash_copy_to_csv(executor, tmpdir):
+    filepath = tmpdir.join('pycons.tsv')
+    executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv"
+             .format(filepath))
+    infile =filepath.open(encoding='utf-8')
+    contents = infile.read()
+    assert len(contents.splitlines()) == 1
+    assert u'Montréal' in contents
+    assert u',' in contents
 
 
 @dbtest
-def test_slash_copy_from_csv(executor, connection):
-    with temp_filepath('tbl1.csv') as filepath:
-        executor("\copy (SELECT 22, 'elephant') TO '{0}' WITH csv"
-                 .format(filepath))
-        executor("\copy tbl1 FROM '{0}' WITH csv".format(filepath))
-        cur = connection.cursor()
-        cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
-        row = cur.fetchone()
-        assert row[1] == 'elephant'
+def test_slash_copy_from_csv(executor, connection, tmpdir):
+    filepath = tmpdir.join('tbl1.csv')
+    executor("\copy (SELECT 22, 'elephant') TO '{0}' WITH csv"
+             .format(filepath))
+    executor("\copy tbl1 FROM '{0}' WITH csv".format(filepath))
+    cur = connection.cursor()
+    cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
+    row = cur.fetchone()
+    assert row[1] == 'elephant'

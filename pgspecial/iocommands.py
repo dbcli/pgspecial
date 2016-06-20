@@ -117,7 +117,7 @@ def copy(cur, pattern, verbose):
                                   after_file_name)
     open_mode = 'r' if direction == 'FROM' else 'w'
     if file_name.startswith("'") and file_name.endswith("'"):
-        file = open(file_name.strip("'"), open_mode)
+        file = io.open(expanduser(file_name.strip("'")), mode=open_mode, encoding='utf-8')
     elif 'stdin' in file_name.lower():
         file = sys.stdin
     elif 'stdout' in file_name.lower():
