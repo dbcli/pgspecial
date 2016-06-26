@@ -5,7 +5,8 @@ python:
   - "3.3"
   - "3.4"
 
-install: 
+install:
+  - psql --version
   - pip install . pytest mock codecov psycopg2
 
 script:
