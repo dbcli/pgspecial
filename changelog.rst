@@ -1,3 +1,11 @@
+1.5.0
+=====
+
+Features:
+---------
+
+* Add support for `\db` command. (Thanks: `Irina Truong`_)
+
 1.4.0
 =====
 
@@ -57,3 +65,4 @@ Features:
 .. _`pik`: https://github.com/pik
 .. _`Catherine Devlin`: https://github.com/catherinedevlin
 .. _`Darik Gamble`: https://github.com/darikg
+.. _`Irina Truong`: https://github.com/j-bennet
