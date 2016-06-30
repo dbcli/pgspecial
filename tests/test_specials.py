@@ -72,6 +72,25 @@ def test_slash_dT(executor):
 
 
 @dbtest
+def test_slash_db(executor):
+    """List all tablespaces."""
+    title, rows, header, status = executor('\db')
+    assert title is None
+    assert header == ['Name', 'Owner', 'Location']
+    assert 'pg_default' in rows[0]
+
+
+@dbtest
+def test_slash_db_name(executor):
+    """List tablespace by name."""
+    title, rows, header, status = executor('\db pg_default')
+    assert title is None
+    assert header == ['Name', 'Owner', 'Location']
+    assert 'pg_default' in rows[0]
+    assert status == 'SELECT 1'
+
+
+@dbtest
 def test_slash_df(executor):
     results = executor('\df')
     title = None
