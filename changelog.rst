@@ -1,3 +1,11 @@
+1.6.0
+=====
+
+Features:
+---------
+
+* Add a function to extract the sql from `\watch` command. (Thanks: `stuartquin`_)
+
 1.5.0
 =====
 
