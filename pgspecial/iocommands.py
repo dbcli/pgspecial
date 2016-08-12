@@ -33,6 +33,15 @@ def get_filename(sql):
 
 
 @export
+def get_watch_command(command):
+    match = re.match("(.*) \\\\watch (\d+);?$", command)
+    if match:
+        groups = match.groups()
+        return groups[0], int(groups[1])
+    return None, None
+
+
+@export
 def open_external_editor(filename=None, sql=''):
     """
     Open external editor, wait for the user to type in his query,
