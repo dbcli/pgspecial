@@ -26,7 +26,7 @@ except:
 dbtest = pytest.mark.skipif(
     not CAN_CONNECT_TO_DB,
     reason="Need a postgres instance at localhost accessible by user "
-           "'postgres'")
+           "'%s'" % POSTGRES_USER)
 
 
 def create_db(dbname):
