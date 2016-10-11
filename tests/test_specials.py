@@ -1,7 +1,7 @@
   #!/usr/bin/python
   # -*- coding: utf-8 -*-
 
-from dbutils import dbtest
+from dbutils import dbtest, POSTGRES_USER
 import itertools
 from codecs import open
 
@@ -10,12 +10,13 @@ from codecs import open
 def test_slash_d(executor):
     results = executor('\d')
     title = None
-    rows = [('public', 'tbl1', 'table', 'postgres'),
-            ('public', 'tbl2', 'table', 'postgres'),
-            ('public', 'vw1', 'view', 'postgres')]
+    rows = [('public', 'tbl1', 'table', POSTGRES_USER),
+            ('public', 'tbl2', 'table', POSTGRES_USER),
+            ('public', 'vw1', 'view', POSTGRES_USER)]
     headers = ['Schema', 'Name', 'Type', 'Owner']
     status = 'SELECT 3'
     expected = [title, rows, headers, status]
+
     assert results == expected
 
 
@@ -37,9 +38,9 @@ def test_slash_dn(executor):
     """List all schemas."""
     results = executor('\dn')
     title = None
-    rows = [('public', 'postgres'),
-            ('schema1', 'postgres'),
-            ('schema2', 'postgres')]
+    rows = [('public', POSTGRES_USER),
+            ('schema1', POSTGRES_USER),
+            ('schema2', POSTGRES_USER)]
     headers = ['Name', 'Owner']
     status = 'SELECT 3'
     expected = [title, rows, headers, status]
@@ -51,8 +52,8 @@ def test_slash_dt(executor):
     """List all tables in public schema."""
     results = executor('\dt')
     title = None
-    rows = [('public', 'tbl1', 'table', 'postgres'),
-            ('public', 'tbl2', 'table', 'postgres')]
+    rows = [('public', 'tbl1', 'table', POSTGRES_USER),
+            ('public', 'tbl2', 'table', POSTGRES_USER)]
     headers = ['Schema', 'Name', 'Type', 'Owner']
     status = 'SELECT 2'
     expected = [title, rows, headers, status]

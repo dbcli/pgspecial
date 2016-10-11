@@ -4,6 +4,7 @@ import sys
 import logging
 import click
 import io
+import shlex
 import sqlparse
 import psycopg2
 from os.path import expanduser
@@ -144,18 +145,26 @@ def copy(cur, pattern, verbose):
         return [(None, None, None, cur.statusmessage)]
 
 
-@special_command('\\n', '\\n[+] [name]', 'List or execute named queries.')
+@special_command('\\n', '\\n[+] [name] [param1 param2 ...]', 'List or execute named queries.')
 def execute_named_query(cur, pattern, **_):
     """Returns (title, rows, headers, status)"""
     if pattern == '':
         return list_named_queries(True)
+
+    params = shlex.split(pattern)
+    pattern = params.pop(0)
 
     query = NamedQueries.instance.get(pattern)
     title = '> {}'.format(query)
     if query is None:
         message = "No named query: {}".format(pattern)
         return [(None, None, None, message)]
-    cur.execute(query)
+
+    try:
+        cur.execute(query, params)
+    except (IndexError, TypeError):
+        raise Exception("Bad arguments")
+
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(title, cur, headers, cur.statusmessage)]
