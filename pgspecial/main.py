@@ -53,7 +53,7 @@ class PGSpecial(object):
                       'Toggle expanded output.', arg_type=PARSED_QUERY)
 
         self.register(self.call_pset, '\\pset', '\\pset [key] [value]',
-                      'A limited version of tradtional \pset', arg_type=PARSED_QUERY)
+                      'A limited version of traditional \pset', arg_type=PARSED_QUERY)
 
         self.register(self.show_command_help, '\\h', '\\h',
                       'Show SQL syntax and help.', arg_type=PARSED_QUERY)
