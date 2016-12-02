@@ -832,7 +832,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         if indisclustered:
             status.append(", clustered")
 
-        if indisvalid:
+        if not indisvalid:
             status.append(", invalid")
 
         if deferrable:
