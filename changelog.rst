@@ -1,3 +1,17 @@
+1.7.0
+=====
+
+Features:
+---------
+
+* Handling saved queries with parameters. (Thanks: `Marcin Sztolcman`_).
+
+Bug fixes:
+----------
+
+* Fix bug where \d called valid indices invalid & vice versa. (Thanks: `Joakim Koljonen`_).
+* Fix typo in pset description. (Thanks: `Emanuele Gaifas`_).
+
 1.6.0
 =====
 
@@ -66,6 +80,7 @@ Features:
 * First release as an independent package.
 
 .. _`pgcli`: https://github.com/dbcli/pgcli
+.. _`Amjith Ramanujam`: https://github.com/amjith
 .. _`stuartquin`: https://github.com/stuartquin
 .. _`darikg`: https://github.com/darikg
 .. _`Timothy Cleaver`: Timothy Cleaver
@@ -74,3 +89,6 @@ Features:
 .. _`Catherine Devlin`: https://github.com/catherinedevlin
 .. _`Darik Gamble`: https://github.com/darikg
 .. _`Irina Truong`: https://github.com/j-bennet
+.. _`Joakim Koljonen`: https://github.com/koljonen
+.. _`Emanuele Gaifas`: https://github.com/lelit
+.. _`Marcin Sztolcman`: https://github.com/msztolcman
