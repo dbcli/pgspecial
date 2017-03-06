@@ -996,7 +996,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             for row in cur:
                 #/* untranslated contraint name and def */
                 status.append("    \"%s\" %s" % row)
-            status.append('\n')
+                status.append('\n')
 
         #/* print foreign-key constraints (there are none if no triggers) */
         if (tableinfo.hastriggers):
