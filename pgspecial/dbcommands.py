@@ -131,6 +131,22 @@ def list_schemas(cur, pattern, verbose):
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
+@special_command('\\copy', '\\copy [pattern]', 'Copy from a table to a file and vice versa.')
+def copy(cur, pattern, verbose):
+    """
+    Returns (title, rows, headers, status)
+    """
+    if not pattern:
+        return [(None, None, None, '\copy: arguments required.')]
+
+    sql = 'COPY ' + pattern
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+    return [(None, None, None, None)]
+
 
 @special_command('\\dx', '\\dx[+] [pattern]', 'List extensions.')
 def list_extensions(cur, pattern, verbose):
@@ -1310,3 +1326,4 @@ def sql_name_pattern(pattern):
         schema = '^(' + schema + ')$'
 
     return schema, relname
+
