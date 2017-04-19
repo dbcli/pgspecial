@@ -149,7 +149,7 @@ def test_slash_copy_to_csv(executor, tmpdir):
     filepath = tmpdir.join('pycons.tsv')
     executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv"
              .format(filepath))
-    infile =filepath.open(encoding='utf-8')
+    infile = filepath.open(encoding='utf-8')
     contents = infile.read()
     assert len(contents.splitlines()) == 1
     assert u'Montréal' in contents
