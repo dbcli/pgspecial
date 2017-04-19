@@ -192,13 +192,13 @@ def _find_extensions(cur, pattern):
 
 def _describe_extension(cur, oid):
     sql = '''
-        SELECT 	pg_catalog.pg_describe_object(classid, objid, 0)
+        SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                   AS "Object Description"
-        FROM 	pg_catalog.pg_depend
+        FROM    pg_catalog.pg_depend
         WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
                 AND refobjid = %s
                 AND deptype = 'e'
-        ORDER BY 1 '''
+        ORDER BY 1'''
     sql = cur.mogrify(sql, [oid])
     log.debug(sql)
     cur.execute(sql)
