@@ -3,7 +3,6 @@
 
 from dbutils import dbtest, POSTGRES_USER
 import itertools
-from codecs import open
 
 
 @dbtest
