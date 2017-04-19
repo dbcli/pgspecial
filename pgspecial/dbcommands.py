@@ -1,5 +1,8 @@
 import logging
 from collections import namedtuple
+
+import psycopg2
+
 from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
@@ -1312,9 +1315,16 @@ def sql_name_pattern(pattern):
 
 @special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.', hidden=True)
 def show_function_definition(cur, pattern, verbose):
-    sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
+    if '(' in pattern:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern])
+    else:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
     log.debug(sql)
-    cur.execute(sql)
+    try:
+        cur.execute(sql)
+    except psycopg2.ProgrammingError as e:
+        statusmessage = e.pgerror.split('\n')[0]
+        return [(None, None, None, statusmessage)]
     (foid,) = cur.fetchone()
 
     sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])

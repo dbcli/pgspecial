@@ -184,6 +184,28 @@ def test_slash_sf(executor):
 
 
 @dbtest
+def test_slash_sf_unknown(executor):
+    results = executor('\sf non_existing')
+    assert results[0] is results[1] is results[2] is None
+    assert 'non_existing' in results[3]
+
+
+@dbtest
+def test_slash_sf_parens(executor):
+    results = executor('\sf func1()')
+    title = None
+    rows = [('CREATE OR REPLACE FUNCTION public.func1()\n'
+             ' RETURNS integer\n'
+             ' LANGUAGE sql\n'
+             'AS $function$select 1$function$\n',),
+            ]
+    headers = ['source']
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_sf_verbose(executor):
     results = executor('\sf+ schema1.s1_func1')
     title = None
