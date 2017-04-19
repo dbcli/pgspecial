@@ -1312,7 +1312,7 @@ def sql_name_pattern(pattern):
 
 @special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.', hidden=True)
 def show_function_definition(cur, pattern, verbose):
-    sql = cur.mogrify("SELECT to_regproc(%s)::oid", [pattern])
+    sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
     log.debug(sql)
     cur.execute(sql)
     (foid,) = cur.fetchone()
