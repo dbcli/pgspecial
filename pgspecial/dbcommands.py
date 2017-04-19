@@ -656,8 +656,6 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cur.execute(sql)
     res = cur.fetchall()
 
-    title = (tableinfo.relkind, schema_name, relation_name)
-
     # Set the column names.
     headers = ['Column', 'Type']
 
