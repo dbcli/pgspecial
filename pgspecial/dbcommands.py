@@ -1308,3 +1308,33 @@ def sql_name_pattern(pattern):
         schema = '^(' + schema + ')$'
 
     return schema, relname
+
+
+@special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.', hidden=True)
+def show_function_definition(cur, pattern, verbose):
+    sql = cur.mogrify("SELECT to_regproc(%s)::oid", [pattern])
+    log.debug(sql)
+    cur.execute(sql)
+    (foid,) = cur.fetchone()
+
+    sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
+    log.debug(sql)
+    cur.execute(sql)
+    statusmessage = cur.statusmessage
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        if verbose:
+            (source,) = cur.fetchone()
+            rows = []
+            rown = None
+            for row in source.splitlines():
+                if rown is None:
+                    if row.startswith('AS '):
+                        rown = 1
+                else:
+                    rown += 1
+                rows.append('%-7s %s' % ('' if rown is None else rown, row))
+            cur = [('\n'.join(rows) + '\n',)]
+    else:
+        headers = None
+    return [(None, cur, headers, statusmessage)]

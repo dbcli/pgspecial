@@ -166,3 +166,33 @@ def test_slash_copy_from_csv(executor, connection, tmpdir):
     cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
     row = cur.fetchone()
     assert row[1] == 'elephant'
+
+
+@dbtest
+def test_slash_sf(executor):
+    results = executor('\sf func1')
+    title = None
+    rows = [('CREATE OR REPLACE FUNCTION public.func1()\n'
+             ' RETURNS integer\n'
+             ' LANGUAGE sql\n'
+             'AS $function$select 1$function$\n',),
+            ]
+    headers = ['source']
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_sf_verbose(executor):
+    results = executor('\sf+ schema1.s1_func1')
+    title = None
+    rows = [('        CREATE OR REPLACE FUNCTION schema1.s1_func1()\n'
+             '         RETURNS integer\n'
+             '         LANGUAGE sql\n'
+             '1       AS $function$select 2$function$\n',),
+            ]
+    headers = ['source']
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
