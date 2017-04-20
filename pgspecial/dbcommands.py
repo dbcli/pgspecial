@@ -1311,6 +1311,13 @@ def sql_name_pattern(pattern):
     return schema, relname
 
 
+class _FakeCursor(list):
+    "Minimalistic wrapper simulating a real cursor, as far as pgcli is concerned."
+
+    def rowcount(self):
+        return len(self)
+
+
 @special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.')
 def show_function_definition(cur, pattern, verbose):
     if '(' in pattern:
@@ -1328,7 +1335,7 @@ def show_function_definition(cur, pattern, verbose):
         headers = [x[0] for x in cur.description]
         if verbose:
             (source,) = cur.fetchone()
-            rows = []
+            rows = _FakeCursor()
             rown = None
             for row in source.splitlines():
                 if rown is None:
