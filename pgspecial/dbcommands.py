@@ -76,7 +76,7 @@ def list_roles(cur, pattern, verbose):
 
 
 @special_command('\\db', '\\db[+] [pattern]', 'List tablespaces.')
-def list_tablestpaces(cur, pattern, **_):
+def list_tablespaces(cur, pattern, **_):
     """
     Returns (title, rows, headers, status)
     """
