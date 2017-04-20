@@ -185,9 +185,12 @@ def test_slash_sf(executor):
 
 @dbtest
 def test_slash_sf_unknown(executor):
-    results = executor('\sf non_existing')
-    assert results[0] is results[1] is results[2] is None
-    assert 'non_existing' in results[3]
+    try:
+        executor('\sf non_existing')
+    except Exception as e:
+        assert 'non_existing' in str(e)
+    else:
+        assert False, "Expected an exception"
 
 
 @dbtest

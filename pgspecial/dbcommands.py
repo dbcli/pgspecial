@@ -1,8 +1,6 @@
 import logging
 from collections import namedtuple
 
-import psycopg2
-
 from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
@@ -1320,11 +1318,7 @@ def show_function_definition(cur, pattern, verbose):
     else:
         sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
     log.debug(sql)
-    try:
-        cur.execute(sql)
-    except psycopg2.ProgrammingError as e:
-        statusmessage = e.pgerror.split('\n')[0]
-        return [(None, None, None, statusmessage)]
+    cur.execute(sql)
     (foid,) = cur.fetchone()
 
     sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
