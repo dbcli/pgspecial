@@ -1311,7 +1311,7 @@ def sql_name_pattern(pattern):
     return schema, relname
 
 
-@special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.', hidden=True)
+@special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.')
 def show_function_definition(cur, pattern, verbose):
     if '(' in pattern:
         sql = cur.mogrify("SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern])
