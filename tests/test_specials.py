@@ -178,7 +178,7 @@ def test_slash_sf(executor):
              'AS $function$select 1$function$\n',),
             ]
     headers = ['source']
-    status = 'SELECT 1'
+    status = None
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -203,7 +203,7 @@ def test_slash_sf_parens(executor):
              'AS $function$select 1$function$\n',),
             ]
     headers = ['source']
-    status = 'SELECT 1'
+    status = None
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -218,6 +218,6 @@ def test_slash_sf_verbose(executor):
              '1       AS $function$select 2$function$\n',),
             ]
     headers = ['source']
-    status = 'SELECT 1'
+    status = None
     expected = [title, rows, headers, status]
     assert results == expected

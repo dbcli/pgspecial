@@ -1324,7 +1324,6 @@ def show_function_definition(cur, pattern, verbose):
     sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
     log.debug(sql)
     cur.execute(sql)
-    statusmessage = cur.statusmessage
     if cur.description:
         headers = [x[0] for x in cur.description]
         if verbose:
@@ -1341,4 +1340,4 @@ def show_function_definition(cur, pattern, verbose):
             cur = [('\n'.join(rows) + '\n',)]
     else:
         headers = None
-    return [(None, cur, headers, statusmessage)]
+    return [(None, cur, headers, None)]
