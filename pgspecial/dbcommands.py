@@ -212,7 +212,8 @@ def list_objects(cur, pattern, verbose, relkinds):
     """
         Returns (title, rows, header, status)
 
-        This method is used by list_tables, list_views, and list_indexes
+        This method is used by list_tables, list_views, list_materialized views
+        and list_indexes
 
         relkinds is a list of strings to filter pg_class.relkind
 
@@ -275,6 +276,11 @@ def list_tables(cur, pattern, verbose):
 @special_command('\\dv', '\\dv[+] [pattern]', 'List views.')
 def list_views(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ['v', 's', ''])
+
+
+@special_command('\\dm', '\\dm[+] [pattern]', 'List materialized views.')
+def list_materialized_views(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ['m', 's', ''])
 
 
 @special_command('\\ds', '\\ds[+] [pattern]', 'List sequences.')
@@ -449,38 +455,15 @@ def list_datatypes(cur, pattern, verbose):
 
 
 @special_command('describe', 'DESCRIBE [pattern]', '', hidden=True, case_sensitive=False)
-@special_command('\\d', '\\d [pattern]', 'List or describe tables, views and sequences.')
+@special_command('\\d', '\\d[+] [pattern]', 'List or describe tables, views and sequences.')
 def describe_table_details(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
     """
 
-    # This is a simple \d command. No table name to follow.
+    # This is a simple \d[+] command. No table name to follow.
     if not pattern:
-        sql = """SELECT n.nspname as "Schema", c.relname as "Name",
-                    CASE c.relkind WHEN 'r' THEN 'table'
-                        WHEN 'v' THEN 'view'
-                        WHEN 'm' THEN 'materialized view'
-                        WHEN 'i' THEN 'index'
-                        WHEN 'S' THEN 'sequence'
-                        WHEN 's' THEN 'special'
-                        WHEN 'f' THEN 'foreign table'
-                    END as "Type",
-                    pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
-                FROM pg_catalog.pg_class c
-                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                WHERE c.relkind IN ('r','v','m','S','f','')
-                AND n.nspname <> 'pg_catalog'
-                AND n.nspname <> 'information_schema'
-                AND n.nspname !~ '^pg_toast'
-                AND pg_catalog.pg_table_is_visible(c.oid)
-                ORDER BY 1,2 """
-
-        log.debug(sql)
-        cur.execute(sql)
-        if cur.description:
-            headers = [x[0] for x in cur.description]
-            return [(None, cur, headers, cur.statusmessage)]
+        return list_objects(cur, pattern, verbose, ['r', 'v', 'm', 'S', 'f', ''])
 
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
