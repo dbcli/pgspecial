@@ -3,7 +3,6 @@
 
 from dbutils import dbtest, POSTGRES_USER
 import itertools
-from codecs import open
 
 
 @dbtest
@@ -150,7 +149,7 @@ def test_slash_copy_to_csv(executor, tmpdir):
     filepath = tmpdir.join('pycons.tsv')
     executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv"
              .format(filepath))
-    infile =filepath.open(encoding='utf-8')
+    infile = filepath.open(encoding='utf-8')
     contents = infile.read()
     assert len(contents.splitlines()) == 1
     assert u'Montréal' in contents
@@ -167,3 +166,58 @@ def test_slash_copy_from_csv(executor, connection, tmpdir):
     cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
     row = cur.fetchone()
     assert row[1] == 'elephant'
+
+
+@dbtest
+def test_slash_sf(executor):
+    results = executor('\sf func1')
+    title = None
+    rows = [('CREATE OR REPLACE FUNCTION public.func1()\n'
+             ' RETURNS integer\n'
+             ' LANGUAGE sql\n'
+             'AS $function$select 1$function$\n',),
+            ]
+    headers = ['source']
+    status = None
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_sf_unknown(executor):
+    try:
+        executor('\sf non_existing')
+    except Exception as e:
+        assert 'non_existing' in str(e)
+    else:
+        assert False, "Expected an exception"
+
+
+@dbtest
+def test_slash_sf_parens(executor):
+    results = executor('\sf func1()')
+    title = None
+    rows = [('CREATE OR REPLACE FUNCTION public.func1()\n'
+             ' RETURNS integer\n'
+             ' LANGUAGE sql\n'
+             'AS $function$select 1$function$\n',),
+            ]
+    headers = ['source']
+    status = None
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_sf_verbose(executor):
+    results = executor('\sf+ schema1.s1_func1')
+    title = None
+    rows = [('        CREATE OR REPLACE FUNCTION schema1.s1_func1()\n'
+             '         RETURNS integer\n'
+             '         LANGUAGE sql\n'
+             '1       AS $function$select 2$function$\n',),
+            ]
+    headers = ['source']
+    status = None
+    expected = [title, rows, headers, status]
+    assert results == expected

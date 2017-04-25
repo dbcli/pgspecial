@@ -1,5 +1,6 @@
 import logging
 from collections import namedtuple
+
 from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
@@ -75,7 +76,7 @@ def list_roles(cur, pattern, verbose):
 
 
 @special_command('\\db', '\\db[+] [pattern]', 'List tablespaces.')
-def list_tablestpaces(cur, pattern, **_):
+def list_tablespaces(cur, pattern, **_):
     """
     Returns (title, rows, headers, status)
     """
@@ -192,13 +193,13 @@ def _find_extensions(cur, pattern):
 
 def _describe_extension(cur, oid):
     sql = '''
-        SELECT 	pg_catalog.pg_describe_object(classid, objid, 0)
+        SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                   AS "Object Description"
-        FROM 	pg_catalog.pg_depend
+        FROM    pg_catalog.pg_depend
         WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
                 AND refobjid = %s
                 AND deptype = 'e'
-        ORDER BY 1 '''
+        ORDER BY 1'''
     sql = cur.mogrify(sql, [oid])
     log.debug(sql)
     cur.execute(sql)
@@ -655,8 +656,6 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     log.debug(sql)
     cur.execute(sql)
     res = cur.fetchall()
-
-    title = (tableinfo.relkind, schema_name, relation_name)
 
     # Set the column names.
     headers = ['Column', 'Type']
@@ -1310,3 +1309,42 @@ def sql_name_pattern(pattern):
         schema = '^(' + schema + ')$'
 
     return schema, relname
+
+
+class _FakeCursor(list):
+    "Minimalistic wrapper simulating a real cursor, as far as pgcli is concerned."
+
+    def rowcount(self):
+        return len(self)
+
+
+@special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.')
+def show_function_definition(cur, pattern, verbose):
+    if '(' in pattern:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern])
+    else:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
+    log.debug(sql)
+    cur.execute(sql)
+    (foid,) = cur.fetchone()
+
+    sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        if verbose:
+            (source,) = cur.fetchone()
+            rows = _FakeCursor()
+            rown = None
+            for row in source.splitlines():
+                if rown is None:
+                    if row.startswith('AS '):
+                        rown = 1
+                else:
+                    rown += 1
+                rows.append('%-7s %s' % ('' if rown is None else rown, row))
+            cur = [('\n'.join(rows) + '\n',)]
+    else:
+        headers = None
+    return [(None, cur, headers, None)]
