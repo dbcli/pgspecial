@@ -4,16 +4,36 @@
 from dbutils import dbtest, POSTGRES_USER
 import itertools
 
+objects_listing_headers = ['Schema', 'Name', 'Type', 'Owner', 'Size', 'Description']
+
 
 @dbtest
 def test_slash_d(executor):
     results = executor('\d')
     title = None
-    rows = [('public', 'tbl1', 'table', POSTGRES_USER),
+    rows = [('public', 'mvw1', 'materialized view', POSTGRES_USER),
+            ('public', 'tbl1', 'table', POSTGRES_USER),
             ('public', 'tbl2', 'table', POSTGRES_USER),
+            ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER),
             ('public', 'vw1', 'view', POSTGRES_USER)]
-    headers = ['Schema', 'Name', 'Type', 'Owner']
-    status = 'SELECT 3'
+    headers = objects_listing_headers[:-2]
+    status = 'SELECT 5'
+    expected = [title, rows, headers, status]
+
+    assert results == expected
+
+
+@dbtest
+def test_slash_d_verbose(executor):
+    results = executor('\d+')
+    title = None
+    rows = [('public', 'mvw1', 'materialized view', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'vw1', 'view', POSTGRES_USER, '0 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 5'
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -28,6 +48,19 @@ def test_slash_d_table(executor):
             ]
     headers = ['Column', 'Type', 'Modifiers']
     status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_d_table_verbose(executor):
+    results = executor('\d+ tbl1')
+    title = None
+    rows = [['id1', 'integer', ' not null', 'plain', None, None],
+            ['txt1', 'text', ' not null', 'extended', None, None],
+            ]
+    headers = ['Column', 'Type', 'Modifiers', 'Storage', 'Stats target', 'Description']
+    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\nHas OIDs: no\n'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -53,9 +86,118 @@ def test_slash_dt(executor):
     title = None
     rows = [('public', 'tbl1', 'table', POSTGRES_USER),
             ('public', 'tbl2', 'table', POSTGRES_USER)]
-    headers = ['Schema', 'Name', 'Type', 'Owner']
+    headers = objects_listing_headers[:-2]
     status = 'SELECT 2'
     expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dt_verbose(executor):
+    """List all tables in public schema in verbose mode."""
+    results = executor('\dt+')
+    title = None
+    rows = [('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 2'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dv(executor):
+    """List all views in public schema."""
+    results = executor('\dv')
+    title = None
+    row = [('public', 'vw1', 'view', POSTGRES_USER)]
+    headers = objects_listing_headers[:-2]
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dv_verbose(executor):
+    """List all views in s1 schema in verbose mode."""
+    results = executor('\dv+ schema1.*')
+    title = None
+    row = [('schema1', 's1_vw1', 'view', POSTGRES_USER, '0 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dm(executor):
+    """List all materialized views in schema1."""
+    results = executor('\dm schema1.*')
+    title = None
+    row = [('schema1', 's1_mvw1', 'materialized view', POSTGRES_USER)]
+    headers = objects_listing_headers[:-2]
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dm_verbose(executor):
+    """List all materialized views in public schema in verbose mode."""
+    results = executor('\dm+')
+    title = None
+    row = [('public', 'mvw1', 'materialized view', POSTGRES_USER, '8192 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_ds(executor):
+    """List all sequences in public schema."""
+    results = executor('\ds')
+    title = None
+    row = [('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER)]
+    headers = objects_listing_headers[:-2]
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_ds_verbose(executor):
+    """List all sequences in public schema in verbose mode."""
+    results = executor('\ds+')
+    title = None
+    row = [('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER, '8192 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_di(executor):
+    """List all indexes in public schema."""
+    results = executor('\di')
+    title = None
+    row = [('public', 'id_text', 'index', POSTGRES_USER)]
+    headers = objects_listing_headers[:-2]
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_di_verbose(executor):
+    """List all indexes in public schema in verbose mode."""
+    results = executor('\di+')
+    title = None
+    row = [('public', 'id_text', 'index', POSTGRES_USER, '8192 bytes', None)]
+    headers = objects_listing_headers
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
     assert results == expected
 
 

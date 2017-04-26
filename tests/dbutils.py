@@ -45,13 +45,18 @@ def setup_db(conn):
 
         # tables
         cur.execute('create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))')
-        cur.execute('create table tbl2(id2 integer, txt2 text)')
+        cur.execute('create table tbl2(id2 serial, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
 
         # views
         cur.execute('create view vw1 as select * from tbl1')
-        cur.execute('''create view schema1.s1_vw1 as select * from
-                schema1.s1_tbl1''')
+        cur.execute('''create view schema1.s1_vw1 as
+                       select * from schema1.s1_tbl1''')
+
+        # materialized views
+        cur.execute('create materialized view mvw1 as select * from tbl1')
+        cur.execute('''create materialized view schema1.s1_mvw1 as
+                       select * from schema1.s1_tbl1''')
 
         # datatype
         cur.execute('create type foo AS (a int, b text)')
