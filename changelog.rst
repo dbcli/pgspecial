@@ -1,9 +1,17 @@
-TBD
-===
+Upcoming
+========
+
+* TBD
+
+1.8.0
+=====
 
 Features:
 ---------
 
+* Implement \sf+ function_name. (Thanks: `Lele Gaifax`_).
+* Separate check constraints with newlines. (Thanks: `Joakim Koljonen`_).
+* Enabled \dm command, corrections to \d+, extended tests. (Thanks: `rsc`_).
 * Opening an external editor will edit default text. (Thanks: `Thomas Roten`_).
 
 
@@ -102,3 +110,5 @@ Features:
 .. _`Emanuele Gaifas`: https://github.com/lelit
 .. _`Marcin Sztolcman`: https://github.com/msztolcman
 .. _`Thomas Roten`: https://github.com/tsroten
+.. _`Lele Gaifax`: https://github.com/lelit
+.. _`rsc`: https://github.com/rafalcieslinski
