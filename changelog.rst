@@ -1,3 +1,12 @@
+TBD
+===
+
+Features:
+---------
+
+* Opening an external editor will edit default text. (Thanks: `Thomas Roten`_).
+
+
 1.7.0
 =====
 
@@ -43,7 +52,7 @@ Features:
 Features:
 ---------
 
-* Add initial support for Postgres 8.4 and above.(Thanks: `Timothy Cleaver`_, darikg_). 
+* Add initial support for Postgres 8.4 and above.(Thanks: `Timothy Cleaver`_, darikg_).
   This enables us to add support for Amazon Redshift. If things look broken please report.
 
 * Add \pset pager command. (Thanks: `pik`_).
@@ -92,3 +101,4 @@ Features:
 .. _`Joakim Koljonen`: https://github.com/koljonen
 .. _`Emanuele Gaifas`: https://github.com/lelit
 .. _`Marcin Sztolcman`: https://github.com/msztolcman
+.. _`Thomas Roten`: https://github.com/tsroten
