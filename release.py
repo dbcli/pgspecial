@@ -6,6 +6,11 @@ import subprocess
 import sys
 from optparse import OptionParser
 
+try:
+    input = raw_input
+except NameError:
+    pass
+
 DEBUG = False
 CONFIRM_STEPS = False
 DRY_RUN = False
@@ -19,7 +24,7 @@ def skip_step():
     global CONFIRM_STEPS
 
     if CONFIRM_STEPS:
-        choice = raw_input("--- Confirm step? (y/N) [y] ")
+        choice = input("--- Confirm step? (y/N) [y] ")
         if choice.lower() == 'n':
             return True
     return False
@@ -67,12 +72,12 @@ def register_with_pypi():
     run_step('python', 'setup.py', 'register')
 
 
-def create_source_tarball():
-    run_step('python', 'setup.py', 'sdist')
+def create_distribution_files():
+    run_step('python', 'setup.py', 'sdist', 'bdist_wheel')
 
 
-def push_to_pypi():
-    run_step('python', 'setup.py', 'sdist', 'upload')
+def upload_distribution_files():
+    run_step('twine', 'upload', 'dist/*')
 
 
 def push_to_github():
@@ -83,9 +88,22 @@ def push_tags_to_github():
     run_step('git', 'push', '--tags', 'origin')
 
 
+def checklist(questions):
+    for question in questions:
+        choice = input(question + ' (y/N) [n] ')
+        if choice.lower() != 'y':
+            sys.exit(1)
+
+
 if __name__ == '__main__':
     if DEBUG:
         subprocess.check_output = lambda x: x
+
+    checks = ['Have you created the debian package?',
+              'Have you updated the AUTHORS file?',
+              'Have you updated the `Usage` section of the README?',
+              ]
+    checklist(checks)
 
     ver = version('pgspecial/__init__.py')
     print('Releasing Version:', ver)
@@ -105,14 +123,14 @@ if __name__ == '__main__':
     CONFIRM_STEPS = popts.confirm_steps
     DRY_RUN = popts.dry_run
 
-    choice = raw_input('Are you sure? (y/N) [n] ')
+    choice = input('Are you sure? (y/N) [n] ')
     if choice.lower() != 'y':
         sys.exit(1)
 
     commit_for_release('pgspecial/__init__.py', ver)
     create_git_tag('v%s' % ver)
     register_with_pypi()
-    create_source_tarball()
-    push_to_pypi()
+    create_distribution_files()
     push_to_github()
     push_tags_to_github()
+    upload_distribution_files()
