@@ -376,6 +376,31 @@ def list_functions(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
+@special_command('\\sf', '\\sf[+] FUNCNAME', 'Show a function\'s definition.')
+def get_function_definition(cur, pattern, verbose):
+
+    if '(' in pattern:
+        query = 'SELECT %s::pg_catalog.regprocedure::pg_catalog.oid'
+    else:
+        query = 'SELECT %s::pg_catalog.regproc::pg_catalog.oid'
+
+    sql = cur.mogrify(query, [pattern])
+
+    log.debug(sql)
+    cur.execute(sql)
+    func_oid = cur.fetchone()
+
+    query = 'SELECT pg_catalog.pg_get_functiondef(%s) AS "Function definition";'
+
+    sql = cur.mogrify(query, [func_oid])
+
+    log.debug(sql)
+    cur.execute(sql)
+
+    headers = [x[0] for x in cur.description] if cur.description else None
+    return [(None, cur, headers, None)]
+
+
 @special_command('\\dT', '\\dT[S+] [pattern]', 'List data types')
 def list_datatypes(cur, pattern, verbose):
     assert True
