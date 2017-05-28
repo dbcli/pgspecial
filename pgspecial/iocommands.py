@@ -35,7 +35,7 @@ def get_filename(sql):
 
 @export
 def get_watch_command(command):
-    match = re.match("(.*) \\\\watch (\d+);?$", command)
+    match = re.match("(.*?)[ \t\n]*\\\\watch (\d+);?$", command)
     if match:
         groups = match.groups()
         return groups[0], int(groups[1])
