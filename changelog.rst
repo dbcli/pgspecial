@@ -1,7 +1,7 @@
 Upcoming
 ========
 
-* TBD
+* Be less strict when searching for the `\watch` command. (Thanks: `Irina Truong`_).
 
 1.8.0
 =====
