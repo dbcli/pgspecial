@@ -1,5 +1,7 @@
 import logging
 from collections import namedtuple
+import psycopg2
+import select
 
 from .main import special_command, RAW_QUERY
 
@@ -10,10 +12,31 @@ TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
 log = logging.getLogger(__name__)
 
 
+def wait(cur):
+    conn = cur.connection
+    if conn.async == 0:
+        return
+    while 1:
+        state = conn.poll()
+        if state == psycopg2.extensions.POLL_OK:
+            break
+        elif state == psycopg2.extensions.POLL_WRITE:
+            select.select([], [conn.fileno()], [])
+        elif state == psycopg2.extensions.POLL_READ:
+            select.select([conn.fileno()], [], [])
+        else:
+            raise psycopg2.OperationalError("poll() returned %s" % state)
+
+
+def execute(cur, query):
+    wait(cur)
+    cur.execute(query)
+    wait(cur)
+
 @special_command('\\l', '\\l', 'List databases.', arg_type=RAW_QUERY)
 def list_databases(cur, **_):
     query = 'SELECT datname FROM pg_database;'
-    cur.execute(query)
+    execute(cur, query)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -69,7 +92,7 @@ def list_roles(cur, pattern, verbose):
     sql = cur.mogrify(sql + " ORDER BY 1", params)
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -99,7 +122,7 @@ def list_tablespaces(cur, pattern, **_):
 
     sql = cur.mogrify(sql + " ORDER BY 1", params)
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, sql)
 
     headers = [x[0] for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
@@ -127,7 +150,7 @@ def list_schemas(cur, pattern, verbose):
     sql = cur.mogrify(sql + " ORDER BY 1", params)
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -173,7 +196,7 @@ def list_extensions(cur, pattern, verbose):
     sql += ' ORDER BY 1'
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     headers = [x[0] for x in cur.description]
     return [(None, cur, headers, cur.statusmessage)]
 
@@ -187,7 +210,7 @@ def _find_extensions(cur, pattern):
     sql += ' ORDER BY 1'
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     return cur.fetchall()
 
 
@@ -202,7 +225,7 @@ def _describe_extension(cur, oid):
         ORDER BY 1'''
     sql = cur.mogrify(sql, [oid])
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
 
     headers = [x[0] for x in cur.description]
     return cur, headers, cur.statusmessage
@@ -261,7 +284,7 @@ def list_objects(cur, pattern, verbose, relkinds):
     sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, sql)
 
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -369,7 +392,7 @@ def list_functions(cur, pattern, verbose):
     sql = cur.mogrify(sql + ' ORDER BY 1, 2, 4', params)
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
 
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -448,7 +471,7 @@ def list_datatypes(cur, pattern, verbose):
 
     sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -481,17 +504,17 @@ def describe_table_details(cur, pattern, verbose):
         where.append('c.relname ~ %s')
         params.append(relname)
 
-    sql = """SELECT c.oid, n.nspname, c.relname
+    query = """SELECT c.oid, n.nspname, c.relname
              FROM pg_catalog.pg_class c
              LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
              """ + ('WHERE ' + ' AND '.join(where) if where else '') + """
              ORDER BY 2,3"""
-    sql = cur.mogrify(sql, params)
+    query = cur.mogrify(query, params)
 
-    # Execute the sql, get the results and call describe_one_table_details on each table.
+    # Execute the query, get the results and call describe_one_table_details on each table.
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(query)
+    execute(cur, query)
     if not (cur.rowcount > 0):
         return [(None, None, None, 'Did not find any relation named %s.' % pattern)]
 
@@ -553,7 +576,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # Create a namedtuple called tableinfo and match what's in describe.c
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     if (cur.rowcount > 0):
         tableinfo = TableInfo._make(cur.fetchone())
     else:
@@ -564,7 +587,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # Do stuff here.
         sql = '''SELECT * FROM "%s"."%s"''' % (schema_name, relation_name)
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
         if not (cur.rowcount > 0):
             return (None, None, None, 'Something went wrong.')
 
@@ -637,7 +660,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum; """ % oid
 
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     res = cur.fetchall()
 
     # Set the column names.
@@ -675,7 +698,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if ((tableinfo.relkind == 'v' or tableinfo.relkind == 'm') and verbose):
         sql = """SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)""" % oid
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
         if cur.rowcount > 0:
             view_def = cur.fetchone()
 
@@ -794,7 +817,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 """ % oid
 
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
 
         (indisunique, indisprimary, indisclustered, indisvalid,
         deferrable, deferred, indamname, indtable, indpred) = cur.fetchone()
@@ -844,7 +867,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                           "\n AND d.objid=%s \n AND d.deptype='a'" % oid)
 
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
         result = cur.fetchone()
         if result:
             status.append("Owned by: %s" % result[0])
@@ -913,7 +936,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     """ % oid
 
             log.debug(sql)
-            result = cur.execute(sql)
+            result = execute(cur, query)
 
             if (cur.rowcount > 0):
                 status.append("Indexes:\n")
@@ -972,7 +995,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     "WHERE r.conrelid = '%s' AND r.contype = 'c'\n"
                     "ORDER BY 1;" % oid)
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             if (cur.rowcount > 0):
                 status.append("Check constraints:\n")
             for row in cur:
@@ -988,7 +1011,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                    "WHERE r.conrelid = '%s' AND r.contype = 'f' ORDER BY 1;" %
                    oid)
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             if (cur.rowcount > 0):
                 status.append("Foreign-key constraints:\n")
             for row in cur:
@@ -1003,7 +1026,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     "WHERE c.confrelid = '%s' AND c.contype = 'f' ORDER BY 1;" %
                     oid)
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             if (cur.rowcount > 0):
                 status.append("Referenced by:\n")
             for row in cur:
@@ -1017,7 +1040,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                               "WHERE r.ev_class = '%s' ORDER BY 1;" %
                               oid)
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             if (cur.rowcount > 0):
                 for category in range(4):
                     have_heading = False
@@ -1061,7 +1084,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     "WHERE r.ev_class = '%s' AND r.rulename != '_RETURN' ORDER BY 1;" % oid)
 
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             if (cur.rowcount > 0):
                 status.append("Rules:\n")
                 for row in cur:
@@ -1093,7 +1116,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 """ % oid
 
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
         if cur.rowcount > 0:
             #/*
             #* split the output into 4 different categories. Enabled triggers,
@@ -1161,7 +1184,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                    "     pg_catalog.pg_foreign_server s\n"
                    "WHERE f.ftrelid = %s AND s.oid = f.ftserver;" % oid)
             log.debug(sql)
-            cur.execute(sql)
+            execute(cur, query)
             row = cur.fetchone()
 
             # /* Print server name */
@@ -1177,7 +1200,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "i.inhrelid = '%s' ORDER BY inhseqno;" % oid)
 
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
 
         spacer = ''
         if cur.rowcount > 0:
@@ -1205,7 +1228,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     """ % oid
 
         log.debug(sql)
-        cur.execute(sql)
+        execute(cur, query)
 
         if not verbose:
             #/* print the number of child tables, if any */
@@ -1308,12 +1331,12 @@ def show_function_definition(cur, pattern, verbose):
     else:
         sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     (foid,) = cur.fetchone()
 
     sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
     log.debug(sql)
-    cur.execute(sql)
+    execute(cur, query)
     if cur.description:
         headers = [x[0] for x in cur.description]
         if verbose:
