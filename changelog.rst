@@ -28,7 +28,7 @@ Bug fixes:
 ----------
 
 * Fix bug where \d called valid indices invalid & vice versa. (Thanks: `Joakim Koljonen`_).
-* Fix typo in pset description. (Thanks: `Emanuele Gaifas`_).
+* Fix typo in pset description. (Thanks: `Lele Gaifax`_).
 
 1.6.0
 =====
@@ -108,7 +108,6 @@ Features:
 .. _`Darik Gamble`: https://github.com/darikg
 .. _`Irina Truong`: https://github.com/j-bennet
 .. _`Joakim Koljonen`: https://github.com/koljonen
-.. _`Emanuele Gaifas`: https://github.com/lelit
 .. _`Marcin Sztolcman`: https://github.com/msztolcman
 .. _`Thomas Roten`: https://github.com/tsroten
 .. _`Lele Gaifax`: https://github.com/lelit
