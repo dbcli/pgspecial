@@ -924,6 +924,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
                 #/* If exclusion constraint, print the constraintdef */
                 if row[7] == "x":
+                    status.append(' ')
                     status.append(row[6])
                 else:
                     #/* Label as primary key or unique (but not both) */
