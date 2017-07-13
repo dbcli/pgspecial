@@ -47,6 +47,7 @@ def setup_db(conn):
         cur.execute('create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))')
         cur.execute('create table tbl2(id2 serial, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
+        cur.execute('create table tbl3(c3 circle, exclude using gist (c3 with &&))')
 
         # views
         cur.execute('create view vw1 as select * from tbl1')

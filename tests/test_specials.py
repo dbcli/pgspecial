@@ -15,9 +15,10 @@ def test_slash_d(executor):
             ('public', 'tbl1', 'table', POSTGRES_USER),
             ('public', 'tbl2', 'table', POSTGRES_USER),
             ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER),
+            ('public', 'tbl3', 'table', POSTGRES_USER),
             ('public', 'vw1', 'view', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 5'
+    status = 'SELECT 6'
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -31,9 +32,10 @@ def test_slash_d_verbose(executor):
             ('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl3', 'table', POSTGRES_USER, '0 bytes', None),
             ('public', 'vw1', 'view', POSTGRES_USER, '0 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 5'
+    status = 'SELECT 6'
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -66,6 +68,17 @@ def test_slash_d_table_verbose(executor):
 
 
 @dbtest
+def test_slash_d_table_with_exclusion(executor):
+    results = executor('\d tbl3')
+    title = None
+    rows = [['c3', 'circle', '']]
+    headers = ['Column', 'Type', 'Modifiers']
+    status = 'Indexes:\n    "tbl3_c3_excl" EXCLUDE USING gist (c3 WITH &&)\n'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dn(executor):
     """List all schemas."""
     results = executor('\dn')
@@ -85,9 +98,10 @@ def test_slash_dt(executor):
     results = executor('\dt')
     title = None
     rows = [('public', 'tbl1', 'table', POSTGRES_USER),
-            ('public', 'tbl2', 'table', POSTGRES_USER)]
+            ('public', 'tbl2', 'table', POSTGRES_USER),
+            ('public', 'tbl3', 'table', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 2'
+    status = 'SELECT 3'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -98,9 +112,10 @@ def test_slash_dt_verbose(executor):
     results = executor('\dt+')
     title = None
     rows = [('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
-            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None)]
+            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl3', 'table', POSTGRES_USER, '0 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 2'
+    status = 'SELECT 3'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -182,9 +197,10 @@ def test_slash_di(executor):
     """List all indexes in public schema."""
     results = executor('\di')
     title = None
-    row = [('public', 'id_text', 'index', POSTGRES_USER)]
+    row = [('public', 'id_text', 'index', POSTGRES_USER),
+           ('public', 'tbl3_c3_excl', 'index', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 1'
+    status = 'SELECT 2'
     expected = [title, row, headers, status]
     assert results == expected
 
@@ -194,9 +210,10 @@ def test_slash_di_verbose(executor):
     """List all indexes in public schema in verbose mode."""
     results = executor('\di+')
     title = None
-    row = [('public', 'id_text', 'index', POSTGRES_USER, '8192 bytes', None)]
+    row = [('public', 'id_text', 'index', POSTGRES_USER, '8192 bytes', None),
+           ('public', 'tbl3_c3_excl', 'index', POSTGRES_USER, '8192 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 1'
+    status = 'SELECT 2'
     expected = [title, row, headers, status]
     assert results == expected
 
