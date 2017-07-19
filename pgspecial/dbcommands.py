@@ -10,9 +10,37 @@ TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
 log = logging.getLogger(__name__)
 
 
-@special_command('\\l', '\\l', 'List databases.', arg_type=RAW_QUERY)
-def list_databases(cur, **_):
-    query = 'SELECT datname FROM pg_database;'
+@special_command('\\l', '\\l[+] [pattern]', 'List databases.', aliases=('\\list',))
+def list_databases(cur, pattern, verbose):
+    query = '''SELECT d.datname as "Name",
+        pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
+        pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
+        d.datcollate as "Collate",
+        d.datctype as "Ctype",
+        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"'''
+    if verbose:
+        query += ''',
+            CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
+                    THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
+                    ELSE 'No Access'
+            END as "Size",
+            t.spcname as "Tablespace",
+            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
+    query += '''
+    FROM pg_catalog.pg_database d
+    '''
+    if verbose:
+        query += '''
+        JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
+        '''
+    params = []
+    if pattern:
+        query += '''
+        WHERE d.datname ~ %s
+        '''
+        _, schema = sql_name_pattern(pattern)
+        params.append(schema)
+    query = cur.mogrify(query + ' ORDER BY 1', params)
     cur.execute(query)
     if cur.description:
         headers = [x[0] for x in cur.description]
