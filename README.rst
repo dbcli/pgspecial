@@ -22,14 +22,14 @@ Usage
 Once this library is included into your project, you will most likely use the
 following imports:
 
-::
+.. code-block:: python
 
     from pgspecial.main import PGSpecial
     from pgspecial.namedqueries import NamedQueries
 
 Then you will create and use an instance of PGSpecial:
 
-::
+.. code-block:: python
 
         pgspecial = PGSpecial()
         for result in pgspecial.execute(cur, sql):
@@ -39,7 +39,7 @@ If you want to import named queries from an existing config file, it is
 convenient to initialize and keep around the class variable in
 ``NamedQueries``:
 
-::
+.. code-block:: python
 
     from configobj import ConfigObj
 
