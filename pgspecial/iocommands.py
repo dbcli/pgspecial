@@ -23,7 +23,7 @@ def editor_command(command):
     """
     # It is possible to have `\e filename` or `SELECT * FROM \e`. So we check
     # for both conditions.
-    return command.strip().endswith('\\e') or command.strip().startswith('\\e')
+    return command.strip().endswith('\\e') or command.strip().startswith('\\e ')
 
 
 @export
