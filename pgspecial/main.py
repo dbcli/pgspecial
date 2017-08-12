@@ -240,6 +240,7 @@ def doc_only():
 
 
 @special_command('\\ef', '\\ef [funcname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
+@special_command('\\ev', '\\ev [viewname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\do', '\\do[S] [pattern]', 'List operators.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\dp', '\\dp [pattern]', 'List table, view, and sequence access privileges.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\z', '\\z [pattern]', 'Same as \\dp.', arg_type=NO_QUERY, hidden=True)
