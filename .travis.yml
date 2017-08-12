@@ -10,9 +10,12 @@ python:
 install:
   - psql --version
   - pip install . pytest mock codecov psycopg2
+  - pip install git+https://github.com/hayd/pep8radius.git
 
 script:
   - coverage run --source pgspecial -m py.test
+  # check for pep8 errors, only looking at branch vs master. If there are errors, show diff and return an error code.
+  - pep8radius master --docformatter --diff --error-status
 
 after_success:
   - codecov
