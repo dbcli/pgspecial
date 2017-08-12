@@ -4,6 +4,7 @@ Upcoming
 * Be less strict when searching for the `\watch` command. (Thanks: `Irina Truong`_).
 * Fix glitch in ``EXCLUDE`` index description emitted by \d command. (Thanks: `Lele Gaifax`_).
 * Change `\l` command behavior, and add `\list` alias. (Thanks: `François Pietka`_).
+* Fix `\e` command handling. (Thanks: `François Pietka`_).
 
 1.8.0
 =====
