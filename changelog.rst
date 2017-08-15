@@ -115,3 +115,4 @@ Features:
 .. _`Thomas Roten`: https://github.com/tsroten
 .. _`Lele Gaifax`: https://github.com/lelit
 .. _`rsc`: https://github.com/rafalcieslinski
+.. _`Klaus Wünschel`: https://github.com/kwuenschel
