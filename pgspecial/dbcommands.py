@@ -1178,7 +1178,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     #*/
     if (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
             tableinfo.relkind == 'f'):
-        # /* print foreign server name */
+        #/* print foreign server name */
         if tableinfo.relkind == 'f':
             #/* Footer information about foreign table */
             sql = ("SELECT s.srvname,\n"
@@ -1193,10 +1193,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             cur.execute(sql)
             row = cur.fetchone()
 
-            # /* Print server name */
+            #/* Print server name */
             status.append("Server: %s\n" % row[0])
 
-            # /* Print per-table FDW options, if any */
+            #/* Print per-table FDW options, if any */
             if (row[1]):
                 status.append("FDW Options: (%s)\n" % row[1])
 
