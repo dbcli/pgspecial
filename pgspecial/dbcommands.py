@@ -1242,14 +1242,18 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Number of child tables: %d (Use \d+ to list"
                     "them.)\n" % cur.rowcount)
         else:
-            spacer = ''
-            if (cur.rowcount >0):
+            if (cur.rowcount > 0):
                 status.append('Child tables')
 
-            #/* display the list of child tables */
-            for row in cur:
-                status.append("%s: %s,\n" % (spacer, row))
-                spacer = ' ' * len('Child tables')
+                spacer = ':'
+                trailer = ',\n'
+                #/* display the list of child tables */
+                for idx, row in enumerate(cur, 1):
+                    if idx == 2:
+                        spacer = ' ' * (len('Child tables') + 1)
+                    if idx == cur.rowcount:
+                        trailer = '\n'
+                    status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* Table type */
         if (tableinfo.reloftype):

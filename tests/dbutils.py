@@ -48,6 +48,8 @@ def setup_db(conn):
         cur.execute('create table tbl2(id2 serial, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
         cur.execute('create table tbl3(c3 circle, exclude using gist (c3 with &&))')
+        cur.execute('create table "Inh1"(value1 integer) inherits (tbl1)')
+        cur.execute('create table inh2(value2 integer) inherits (tbl1, tbl2)')
 
         # views
         cur.execute('create view vw1 as select * from tbl1')
