@@ -32,10 +32,12 @@ def test_slash_d_verbose(executor):
     title = None
     rows = [('public', 'Inh1', 'table', POSTGRES_USER, '8192 bytes', None),
             ('public', 'inh2', 'table', POSTGRES_USER, '8192 bytes', None),
-            ('public', 'mvw1', 'materialized view', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'mvw1', 'materialized view',
+             POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
-            ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2_id2_seq', 'sequence',
+             POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl3', 'table', POSTGRES_USER, '0 bytes', None),
             ('public', 'vw1', 'view', POSTGRES_USER, '0 bytes', None)]
     headers = objects_listing_headers
@@ -79,7 +81,8 @@ def test_slash_d_table_verbose_1(executor):
     rows = [['id1', 'integer', ' not null', 'plain', None, None],
             ['txt1', 'text', ' not null', 'extended', None, None],
             ]
-    headers = ['Column', 'Type', 'Modifiers', 'Storage', 'Stats target', 'Description']
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
     status = ('Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
               'Child tables: "Inh1",\n'
               '              inh2\n'
@@ -96,7 +99,8 @@ def test_slash_d_table_verbose_2(executor):
              'plain', None, None],
             ['txt2', 'text', '', 'extended', None, None],
             ]
-    headers = ['Column', 'Type', 'Modifiers', 'Storage', 'Stats target', 'Description']
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
     status = ('Child tables: inh2\n'
               'Has OIDs: no\n')
     expected = [title, rows, headers, status]
