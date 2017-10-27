@@ -56,7 +56,7 @@ def test_slash_d_table_1(executor):
             ]
     headers = ['Column', 'Type', 'Modifiers']
     status = ('Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
-              'Number of child tables: 2 (Use \\d+ to listthem.)\n')
+              'Number of child tables: 2 (Use \\d+ to list them.)\n')
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -69,7 +69,7 @@ def test_slash_d_table_2(executor):
             ['txt2', 'text', ''],
             ]
     headers = ['Column', 'Type', 'Modifiers']
-    status = ('Number of child tables: 1 (Use \\d+ to listthem.)\n')
+    status = ('Number of child tables: 1 (Use \\d+ to list them.)\n')
     expected = [title, rows, headers, status]
     assert results == expected
 
