@@ -1,9 +1,21 @@
 Upcoming
 ========
 
+TODO
+
+1.9.0
+=====
+
+Features:
+---------
+
+* Change `\l` command behavior, and add `\list` alias. (Thanks: `François Pietka`_).
+
+Bug fixes:
+----------
+
 * Be less strict when searching for the `\watch` command. (Thanks: `Irina Truong`_).
 * Fix glitch in ``EXCLUDE`` index description emitted by \d command. (Thanks: `Lele Gaifax`_).
-* Change `\l` command behavior, and add `\list` alias. (Thanks: `François Pietka`_).
 * Fix `\e` command handling. (Thanks: `François Pietka`_).
 * Fix UnicodeEncodeError when opening sql statement in editor (Thanks: `Klaus Wünschel`_).
 * Fix listing of child tables in `\d` command. (Thanks: `Lele Gaifax`_)
