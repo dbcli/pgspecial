@@ -1178,7 +1178,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     #*/
     if (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
             tableinfo.relkind == 'f'):
-        # /* print foreign server name */
+        #/* print foreign server name */
         if tableinfo.relkind == 'f':
             #/* Footer information about foreign table */
             sql = ("SELECT s.srvname,\n"
@@ -1193,10 +1193,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             cur.execute(sql)
             row = cur.fetchone()
 
-            # /* Print server name */
+            #/* Print server name */
             status.append("Server: %s\n" % row[0])
 
-            # /* Print per-table FDW options, if any */
+            #/* Print per-table FDW options, if any */
             if (row[1]):
                 status.append("FDW Options: (%s)\n" % row[1])
 
@@ -1240,16 +1240,20 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             #/* print the number of child tables, if any */
             if (cur.rowcount > 0):
                 status.append("Number of child tables: %d (Use \d+ to list"
-                    "them.)\n" % cur.rowcount)
+                              " them.)\n" % cur.rowcount)
         else:
-            spacer = ''
-            if (cur.rowcount >0):
+            if (cur.rowcount > 0):
                 status.append('Child tables')
 
-            #/* display the list of child tables */
-            for row in cur:
-                status.append("%s: %s,\n" % (spacer, row))
-                spacer = ' ' * len('Child tables')
+                spacer = ':'
+                trailer = ',\n'
+                #/* display the list of child tables */
+                for idx, row in enumerate(cur, 1):
+                    if idx == 2:
+                        spacer = ' ' * (len('Child tables') + 1)
+                    if idx == cur.rowcount:
+                        trailer = '\n'
+                    status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* Table type */
         if (tableinfo.reloftype):

@@ -6,6 +6,7 @@ Upcoming
 * Change `\l` command behavior, and add `\list` alias. (Thanks: `François Pietka`_).
 * Fix `\e` command handling. (Thanks: `François Pietka`_).
 * Fix UnicodeEncodeError when opening sql statement in editor (Thanks: `Klaus Wünschel`_).
+* Fix listing of child tables in `\d` command. (Thanks: `Lele Gaifax`_)
 
 1.8.0
 =====
