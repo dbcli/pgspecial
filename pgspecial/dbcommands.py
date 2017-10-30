@@ -3,9 +3,9 @@ from collections import namedtuple
 
 from .main import special_command, RAW_QUERY
 
-TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
-'hasrules', 'hastriggers', 'hasoids', 'tablespace', 'reloptions', 'reloftype',
-'relpersistence'])
+TableInfo = namedtuple("TableInfo", [
+    'checks', 'relkind', 'hasindex', 'hasrules', 'hastriggers', 'hasoids',
+    'tablespace', 'reloptions', 'reloftype', 'relpersistence'])
 
 log = logging.getLogger(__name__)
 
