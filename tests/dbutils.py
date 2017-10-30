@@ -4,7 +4,7 @@ import psycopg2.extras
 
 
 # TODO: should this be somehow be divined from environment?
-POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
+POSTGRES_USER, POSTGRES_HOST = 'lele', 'localhost'
 
 
 def db_connection(dbname=None):
@@ -69,6 +69,14 @@ def setup_db(conn):
                        $$select 1$$''')
         cur.execute('''create function schema1.s1_func1() returns int language
                        sql as $$select 2$$''')
+
+        # domains
+        cur.execute("create domain gender_t char(1)"
+                    " check (value in ('F', 'M'))")
+        cur.execute("create domain schema1.smallint_t smallint")
+        cur.execute("create domain schema1.bigint_t bigint")
+        cur.execute("comment on domain schema1.bigint_t is"
+                    " 'a really large integer'")
 
 
 def teardown_db(conn):
