@@ -1201,9 +1201,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("FDW Options: (%s)\n" % row[1])
 
         #/* print inherited tables */
-        sql = ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c, "
-                "pg_catalog.pg_inherits i WHERE c.oid=i.inhparent AND "
-                "i.inhrelid = '%s' ORDER BY inhseqno;" % oid)
+        sql = ("SELECT c.oid::pg_catalog.regclass\n"
+               "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
+               "WHERE c.oid = i.inhparent\n"
+               "  AND i.inhrelid = '%s'\n"
+               "ORDER BY inhseqno" % oid)
 
         log.debug(sql)
         cur.execute(sql)
