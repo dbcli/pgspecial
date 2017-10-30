@@ -18,7 +18,7 @@ Bug fixes:
 * Fix glitch in ``EXCLUDE`` index description emitted by ``\d`` command. (Thanks: `Lele Gaifax`_).
 * Fix ``\e`` command handling. (Thanks: `François Pietka`_).
 * Fix UnicodeEncodeError when opening sql statement in editor (Thanks: `Klaus Wünschel`_).
-* Fix listing of child tables in ``\d`` command. (Thanks: `Lele Gaifax`_)
+* Fix listing of child tables in ``\d`` command. (Thanks: `Lele Gaifax`_).
 
 1.8.0
 =====
@@ -52,7 +52,7 @@ Bug fixes:
 Features:
 ---------
 
-* Add a function to extract the sql from ``\watch`` command. (Thanks: `stuartquin`_)
+* Add a function to extract the sql from ``\watch`` command. (Thanks: `stuartquin`_).
 
 1.5.0
 =====
@@ -60,7 +60,7 @@ Features:
 Features:
 ---------
 
-* Add support for ``\db`` command. (Thanks: `Irina Truong`_)
+* Add support for ``\db`` command. (Thanks: `Irina Truong`_).
 
 1.4.0
 =====
@@ -68,8 +68,8 @@ Features:
 Features:
 ---------
 
-* Add support for ``\copy`` command. (Thanks: `Catherine Devlin`_)
-* Add support for ``\dx`` command. (Thanks: `Darik Gamble`_)
+* Add support for ``\copy`` command. (Thanks: `Catherine Devlin`_).
+* Add support for ``\dx`` command. (Thanks: `Darik Gamble`_).
 
 1.3.0
 =====
@@ -94,7 +94,7 @@ Bug fixes:
 Features:
 ---------
 
-* Add support for ``\h``. (Thanks: `stuartquin`_)
+* Add support for ``\h``. (Thanks: `stuartquin`_).
   Users can now run ``\h [keyword]`` to checkout the help for a keyboard.
 
 1.1.0
