@@ -1,7 +1,10 @@
 Upcoming
 ========
 
-TODO
+Features:
+---------
+
+* Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
 
 1.9.0
 =====
