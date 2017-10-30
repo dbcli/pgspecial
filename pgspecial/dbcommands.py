@@ -406,7 +406,6 @@ def list_functions(cur, pattern, verbose):
 
 @special_command('\\dT', '\\dT[S+] [pattern]', 'List data types')
 def list_datatypes(cur, pattern, verbose):
-    assert True
     sql = '''SELECT n.nspname as "Schema",
                     pg_catalog.format_type(t.oid, NULL) AS "Name", '''
 
