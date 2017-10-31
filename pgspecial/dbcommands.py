@@ -1201,9 +1201,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("FDW Options: (%s)\n" % row[1])
 
         #/* print inherited tables */
-        sql = ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c, "
-                "pg_catalog.pg_inherits i WHERE c.oid=i.inhparent AND "
-                "i.inhrelid = '%s' ORDER BY inhseqno;" % oid)
+        sql = ("SELECT c.oid::pg_catalog.regclass\n"
+               "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
+               "WHERE c.oid = i.inhparent\n"
+               "  AND i.inhrelid = '%s'\n"
+               "ORDER BY inhseqno" % oid)
 
         log.debug(sql)
         cur.execute(sql)
@@ -1211,9 +1213,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         spacer = ''
         if cur.rowcount > 0:
             status.append("Inherits")
-        for row in cur:
-            status.append("%s: %s,\n" % (spacer, row))
-            spacer = ' ' * len('Inherits')
+            spacer = ':'
+            trailer = ',\n'
+            for idx, row in enumerate(cur, 1):
+                if idx == 2:
+                    spacer = ' ' * (len('Inherits') + 1)
+                if idx == cur.rowcount:
+                    trailer = '\n'
+                status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* print child tables */
         if cur.connection.server_version > 90000:

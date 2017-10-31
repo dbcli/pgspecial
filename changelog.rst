@@ -1,7 +1,10 @@
 Upcoming
 ========
 
-TODO
+Bug fixes:
+----------
+
+* Fix listing of table inheritance in ``\d`` command. (Thanks: `Lele Gaifax`_).
 
 1.9.0
 =====
