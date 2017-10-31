@@ -1,6 +1,11 @@
 Upcoming
 ========
 
+Features:
+---------
+
+* Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
+
 Bug fixes:
 ----------
 
@@ -12,16 +17,16 @@ Bug fixes:
 Features:
 ---------
 
-* Change `\l` command behavior, and add `\list` alias. (Thanks: `François Pietka`_).
+* Change ``\l`` command behavior, and add ``\list`` alias. (Thanks: `François Pietka`_).
 
 Bug fixes:
 ----------
 
-* Be less strict when searching for the `\watch` command. (Thanks: `Irina Truong`_).
-* Fix glitch in ``EXCLUDE`` index description emitted by \d command. (Thanks: `Lele Gaifax`_).
-* Fix `\e` command handling. (Thanks: `François Pietka`_).
+* Be less strict when searching for the ``\watch`` command. (Thanks: `Irina Truong`_).
+* Fix glitch in ``EXCLUDE`` index description emitted by ``\d`` command. (Thanks: `Lele Gaifax`_).
+* Fix ``\e`` command handling. (Thanks: `François Pietka`_).
 * Fix UnicodeEncodeError when opening sql statement in editor (Thanks: `Klaus Wünschel`_).
-* Fix listing of child tables in `\d` command. (Thanks: `Lele Gaifax`_)
+* Fix listing of child tables in ``\d`` command. (Thanks: `Lele Gaifax`_).
 
 1.8.0
 =====
@@ -29,9 +34,9 @@ Bug fixes:
 Features:
 ---------
 
-* Implement \sf+ function_name. (Thanks: `Lele Gaifax`_).
+* Implement ``\sf+`` function_name. (Thanks: `Lele Gaifax`_).
 * Separate check constraints with newlines. (Thanks: `Joakim Koljonen`_).
-* Enabled \dm command, corrections to \d+, extended tests. (Thanks: `rsc`_).
+* Enabled ``\dm`` command, corrections to ``\d+``, extended tests. (Thanks: `rsc`_).
 * Opening an external editor will edit default text. (Thanks: `Thomas Roten`_).
 
 
@@ -46,8 +51,8 @@ Features:
 Bug fixes:
 ----------
 
-* Fix bug where \d called valid indices invalid & vice versa. (Thanks: `Joakim Koljonen`_).
-* Fix typo in pset description. (Thanks: `Lele Gaifax`_).
+* Fix bug where ``\d`` called valid indices invalid & vice versa. (Thanks: `Joakim Koljonen`_).
+* Fix typo in ``pset`` description. (Thanks: `Lele Gaifax`_).
 
 1.6.0
 =====
@@ -55,7 +60,7 @@ Bug fixes:
 Features:
 ---------
 
-* Add a function to extract the sql from `\watch` command. (Thanks: `stuartquin`_)
+* Add a function to extract the sql from ``\watch`` command. (Thanks: `stuartquin`_).
 
 1.5.0
 =====
@@ -63,7 +68,7 @@ Features:
 Features:
 ---------
 
-* Add support for `\db` command. (Thanks: `Irina Truong`_)
+* Add support for ``\db`` command. (Thanks: `Irina Truong`_).
 
 1.4.0
 =====
@@ -71,8 +76,8 @@ Features:
 Features:
 ---------
 
-* Add support for `\copy` command. (Thanks: `Catherine Devlin`_)
-* Add support for `\dx` command. (Thanks: `Darik Gamble`_)
+* Add support for ``\copy`` command. (Thanks: `Catherine Devlin`_).
+* Add support for ``\dx`` command. (Thanks: `Darik Gamble`_).
 
 1.3.0
 =====
@@ -83,7 +88,7 @@ Features:
 * Add initial support for Postgres 8.4 and above.(Thanks: `Timothy Cleaver`_, darikg_).
   This enables us to add support for Amazon Redshift. If things look broken please report.
 
-* Add \pset pager command. (Thanks: `pik`_).
+* Add ``\pset`` pager command. (Thanks: `pik`_).
 
 Bug fixes:
 ----------
@@ -97,7 +102,7 @@ Bug fixes:
 Features:
 ---------
 
-* Add support for ``\h``. (Thanks: `stuartquin`_)
+* Add support for ``\h``. (Thanks: `stuartquin`_).
   Users can now run ``\h [keyword]`` to checkout the help for a keyboard.
 
 1.1.0

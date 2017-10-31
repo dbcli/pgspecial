@@ -21,8 +21,9 @@ PAGER_MSG = {
     PAGER_ALWAYS: "Pager is always used."
     }
 
-SpecialCommand = namedtuple('SpecialCommand',
-        ['handler', 'syntax', 'description', 'arg_type', 'hidden', 'case_sensitive'])
+SpecialCommand = namedtuple('SpecialCommand', [
+    'handler', 'syntax', 'description', 'arg_type', 'hidden', 'case_sensitive'])
+
 
 @export
 class CommandNotFound(Exception):

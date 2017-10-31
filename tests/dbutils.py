@@ -70,6 +70,14 @@ def setup_db(conn):
         cur.execute('''create function schema1.s1_func1() returns int language
                        sql as $$select 2$$''')
 
+        # domains
+        cur.execute("create domain gender_t char(1)"
+                    " check (value in ('F', 'M'))")
+        cur.execute("create domain schema1.smallint_t smallint")
+        cur.execute("create domain schema1.bigint_t bigint")
+        cur.execute("comment on domain schema1.bigint_t is"
+                    " 'a really large integer'")
+
 
 def teardown_db(conn):
     with conn.cursor() as cur:

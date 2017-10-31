@@ -293,8 +293,49 @@ def test_slash_dT(executor):
     """List all datatypes."""
     results = executor('\dT')
     title = None
-    rows = [('public', 'foo', None)]
+    rows = [('public', 'foo', None),
+            ('public', 'gender_t', None)]
     headers = ['Schema', 'Name', 'Description']
+    status = 'SELECT 2'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dD(executor):
+    title = None
+    headers = ['Schema', 'Name', 'Type', 'Modifier', 'Check']
+    results = executor('\dD')
+    rows = [('public', 'gender_t', 'character(1)', '',
+             "CHECK (VALUE = ANY (ARRAY['F'::bpchar, 'M'::bpchar]))")]
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\dD schema1.*')
+    rows = [('schema1', 'bigint_t', 'bigint', '', ''),
+            ('schema1', 'smallint_t', 'smallint', '', '')]
+    status = 'SELECT 2'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dD_verbose(executor):
+    title = None
+    headers = ['Schema', 'Name', 'Type', 'Modifier', 'Check',
+               'Access privileges', 'Description']
+    results = executor('\dD+')
+    rows = [('public', 'gender_t', 'character(1)', '',
+             "CHECK (VALUE = ANY (ARRAY['F'::bpchar, 'M'::bpchar]))",
+             None, None)]
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\dD+ schema1.bigint_t')
+    rows = [('schema1', 'bigint_t', 'bigint', '', '', None,
+             'a really large integer')]
     status = 'SELECT 1'
     expected = [title, rows, headers, status]
     assert results == expected

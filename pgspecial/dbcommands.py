@@ -3,9 +3,9 @@ from collections import namedtuple
 
 from .main import special_command, RAW_QUERY
 
-TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
-'hasrules', 'hastriggers', 'hasoids', 'tablespace', 'reloptions', 'reloftype',
-'relpersistence'])
+TableInfo = namedtuple("TableInfo", [
+    'checks', 'relkind', 'hasindex', 'hasrules', 'hastriggers', 'hasoids',
+    'tablespace', 'reloptions', 'reloftype', 'relpersistence'])
 
 log = logging.getLogger(__name__)
 
@@ -406,7 +406,6 @@ def list_functions(cur, pattern, verbose):
 
 @special_command('\\dT', '\\dT[S+] [pattern]', 'List data types')
 def list_datatypes(cur, pattern, verbose):
-    assert True
     sql = '''SELECT n.nspname as "Schema",
                     pg_catalog.format_type(t.oid, NULL) AS "Name", '''
 
@@ -473,6 +472,68 @@ def list_datatypes(cur, pattern, verbose):
     if not (schema_pattern or type_pattern):
         sql += ''' AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' '''
+
+    sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+
+
+@special_command('\\dD', '\\dD[+] [pattern]', 'List or describe domains.')
+def list_domains(cur, pattern, verbose):
+    if verbose:
+        extra_cols = r''',
+               pg_catalog.array_to_string(t.typacl, E'\n') AS "Access privileges",
+               d.description as "Description"'''
+        extra_joins = '''
+           LEFT JOIN pg_catalog.pg_description d ON d.classoid = t.tableoid
+                                                AND d.objoid = t.oid AND d.objsubid = 0'''
+    else:
+        extra_cols = extra_joins = ''
+
+    sql = '''\
+        SELECT n.nspname AS "Schema",
+               t.typname AS "Name",
+               pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+               pg_catalog.ltrim((COALESCE((SELECT (' collate ' || c.collname)
+                                           FROM pg_catalog.pg_collation AS c,
+                                                pg_catalog.pg_type AS bt
+                                           WHERE c.oid = t.typcollation
+                                             AND bt.oid = t.typbasetype
+                                             AND t.typcollation <> bt.typcollation) , '')
+                                || CASE
+                                     WHEN t.typnotnull
+                                       THEN ' not null'
+                                     ELSE ''
+                                   END) || CASE
+                                             WHEN t.typdefault IS NOT NULL
+                                               THEN(' default ' || t.typdefault)
+                                             ELSE ''
+                                           END) AS "Modifier",
+               pg_catalog.array_to_string(ARRAY(
+                 SELECT pg_catalog.pg_get_constraintdef(r.oid, TRUE)
+                 FROM pg_catalog.pg_constraint AS r
+                 WHERE t.oid = r.contypid), ' ') AS "Check"%s
+        FROM pg_catalog.pg_type AS t
+           LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace%s
+        WHERE t.typtype = 'd' ''' % (extra_cols, extra_joins)
+
+    schema_pattern, name_pattern = sql_name_pattern(pattern)
+    params = []
+    if schema_pattern or name_pattern:
+        if schema_pattern:
+            sql += ' AND n.nspname ~ %s'
+            params.append(schema_pattern)
+        if name_pattern:
+            sql += ' AND t.typname ~ %s'
+            params.append(name_pattern)
+    else:
+        sql += '''
+          AND (n.nspname <> 'pg_catalog')
+          AND (n.nspname <> 'information_schema')
+          AND pg_catalog.pg_type_is_visible(t.oid)'''
 
     sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
     log.debug(sql)
