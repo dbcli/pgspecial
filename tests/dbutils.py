@@ -4,7 +4,7 @@ import psycopg2.extras
 
 
 # TODO: should this be somehow be divined from environment?
-POSTGRES_USER, POSTGRES_HOST = 'lele', 'localhost'
+POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
 
 
 def db_connection(dbname=None):
