@@ -76,13 +76,14 @@ def test_slash_d_table_2(executor):
 
 @dbtest
 def test_slash_d_table_verbose_1(executor):
-    results = executor('\d+ tbl1')
     title = None
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
+
+    results = executor('\d+ tbl1')
     rows = [['id1', 'integer', ' not null', 'plain', None, None],
             ['txt1', 'text', ' not null', 'extended', None, None],
             ]
-    headers = ['Column', 'Type', 'Modifiers',
-               'Storage', 'Stats target', 'Description']
     status = ('Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
               'Child tables: "Inh1",\n'
               '              inh2\n'
@@ -90,18 +91,43 @@ def test_slash_d_table_verbose_1(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+    results = executor('\d+ "Inh1"')
+    rows = [['id1', 'integer', ' not null', 'plain', None, None],
+            ['txt1', 'text', ' not null', 'extended', None, None],
+            ['value1', 'integer', '', 'plain', None, None],
+            ]
+    status = ('Inherits: tbl1\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
 
 @dbtest
 def test_slash_d_table_verbose_2(executor):
-    results = executor('\d+ tbl2')
     title = None
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
+
+    results = executor('\d+ tbl2')
     rows = [['id2', 'integer', " not null default nextval('tbl2_id2_seq'::regclass)",
              'plain', None, None],
             ['txt2', 'text', '', 'extended', None, None],
             ]
-    headers = ['Column', 'Type', 'Modifiers',
-               'Storage', 'Stats target', 'Description']
     status = ('Child tables: inh2\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\d+ inh2')
+    rows = [['id1', 'integer', ' not null', 'plain', None, None],
+            ['txt1', 'text', ' not null', 'extended', None, None],
+            ['id2', 'integer', " not null default nextval('tbl2_id2_seq'::regclass)",
+             'plain', None, None],
+            ['txt2', 'text', '', 'extended', None, None],
+            ['value2', 'integer', '', 'plain', None, None],
+            ]
+    status = ('Inherits: tbl1,\n'
+              '          tbl2\n'
               'Has OIDs: no\n')
     expected = [title, rows, headers, status]
     assert results == expected
