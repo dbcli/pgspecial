@@ -151,6 +151,20 @@ def copy(cur, pattern, verbose):
     else:
         return [(None, None, None, cur.statusmessage)]
 
+def subst_favorite_query_args(query, args):
+    """replace positional parameters ($1...$N) in query."""
+    for idx, val in enumerate(args):
+        subst_var = '$' + str(idx + 1)
+        if subst_var not in query:
+            return [None, 'query does not have substitution parameter ' + subst_var + ':\n  ' + query]
+
+        query = query.replace(subst_var, val)
+
+    match = re.search('\\$\d+', query)
+    if match:
+        return[None, 'missing substitution for ' + match.group(0) + ' in query:\n  ' + query]
+
+    return [query, None]
 
 @special_command('\\n', '\\n[+] [name] [param1 param2 ...]', 'List or execute named queries.')
 def execute_named_query(cur, pattern, **_):
@@ -168,6 +182,8 @@ def execute_named_query(cur, pattern, **_):
         return [(None, None, None, message)]
 
     try:
+        if "$1" in query:
+            query, params = subst_favorite_query_args(query, params)
         cur.execute(query, params)
     except (IndexError, TypeError):
         raise Exception("Bad arguments")
