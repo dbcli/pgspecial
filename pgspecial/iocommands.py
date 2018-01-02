@@ -185,6 +185,8 @@ def execute_named_query(cur, pattern, **_):
     try:
         if "$1" in query:
             query, params = subst_favorite_query_args(query, params)
+            if query is None:
+                raise Exception("Bad arguments\n" + params)
         cur.execute(query, params)
     except (IndexError, TypeError):
         raise Exception("Bad arguments")
