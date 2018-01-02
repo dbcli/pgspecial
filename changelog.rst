@@ -138,3 +138,4 @@ Features:
 .. _`Lele Gaifax`: https://github.com/lelit
 .. _`rsc`: https://github.com/rafalcieslinski
 .. _`Klaus Wünschel`: https://github.com/kwuenschel
+.. _`Frederic Aoustin`: https://github.com/fraoustin

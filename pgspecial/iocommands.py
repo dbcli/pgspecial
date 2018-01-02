@@ -167,6 +167,7 @@ def subst_favorite_query_args(query, args):
 
     return [query, None]
 
+
 @special_command('\\n', '\\n[+] [name] [param1 param2 ...]', 'List or execute named queries.')
 def execute_named_query(cur, pattern, **_):
     """Returns (title, rows, headers, status)"""
