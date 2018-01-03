@@ -5,7 +5,7 @@ Features:
 ---------
 
 * Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
-* Add support parameter $1...£n in query (Thanks: `Frederic Aoustin`_).
+* Add support parameter $1...$n in query (Thanks: `Frederic Aoustin`_).
 
 Bug fixes:
 ----------
