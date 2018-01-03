@@ -153,7 +153,7 @@ def copy(cur, pattern, verbose):
 
 
 def subst_favorite_query_args(query, args):
-    """replace positional parameters ($1...$N) in query"""
+    """replace positional parameters ($1...$N) in query."""
     for idx, val in enumerate(args):
         subst_var = '$' + str(idx + 1)
         if subst_var not in query:
