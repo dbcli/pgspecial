@@ -5,6 +5,7 @@ Features:
 ---------
 
 * Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
+* Add support parameter $1...$n in query (Thanks: `Frederic Aoustin`_).
 
 Bug fixes:
 ----------
@@ -137,3 +138,4 @@ Features:
 .. _`Lele Gaifax`: https://github.com/lelit
 .. _`rsc`: https://github.com/rafalcieslinski
 .. _`Klaus Wünschel`: https://github.com/kwuenschel
+.. _`Frederic Aoustin`: https://github.com/fraoustin
