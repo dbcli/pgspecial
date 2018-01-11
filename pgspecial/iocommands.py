@@ -23,7 +23,7 @@ def editor_command(command):
     """
     # It is possible to have `\e filename` or `SELECT * FROM \e`. So we check
     # for both conditions.
-    return command.strip().endswith('\\e') or command.strip().startswith('\\e')
+    return command.strip().endswith('\\e') or command.strip().startswith('\\e ')
 
 
 @export
@@ -73,7 +73,7 @@ def open_external_editor(filename=None, sql=None):
 
     # Populate the editor buffer with the partial sql (if available) and a
     # placeholder comment.
-    query = click.edit('{sql}\n\n{marker}'.format(sql=sql, marker=MARKER),
+    query = click.edit(u'{sql}\n\n{marker}'.format(sql=sql, marker=MARKER),
                        filename=filename, extension='.sql')
 
     if filename:
@@ -152,6 +152,22 @@ def copy(cur, pattern, verbose):
         return [(None, None, None, cur.statusmessage)]
 
 
+def subst_favorite_query_args(query, args):
+    """replace positional parameters ($1,$2,...$n) in query."""
+    for idx, val in enumerate(args):
+        subst_var = '$' + str(idx + 1)
+        if subst_var not in query:
+            return [None, 'query does not have substitution parameter ' + subst_var + ':\n  ' + query]
+
+        query = query.replace(subst_var, val)
+
+    match = re.search('\\$\d+', query)
+    if match:
+        return[None, 'missing substitution for ' + match.group(0) + ' in query:\n  ' + query]
+
+    return [query, None]
+
+
 @special_command('\\n', '\\n[+] [name] [param1 param2 ...]', 'List or execute named queries.')
 def execute_named_query(cur, pattern, **_):
     """Returns (title, rows, headers, status)"""
@@ -168,6 +184,10 @@ def execute_named_query(cur, pattern, **_):
         return [(None, None, None, message)]
 
     try:
+        if "$1" in query:
+            query, params = subst_favorite_query_args(query, params)
+            if query is None:
+                raise Exception("Bad arguments\n" + params)
         cur.execute(query, params)
     except (IndexError, TypeError):
         raise Exception("Bad arguments")

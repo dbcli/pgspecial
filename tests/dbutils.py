@@ -47,6 +47,9 @@ def setup_db(conn):
         cur.execute('create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))')
         cur.execute('create table tbl2(id2 serial, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
+        cur.execute('create table tbl3(c3 circle, exclude using gist (c3 with &&))')
+        cur.execute('create table "Inh1"(value1 integer) inherits (tbl1)')
+        cur.execute('create table inh2(value2 integer) inherits (tbl1, tbl2)')
 
         # views
         cur.execute('create view vw1 as select * from tbl1')
@@ -66,6 +69,14 @@ def setup_db(conn):
                        $$select 1$$''')
         cur.execute('''create function schema1.s1_func1() returns int language
                        sql as $$select 2$$''')
+
+        # domains
+        cur.execute("create domain gender_t char(1)"
+                    " check (value in ('F', 'M'))")
+        cur.execute("create domain schema1.smallint_t smallint")
+        cur.execute("create domain schema1.bigint_t bigint")
+        cur.execute("comment on domain schema1.bigint_t is"
+                    " 'a really large integer'")
 
 
 def teardown_db(conn):

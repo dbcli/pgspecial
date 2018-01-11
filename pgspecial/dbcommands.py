@@ -3,16 +3,44 @@ from collections import namedtuple
 
 from .main import special_command, RAW_QUERY
 
-TableInfo = namedtuple("TableInfo", ['checks', 'relkind', 'hasindex',
-'hasrules', 'hastriggers', 'hasoids', 'tablespace', 'reloptions', 'reloftype',
-'relpersistence'])
+TableInfo = namedtuple("TableInfo", [
+    'checks', 'relkind', 'hasindex', 'hasrules', 'hastriggers', 'hasoids',
+    'tablespace', 'reloptions', 'reloftype', 'relpersistence'])
 
 log = logging.getLogger(__name__)
 
 
-@special_command('\\l', '\\l', 'List databases.', arg_type=RAW_QUERY)
-def list_databases(cur, **_):
-    query = 'SELECT datname FROM pg_database;'
+@special_command('\\l', '\\l[+] [pattern]', 'List databases.', aliases=('\\list',))
+def list_databases(cur, pattern, verbose):
+    query = '''SELECT d.datname as "Name",
+        pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
+        pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
+        d.datcollate as "Collate",
+        d.datctype as "Ctype",
+        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"'''
+    if verbose:
+        query += ''',
+            CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
+                    THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
+                    ELSE 'No Access'
+            END as "Size",
+            t.spcname as "Tablespace",
+            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
+    query += '''
+    FROM pg_catalog.pg_database d
+    '''
+    if verbose:
+        query += '''
+        JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
+        '''
+    params = []
+    if pattern:
+        query += '''
+        WHERE d.datname ~ %s
+        '''
+        _, schema = sql_name_pattern(pattern)
+        params.append(schema)
+    query = cur.mogrify(query + ' ORDER BY 1', params)
     cur.execute(query)
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -378,7 +406,6 @@ def list_functions(cur, pattern, verbose):
 
 @special_command('\\dT', '\\dT[S+] [pattern]', 'List data types')
 def list_datatypes(cur, pattern, verbose):
-    assert True
     sql = '''SELECT n.nspname as "Schema",
                     pg_catalog.format_type(t.oid, NULL) AS "Name", '''
 
@@ -445,6 +472,68 @@ def list_datatypes(cur, pattern, verbose):
     if not (schema_pattern or type_pattern):
         sql += ''' AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' '''
+
+    sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+
+
+@special_command('\\dD', '\\dD[+] [pattern]', 'List or describe domains.')
+def list_domains(cur, pattern, verbose):
+    if verbose:
+        extra_cols = r''',
+               pg_catalog.array_to_string(t.typacl, E'\n') AS "Access privileges",
+               d.description as "Description"'''
+        extra_joins = '''
+           LEFT JOIN pg_catalog.pg_description d ON d.classoid = t.tableoid
+                                                AND d.objoid = t.oid AND d.objsubid = 0'''
+    else:
+        extra_cols = extra_joins = ''
+
+    sql = '''\
+        SELECT n.nspname AS "Schema",
+               t.typname AS "Name",
+               pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+               pg_catalog.ltrim((COALESCE((SELECT (' collate ' || c.collname)
+                                           FROM pg_catalog.pg_collation AS c,
+                                                pg_catalog.pg_type AS bt
+                                           WHERE c.oid = t.typcollation
+                                             AND bt.oid = t.typbasetype
+                                             AND t.typcollation <> bt.typcollation) , '')
+                                || CASE
+                                     WHEN t.typnotnull
+                                       THEN ' not null'
+                                     ELSE ''
+                                   END) || CASE
+                                             WHEN t.typdefault IS NOT NULL
+                                               THEN(' default ' || t.typdefault)
+                                             ELSE ''
+                                           END) AS "Modifier",
+               pg_catalog.array_to_string(ARRAY(
+                 SELECT pg_catalog.pg_get_constraintdef(r.oid, TRUE)
+                 FROM pg_catalog.pg_constraint AS r
+                 WHERE t.oid = r.contypid), ' ') AS "Check"%s
+        FROM pg_catalog.pg_type AS t
+           LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace%s
+        WHERE t.typtype = 'd' ''' % (extra_cols, extra_joins)
+
+    schema_pattern, name_pattern = sql_name_pattern(pattern)
+    params = []
+    if schema_pattern or name_pattern:
+        if schema_pattern:
+            sql += ' AND n.nspname ~ %s'
+            params.append(schema_pattern)
+        if name_pattern:
+            sql += ' AND t.typname ~ %s'
+            params.append(name_pattern)
+    else:
+        sql += '''
+          AND (n.nspname <> 'pg_catalog')
+          AND (n.nspname <> 'information_schema')
+          AND pg_catalog.pg_type_is_visible(t.oid)'''
 
     sql = cur.mogrify(sql + ' ORDER BY 1, 2', params)
     log.debug(sql)
@@ -924,6 +1013,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
                 #/* If exclusion constraint, print the constraintdef */
                 if row[7] == "x":
+                    status.append(' ')
                     status.append(row[6])
                 else:
                     #/* Label as primary key or unique (but not both) */
@@ -1149,7 +1239,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     #*/
     if (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
             tableinfo.relkind == 'f'):
-        # /* print foreign server name */
+        #/* print foreign server name */
         if tableinfo.relkind == 'f':
             #/* Footer information about foreign table */
             sql = ("SELECT s.srvname,\n"
@@ -1164,17 +1254,19 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             cur.execute(sql)
             row = cur.fetchone()
 
-            # /* Print server name */
+            #/* Print server name */
             status.append("Server: %s\n" % row[0])
 
-            # /* Print per-table FDW options, if any */
+            #/* Print per-table FDW options, if any */
             if (row[1]):
                 status.append("FDW Options: (%s)\n" % row[1])
 
         #/* print inherited tables */
-        sql = ("SELECT c.oid::pg_catalog.regclass FROM pg_catalog.pg_class c, "
-                "pg_catalog.pg_inherits i WHERE c.oid=i.inhparent AND "
-                "i.inhrelid = '%s' ORDER BY inhseqno;" % oid)
+        sql = ("SELECT c.oid::pg_catalog.regclass\n"
+               "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
+               "WHERE c.oid = i.inhparent\n"
+               "  AND i.inhrelid = '%s'\n"
+               "ORDER BY inhseqno" % oid)
 
         log.debug(sql)
         cur.execute(sql)
@@ -1182,9 +1274,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         spacer = ''
         if cur.rowcount > 0:
             status.append("Inherits")
-        for row in cur:
-            status.append("%s: %s,\n" % (spacer, row))
-            spacer = ' ' * len('Inherits')
+            spacer = ':'
+            trailer = ',\n'
+            for idx, row in enumerate(cur, 1):
+                if idx == 2:
+                    spacer = ' ' * (len('Inherits') + 1)
+                if idx == cur.rowcount:
+                    trailer = '\n'
+                status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* print child tables */
         if cur.connection.server_version > 90000:
@@ -1211,16 +1308,20 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             #/* print the number of child tables, if any */
             if (cur.rowcount > 0):
                 status.append("Number of child tables: %d (Use \d+ to list"
-                    "them.)\n" % cur.rowcount)
+                              " them.)\n" % cur.rowcount)
         else:
-            spacer = ''
-            if (cur.rowcount >0):
+            if (cur.rowcount > 0):
                 status.append('Child tables')
 
-            #/* display the list of child tables */
-            for row in cur:
-                status.append("%s: %s,\n" % (spacer, row))
-                spacer = ' ' * len('Child tables')
+                spacer = ':'
+                trailer = ',\n'
+                #/* display the list of child tables */
+                for idx, row in enumerate(cur, 1):
+                    if idx == 2:
+                        spacer = ' ' * (len('Child tables') + 1)
+                    if idx == cur.rowcount:
+                        trailer = '\n'
+                    status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* Table type */
         if (tableinfo.reloftype):

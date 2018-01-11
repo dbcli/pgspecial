@@ -11,13 +11,16 @@ objects_listing_headers = ['Schema', 'Name', 'Type', 'Owner', 'Size', 'Descripti
 def test_slash_d(executor):
     results = executor('\d')
     title = None
-    rows = [('public', 'mvw1', 'materialized view', POSTGRES_USER),
+    rows = [('public', 'Inh1', 'table', POSTGRES_USER),
+            ('public', 'inh2', 'table', POSTGRES_USER),
+            ('public', 'mvw1', 'materialized view', POSTGRES_USER),
             ('public', 'tbl1', 'table', POSTGRES_USER),
             ('public', 'tbl2', 'table', POSTGRES_USER),
             ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER),
+            ('public', 'tbl3', 'table', POSTGRES_USER),
             ('public', 'vw1', 'view', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 5'
+    status = 'SELECT 8'
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -27,40 +30,116 @@ def test_slash_d(executor):
 def test_slash_d_verbose(executor):
     results = executor('\d+')
     title = None
-    rows = [('public', 'mvw1', 'materialized view', POSTGRES_USER, '8192 bytes', None),
+    rows = [('public', 'Inh1', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'inh2', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'mvw1', 'materialized view',
+             POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
             ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
-            ('public', 'tbl2_id2_seq', 'sequence', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2_id2_seq', 'sequence',
+             POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl3', 'table', POSTGRES_USER, '0 bytes', None),
             ('public', 'vw1', 'view', POSTGRES_USER, '0 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 5'
+    status = 'SELECT 8'
     expected = [title, rows, headers, status]
 
     assert results == expected
 
 
 @dbtest
-def test_slash_d_table(executor):
+def test_slash_d_table_1(executor):
     results = executor('\d tbl1')
     title = None
     rows = [['id1', 'integer', ' not null'],
             ['txt1', 'text', ' not null'],
             ]
     headers = ['Column', 'Type', 'Modifiers']
-    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+    status = ('Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+              'Number of child tables: 2 (Use \\d+ to list them.)\n')
     expected = [title, rows, headers, status]
     assert results == expected
 
 
 @dbtest
-def test_slash_d_table_verbose(executor):
-    results = executor('\d+ tbl1')
+def test_slash_d_table_2(executor):
+    results = executor('\d tbl2')
     title = None
+    rows = [['id2', 'integer', " not null default nextval('tbl2_id2_seq'::regclass)"],
+            ['txt2', 'text', ''],
+            ]
+    headers = ['Column', 'Type', 'Modifiers']
+    status = ('Number of child tables: 1 (Use \\d+ to list them.)\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_d_table_verbose_1(executor):
+    title = None
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
+
+    results = executor('\d+ tbl1')
     rows = [['id1', 'integer', ' not null', 'plain', None, None],
             ['txt1', 'text', ' not null', 'extended', None, None],
             ]
-    headers = ['Column', 'Type', 'Modifiers', 'Storage', 'Stats target', 'Description']
-    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\nHas OIDs: no\n'
+    status = ('Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+              'Child tables: "Inh1",\n'
+              '              inh2\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\d+ "Inh1"')
+    rows = [['id1', 'integer', ' not null', 'plain', None, None],
+            ['txt1', 'text', ' not null', 'extended', None, None],
+            ['value1', 'integer', '', 'plain', None, None],
+            ]
+    status = ('Inherits: tbl1\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_d_table_verbose_2(executor):
+    title = None
+    headers = ['Column', 'Type', 'Modifiers',
+               'Storage', 'Stats target', 'Description']
+
+    results = executor('\d+ tbl2')
+    rows = [['id2', 'integer', " not null default nextval('tbl2_id2_seq'::regclass)",
+             'plain', None, None],
+            ['txt2', 'text', '', 'extended', None, None],
+            ]
+    status = ('Child tables: inh2\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\d+ inh2')
+    rows = [['id1', 'integer', ' not null', 'plain', None, None],
+            ['txt1', 'text', ' not null', 'extended', None, None],
+            ['id2', 'integer', " not null default nextval('tbl2_id2_seq'::regclass)",
+             'plain', None, None],
+            ['txt2', 'text', '', 'extended', None, None],
+            ['value2', 'integer', '', 'plain', None, None],
+            ]
+    status = ('Inherits: tbl1,\n'
+              '          tbl2\n'
+              'Has OIDs: no\n')
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_d_table_with_exclusion(executor):
+    results = executor('\d tbl3')
+    title = None
+    rows = [['c3', 'circle', '']]
+    headers = ['Column', 'Type', 'Modifiers']
+    status = 'Indexes:\n    "tbl3_c3_excl" EXCLUDE USING gist (c3 WITH &&)\n'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -84,10 +163,13 @@ def test_slash_dt(executor):
     """List all tables in public schema."""
     results = executor('\dt')
     title = None
-    rows = [('public', 'tbl1', 'table', POSTGRES_USER),
-            ('public', 'tbl2', 'table', POSTGRES_USER)]
+    rows = [('public', 'Inh1', 'table', POSTGRES_USER),
+            ('public', 'inh2', 'table', POSTGRES_USER),
+            ('public', 'tbl1', 'table', POSTGRES_USER),
+            ('public', 'tbl2', 'table', POSTGRES_USER),
+            ('public', 'tbl3', 'table', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 2'
+    status = 'SELECT 5'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -97,10 +179,13 @@ def test_slash_dt_verbose(executor):
     """List all tables in public schema in verbose mode."""
     results = executor('\dt+')
     title = None
-    rows = [('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
-            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None)]
+    rows = [('public', 'Inh1', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'inh2', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl1', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl2', 'table', POSTGRES_USER, '8192 bytes', None),
+            ('public', 'tbl3', 'table', POSTGRES_USER, '0 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 2'
+    status = 'SELECT 5'
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -182,9 +267,10 @@ def test_slash_di(executor):
     """List all indexes in public schema."""
     results = executor('\di')
     title = None
-    row = [('public', 'id_text', 'index', POSTGRES_USER)]
+    row = [('public', 'id_text', 'index', POSTGRES_USER),
+           ('public', 'tbl3_c3_excl', 'index', POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
-    status = 'SELECT 1'
+    status = 'SELECT 2'
     expected = [title, row, headers, status]
     assert results == expected
 
@@ -194,9 +280,10 @@ def test_slash_di_verbose(executor):
     """List all indexes in public schema in verbose mode."""
     results = executor('\di+')
     title = None
-    row = [('public', 'id_text', 'index', POSTGRES_USER, '8192 bytes', None)]
+    row = [('public', 'id_text', 'index', POSTGRES_USER, '8192 bytes', None),
+           ('public', 'tbl3_c3_excl', 'index', POSTGRES_USER, '8192 bytes', None)]
     headers = objects_listing_headers
-    status = 'SELECT 1'
+    status = 'SELECT 2'
     expected = [title, row, headers, status]
     assert results == expected
 
@@ -206,8 +293,49 @@ def test_slash_dT(executor):
     """List all datatypes."""
     results = executor('\dT')
     title = None
-    rows = [('public', 'foo', None)]
+    rows = [('public', 'foo', None),
+            ('public', 'gender_t', None)]
     headers = ['Schema', 'Name', 'Description']
+    status = 'SELECT 2'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dD(executor):
+    title = None
+    headers = ['Schema', 'Name', 'Type', 'Modifier', 'Check']
+    results = executor('\dD')
+    rows = [('public', 'gender_t', 'character(1)', '',
+             "CHECK (VALUE = ANY (ARRAY['F'::bpchar, 'M'::bpchar]))")]
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\dD schema1.*')
+    rows = [('schema1', 'bigint_t', 'bigint', '', ''),
+            ('schema1', 'smallint_t', 'smallint', '', '')]
+    status = 'SELECT 2'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dD_verbose(executor):
+    title = None
+    headers = ['Schema', 'Name', 'Type', 'Modifier', 'Check',
+               'Access privileges', 'Description']
+    results = executor('\dD+')
+    rows = [('public', 'gender_t', 'character(1)', '',
+             "CHECK (VALUE = ANY (ARRAY['F'::bpchar, 'M'::bpchar]))",
+             None, None)]
+    status = 'SELECT 1'
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+    results = executor('\dD+ schema1.bigint_t')
+    rows = [('schema1', 'bigint_t', 'bigint', '', '', None,
+             'a really large integer')]
     status = 'SELECT 1'
     expected = [title, rows, headers, status]
     assert results == expected

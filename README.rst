@@ -22,14 +22,14 @@ Usage
 Once this library is included into your project, you will most likely use the
 following imports:
 
-::
+.. code-block:: python
 
     from pgspecial.main import PGSpecial
     from pgspecial.namedqueries import NamedQueries
 
 Then you will create and use an instance of PGSpecial:
 
-::
+.. code-block:: python
 
         pgspecial = PGSpecial()
         for result in pgspecial.execute(cur, sql):
@@ -39,7 +39,7 @@ If you want to import named queries from an existing config file, it is
 convenient to initialize and keep around the class variable in
 ``NamedQueries``:
 
-::
+.. code-block:: python
 
     from configobj import ConfigObj
 
@@ -55,13 +55,18 @@ get this running in a development setup.
 
 https://github.com/dbcli/pgspecial/blob/master/DEVELOP.rst
 
-Please feel free to reach out to me if you need help.
-My email: amjith.r@gmail.com, Twitter: `@amjithr <http://twitter.com/amjithr>`_
+Please feel free to reach out if you need help.
+
+mailing list: https://groups.google.com/forum/#!forum/pgcli
 
 Projects using it:
 ------------------
 
-This module is being used by pgcli_: A REPL for Postgres.
+This library is used by the following projects:
+
+pgcli_: A REPL for Postgres.
+
+`ipython-sql`_: %%sql magic for IPython
 
 If you find this module useful and include it in your project, I'll be happy
 to know about it and list it here.
@@ -74,3 +79,4 @@ to know about it and list it here.
     :alt: Latest Version
 
 .. _pgcli: https://github.com/dbcli/pgcli
+.. _`ipython-sql`: https://github.com/catherinedevlin/ipython-sql

@@ -13,7 +13,7 @@ description = 'Meta-commands handler for Postgres Database.'
 
 setup(
         name='pgspecial',
-        author='PGCLI Core Team',
+        author='Pgcli Core Team',
         author_email='pgcli-dev@googlegroups.com',
         version=version,
         license='LICENSE.txt',
