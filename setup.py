@@ -40,5 +40,5 @@ setup(
         'Topic :: Database :: Front-Ends',
         'Topic :: Software Development',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        ],
-    )
+    ],
+)
