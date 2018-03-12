@@ -238,9 +238,52 @@ def chunks(l, n):
 def doc_only():
     raise RuntimeError
 
+@special_command('\\ef', '\\ef [funcname [line]]', 'Edit the contents of the query buffer.', arg_type=PARSED_QUERY)
+def edit_function(cur, pattern, verbose):
+    return _edit_inplace('function', cur, pattern, verbose)
 
-@special_command('\\ef', '\\ef [funcname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
-@special_command('\\ev', '\\ev [viewname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
+@special_command('\\ev', '\\ev [viewname [line]]', 'Edit the contents of the query buffer.', arg_type=PARSED_QUERY)
+def edit_view(cur, pattern, verbose):
+    return _edit_inplace('view', cur, pattern, verbose)
+
+def _edit_inplace(type_, cur, pattern, verbose):
+    if not pattern:
+        print(description)
+
+    if type_ == 'view':
+        sql = cur.mogrify("SELECT %s::pg_catalog.regclass::pg_catalog.oid", [pattern])
+    elif '(' in pattern:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern])
+    else:
+        sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
+
+    log.debug(sql)
+    cur.execute(sql)
+    (oid,) = cur.fetchone()
+
+    if type_ == 'view':
+        sql = cur.mogrify("""
+            SELECT pg_catalog.pg_get_viewdef(c.oid, true)
+            FROM pg_catalog.pg_class c 
+            WHERE c.oid = %s""", [oid])
+    else:
+        sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s)", [oid])
+
+    log.debug(sql)
+    cur.execute(sql)
+
+    (source,) = cur.fetchone()
+    if type_ == 'view':
+        source = """CREATE OR REPLACE %s %s AS \n%s""" % (type_.upper(), pattern, source)
+
+    from . import iocommands
+    sql, message = iocommands.open_external_editor(None, source)
+    if message:
+        # Something went wrong. Raise an exception and bail.
+        raise RuntimeError(message)
+
+    return [(sql, None, None, None)]
+
 @special_command('\\do', '\\do[S] [pattern]', 'List operators.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\dp', '\\dp [pattern]', 'List table, view, and sequence access privileges.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\z', '\\z [pattern]', 'Same as \\dp.', arg_type=NO_QUERY, hidden=True)
