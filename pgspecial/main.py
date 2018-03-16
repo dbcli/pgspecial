@@ -63,7 +63,7 @@ class PGSpecial(object):
                       'Toggle timing of commands.', arg_type=NO_QUERY)
 
         self.register(self.set_pager, '\\pager', '\\pager [command]',
-                      'Set PAGER. Pring the query results via PAGER.',
+                      'Set PAGER. Print the query results via PAGER.',
                       arg_type=PARSED_QUERY)
 
     def register(self, *args, **kwargs):
