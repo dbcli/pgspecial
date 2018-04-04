@@ -1067,7 +1067,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Check constraints:\n")
             for row in cur:
                 #/* untranslated contraint name and def */
-                status.append("    \"%s\" %s" % row)
+                status.append("    \"%s\" %s" % tuple(row))
                 status.append('\n')
 
         #/* print foreign-key constraints (there are none if no triggers) */
@@ -1083,7 +1083,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Foreign-key constraints:\n")
             for row in cur:
                 #/* untranslated constraint name and def */
-                status.append("    \"%s\" %s\n" % row)
+                status.append("    \"%s\" %s\n" % tuple(row))
 
         #/* print incoming foreign-key references (none if no triggers) */
         if (tableinfo.hastriggers):
@@ -1097,7 +1097,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if (cur.rowcount > 0):
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append("    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % row)
+                status.append("    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % tuple(row))
 
         # /* print rules */
         if (tableinfo.hasrules and tableinfo.relkind != 'm'):
