@@ -38,8 +38,15 @@ def editor_command(command):
     # It is possible to have `\e filename` or `SELECT * FROM \e`. So we check
     # for both conditions.
 
-    found = _EDITOR_COMMAND_PATTERN.search(command.strip())
-    return found.group(1) or found.group(2)
+    # found = _EDITOR_COMMAND_PATTERN.search(command.strip())
+    stripped = command.strip()
+    # import pdb; pdb.set_trace()
+    for c in (r'\e ', r'\ev '):
+        if stripped.startswith(c):
+            return c.strip()
+    for c in (r'\e', ):
+        if stripped.endswith(c):
+            return c
 
 
 
