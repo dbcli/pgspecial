@@ -15,17 +15,6 @@ from .main import special_command
 _logger = logging.getLogger(__name__)
 
 
-_EDITOR_COMMAND_PATTERN = re.compile(r""" 
-    ^          # command begins with
-    (?:        # non-capturing group
-        (\\e |     # \e for edit, or
-         \\ev)     # \ev for edit view
-     \s+           # separated by whitespace
-    )?    
-    .*?        # query or filename, optionally
-    (\\e)?     # ends with \e 
-    $""", re.VERBOSE)
-
 @export
 def editor_command(command):
     """
@@ -38,21 +27,19 @@ def editor_command(command):
     # It is possible to have `\e filename` or `SELECT * FROM \e`. So we check
     # for both conditions.
 
-    # found = _EDITOR_COMMAND_PATTERN.search(command.strip())
     stripped = command.strip()
-    # import pdb; pdb.set_trace()
-    for c in (r'\e ', r'\ev '):
-        if stripped.startswith(c):
-            return c.strip()
-    for c in (r'\e', ):
-        if stripped.endswith(c):
-            return c
+    for sought in (r'\e ', r'\ev '):
+        if stripped.startswith(sought):
+            return sought.strip()
+    for sought in (r'\e', ):
+        if stripped.endswith(sought):
+            return sought
 
 
 
 @export
 def get_filename(sql):
-    if sql.strip().startswith('\\e'):  # this would need to catch \\e, also 
+    if sql.strip().startswith('\\e'):
         command, _, filename = sql.partition(' ')
         return filename.strip() or None
 
@@ -74,7 +61,7 @@ def get_editor_query(sql):
     # The reason we can't simply do .strip('\e') is that it strips characters,
     # not a substring. So it'll strip "e" in the end of the sql also!
     # Ex: "select * from style\e" -> "select * from styl".
-    pattern = re.compile('(^\\\e|\\\e$)')  # this would have to catch the other editor commands, too
+    pattern = re.compile('(^\\\e|\\\e$)')
     while pattern.search(sql):
         sql = pattern.sub('', sql)
 
@@ -98,7 +85,7 @@ def open_external_editor(filename=None, sql=None):
     # Populate the editor buffer with the partial sql (if available) and a
     # placeholder comment.
     query = click.edit(u'{sql}\n\n{marker}'.format(sql=sql, marker=MARKER),
-                       filename=filename, extension='.sql')  # filename is optional in click
+                       filename=filename, extension='.sql')
 
     if filename:
         try:
