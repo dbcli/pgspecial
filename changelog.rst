@@ -11,6 +11,7 @@ Features:
 
 * Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
 * Add support parameter $1...$n in query (Thanks: `Frederic Aoustin`_).
+* Add support for ``\ev``, ``\ef`` commands. (Thanks: `Catherine Devlin`_).
 
 Bug fixes:
 ----------
@@ -144,3 +145,4 @@ Features:
 .. _`rsc`: https://github.com/rafalcieslinski
 .. _`Klaus Wünschel`: https://github.com/kwuenschel
 .. _`Frederic Aoustin`: https://github.com/fraoustin
+.. _`Catherine Devlin`: https://github.com/catherinedevlin
