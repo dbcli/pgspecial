@@ -119,3 +119,18 @@ After that, tests can be run with:
 
     $ cd tests
     $ py.test
+
+PEP8 checks (lint)
+-----------------_
+
+When you submit a PR, the changeset is checked for pep8 compliance using
+`pep8radius <https://github.com/hayd/pep8radius>`_. If you see a build failing because
+of these checks, install pep8radius and apply style fixes:
+
+::
+
+    $ pip install pep8radius
+    $ pep8radius master --docformatter --diff # view a diff of proposed fixes
+    $ pep8radius master --docformatter --in-place # apply the fixes
+
+Then commit and push the fixes.
