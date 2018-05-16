@@ -236,12 +236,13 @@ def chunks(l, n):
     return [l[i:i + n] for i in range(0, len(l), n)]
 
 @special_command('\\e', '\\e [file]', 'Edit the query with external editor.', arg_type=NO_QUERY)
+@special_command('\\ef', '\\ef [funcname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
+@special_command('\\ev', '\\ev [viewname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
 def doc_only():
+    "Documention placeholder.  Implemented in pgcli.main.handle_editor_command"
     raise RuntimeError
 
 
-@special_command('\\ef', '\\ef [funcname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
-@special_command('\\ev', '\\ev [viewname [line]]', 'Edit the contents of the query buffer.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\do', '\\do[S] [pattern]', 'List operators.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\dp', '\\dp [pattern]', 'List table, view, and sequence access privileges.', arg_type=NO_QUERY, hidden=True)
 @special_command('\\z', '\\z [pattern]', 'Same as \\dp.', arg_type=NO_QUERY, hidden=True)

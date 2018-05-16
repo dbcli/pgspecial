@@ -28,10 +28,10 @@ def editor_command(command):
     # for both conditions.
 
     stripped = command.strip()
-    for sought in (r'\e ', r'\ev '):
+    for sought in ('\\e ', '\\ev ', '\\ef'):
         if stripped.startswith(sought):
             return sought.strip()
-    for sought in (r'\e', ):
+    for sought in ('\\e', ):
         if stripped.endswith(sought):
             return sought
 
