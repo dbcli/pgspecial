@@ -192,7 +192,7 @@ def execute_named_query(cur, pattern, **_):
     except psycopg2.ProgrammingError as e:
         if e.pgcode == psycopg2.errorcodes.SYNTAX_ERROR and "%s" in query:
             raise Exception('Bad arguments: '
-                'please use "$1", "$2", etc. for named queries instead of "%s"')
+                            'please use "$1", "$2", etc. for named queries instead of "%s"')
         else:
             raise
     except (IndexError, TypeError):
