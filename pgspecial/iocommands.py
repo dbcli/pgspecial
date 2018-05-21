@@ -18,12 +18,23 @@ _logger = logging.getLogger(__name__)
 @export
 def editor_command(command):
     """
-    Is this an external editor command?
+    Is this an external editor command?  (\e or \ev)
+
     :param command: string
+
+    Returns the specific external editor command found.
     """
     # It is possible to have `\e filename` or `SELECT * FROM \e`. So we check
     # for both conditions.
-    return command.strip().endswith('\\e') or command.strip().startswith('\\e ')
+
+    stripped = command.strip()
+    for sought in ('\\e ', '\\ev ', '\\ef'):
+        if stripped.startswith(sought):
+            return sought.strip()
+    for sought in ('\\e', ):
+        if stripped.endswith(sought):
+            return sought
+
 
 
 @export
