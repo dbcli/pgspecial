@@ -17,6 +17,7 @@ Bug fixes:
 ----------
 
 * Fix listing of table inheritance in ``\d`` command. (Thanks: `Lele Gaifax`_).
+* Avoid the need to escape "%" in named queries (dbcli/pgcli#865). (Thanks: `Jason Ribeiro`_).
 
 1.9.0
 =====
@@ -146,3 +147,4 @@ Features:
 .. _`Klaus Wünschel`: https://github.com/kwuenschel
 .. _`Frederic Aoustin`: https://github.com/fraoustin
 .. _`Catherine Devlin`: https://github.com/catherinedevlin
+.. _`Jason Ribeiro`: https://github.com/jrib
