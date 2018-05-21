@@ -9,6 +9,18 @@ Bug fixes:
 
 * Remove pycache files from release (Thanks: `Dick Marinus`_).
 
+1.11.0
+======
+
+Features:
+---------
+
+* Add support for ``\ev``, ``\ef`` commands. (Thanks: `Catherine Devlin`_).
+
+Bug fixes:
+----------
+
+* Avoid the need to escape "%" in named queries (dbcli/pgcli#865). (Thanks: `Jason Ribeiro`_).
 
 1.10.0
 ======
@@ -18,13 +30,11 @@ Features:
 
 * Add support for ``\dD`` command. (Thanks: `Lele Gaifax`_).
 * Add support parameter $1...$n in query (Thanks: `Frederic Aoustin`_).
-* Add support for ``\ev``, ``\ef`` commands. (Thanks: `Catherine Devlin`_).
 
 Bug fixes:
 ----------
 
 * Fix listing of table inheritance in ``\d`` command. (Thanks: `Lele Gaifax`_).
-* Avoid the need to escape "%" in named queries (dbcli/pgcli#865). (Thanks: `Jason Ribeiro`_).
 
 1.9.0
 =====
