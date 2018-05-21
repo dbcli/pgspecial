@@ -1,7 +1,14 @@
 Upcoming
 ========
 
-TODO
+TBD
+===
+
+Bug fixes:
+----------
+
+* Remove pycache files from release (Thanks: `Dick Marinus`_).
+
 
 1.10.0
 ======
@@ -148,3 +155,4 @@ Features:
 .. _`Frederic Aoustin`: https://github.com/fraoustin
 .. _`Catherine Devlin`: https://github.com/catherinedevlin
 .. _`Jason Ribeiro`: https://github.com/jrib
+.. _`Dick Marinus`: https://github.com/meeuw

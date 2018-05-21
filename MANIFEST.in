@@ -1,2 +1,4 @@
-include License.txt
-recursive-include tests *
+include changelog.rst DEVELOP.rst License.txt requirements-dev.txt
+include scripts/docparser.py scripts/README.rst tox.ini
+recursive-include tests *.py
+recursive-include tests *.ini
