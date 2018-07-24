@@ -8,6 +8,7 @@ Bug fixes:
 ----------
 
 * Remove pycache files from release (Thanks: `Dick Marinus`_).
+* Fix ``\df`` under PG11. (Thanks: `Lele Gaifax`_).
 
 1.11.0
 ======
