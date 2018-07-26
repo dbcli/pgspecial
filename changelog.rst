@@ -1,8 +1,10 @@
 Upcoming
 ========
 
-TBD
-===
+TODO
+
+1.11.1
+======
 
 Bug fixes:
 ----------
@@ -154,7 +156,6 @@ Features:
 .. _`Timothy Cleaver`: Timothy Cleaver
 .. _`François Pietka`: https://github.com/fpietka
 .. _`pik`: https://github.com/pik
-.. _`Catherine Devlin`: https://github.com/catherinedevlin
 .. _`Darik Gamble`: https://github.com/darikg
 .. _`Irina Truong`: https://github.com/j-bennet
 .. _`Joakim Koljonen`: https://github.com/koljonen
