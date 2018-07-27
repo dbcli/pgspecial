@@ -196,7 +196,8 @@ def list_extensions(cur, pattern, verbose):
       '''
 
     if name_pattern:
-        sql = cur.mogrify(sql + ' WHERE e.extname ~ %s ORDER BY 1', [name_pattern])
+        sql = cur.mogrify(
+            sql + ' WHERE e.extname ~ %s ORDER BY 1', [name_pattern])
     else:
         sql += ' ORDER BY 1'
 
@@ -1133,7 +1134,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if (cur.rowcount > 0):
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append("    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % tuple(row))
+                status.append(
+                    "    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % tuple(row))
 
         # /* print rules */
         if (tableinfo.hasrules and tableinfo.relkind != 'm'):
@@ -1226,7 +1228,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         else:
                             status.append("            %s\n" % row[0])
                 else:
-                    status.append("Number of partitions %i: (Use \\d+ to list them.)\n" % cur.rowcount)
+                    status.append(
+                        "Number of partitions %i: (Use \\d+ to list them.)\n" % cur.rowcount)
 
     if (view_def):
         #/* Footer information about a view */
