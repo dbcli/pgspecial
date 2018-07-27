@@ -6,6 +6,8 @@ python:
   - "3.6"
 
 install:
+  - which pip
+  - pip install --upgrade pip
   - psql --version
   - pip install .
   - pip install -r requirements-dev.txt
