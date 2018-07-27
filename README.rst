@@ -68,6 +68,8 @@ pgcli_: A REPL for Postgres.
 
 `ipython-sql`_: %%sql magic for IPython
 
+OmniDB_: An web tool for database management
+
 If you find this module useful and include it in your project, I'll be happy
 to know about it and list it here.
 
@@ -80,3 +82,4 @@ to know about it and list it here.
 
 .. _pgcli: https://github.com/dbcli/pgcli
 .. _`ipython-sql`: https://github.com/catherinedevlin/ipython-sql
+.. _OmniDB: https://github.com/OmniDB/OmniDB

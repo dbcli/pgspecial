@@ -5,7 +5,7 @@ from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple("TableInfo", [
     'checks', 'relkind', 'hasindex', 'hasrules', 'hastriggers', 'hasoids',
-    'tablespace', 'reloptions', 'reloftype', 'relpersistence'])
+    'tablespace', 'reloptions', 'reloftype', 'relpersistence', 'relispartition'])
 
 log = logging.getLogger(__name__)
 
@@ -196,9 +196,9 @@ def list_extensions(cur, pattern, verbose):
       '''
 
     if name_pattern:
-        sql = cur.mogrify(sql + ' WHERE e.extname ~ %s', [name_pattern])
-
-    sql += ' ORDER BY 1'
+        sql = cur.mogrify(sql + ' WHERE e.extname ~ %s ORDER BY 1', [name_pattern])
+    else:
+        sql += ' ORDER BY 1'
 
     log.debug(sql)
     cur.execute(sql)
@@ -259,6 +259,7 @@ def list_objects(cur, pattern, verbose, relkinds):
                     c.relname as "Name",
                     CASE c.relkind
                       WHEN 'r' THEN 'table' WHEN 'v' THEN 'view'
+                      WHEN 'p' THEN 'partitioned table'
                       WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index'
                       WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special'
                       WHEN 'f' THEN 'foreign table' END
@@ -298,7 +299,7 @@ def list_objects(cur, pattern, verbose, relkinds):
 
 @special_command('\\dt', '\\dt[+] [pattern]', 'List tables.')
 def list_tables(cur, pattern, verbose):
-    return list_objects(cur, pattern, verbose, ['r', ''])
+    return list_objects(cur, pattern, verbose, ['r', 'p', ''])
 
 
 @special_command('\\dv', '\\dv[+] [pattern]', 'List views.')
@@ -571,7 +572,7 @@ def describe_table_details(cur, pattern, verbose):
 
     # This is a simple \d[+] command. No table name to follow.
     if not pattern:
-        return list_objects(cur, pattern, verbose, ['r', 'v', 'm', 'S', 'f', ''])
+        return list_objects(cur, pattern, verbose, ['r', 'p', 'v', 'm', 'S', 'f', ''])
 
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
@@ -617,7 +618,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     else:
         suffix = "''"
 
-    if cur.connection.server_version > 90000:
+    if cur.connection.server_version >= 100000:
         sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
                     c.relhasrules, c.relhastriggers, c.relhasoids,
                     %s,
@@ -625,7 +626,21 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     CASE WHEN c.reloftype = 0 THEN ''
                         ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
                     END,
-                    c.relpersistence
+                    c.relpersistence,
+                    c.relispartition
+                 FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+                 WHERE c.oid = '%s'""" % (suffix, oid)
+    elif cur.connection.server_version > 90000:
+        sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
+                    c.relhasrules, c.relhastriggers, c.relhasoids,
+                    %s,
+                    c.reltablespace,
+                    CASE WHEN c.reloftype = 0 THEN ''
+                        ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+                    END,
+                    c.relpersistence,
+                    false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
                  WHERE c.oid = '%s'""" % (suffix, oid)
@@ -639,7 +654,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     %s,
                     c.reltablespace,
                     0 AS reloftype,
-                    'p' AS relpersistence
+                    'p' AS relpersistence,
+                    false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
                  WHERE c.oid = '%s'""" % (suffix, oid)
@@ -653,7 +669,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     %s,
                     c.reltablespace,
                     0 AS reloftype,
-                    'p' AS relpersistence
+                    'p' AS relpersistence,
+                    false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
                  WHERE c.oid = '%s'""" % (suffix, oid)
@@ -737,7 +754,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 a.attstattarget END AS attstattarget"""
         if (tableinfo.relkind == 'r' or tableinfo.relkind == 'v' or
                 tableinfo.relkind == 'm' or tableinfo.relkind == 'f' or
-                tableinfo.relkind == 'c'):
+                tableinfo.relkind == 'c' or tableinfo.relkind == 'p'):
             sql += """, pg_catalog.col_description(a.attrelid,
                     a.attnum)"""
 
@@ -752,9 +769,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     headers = ['Column', 'Type']
 
     show_modifiers = False
-    if (tableinfo.relkind == 'r' or tableinfo.relkind == 'v' or
-            tableinfo.relkind == 'm' or tableinfo.relkind == 'f' or
-            tableinfo.relkind == 'c'):
+    if (tableinfo.relkind == 'r' or tableinfo.relkind == 'p' or
+            tableinfo.relkind == 'v' or tableinfo.relkind == 'm' or
+            tableinfo.relkind == 'f' or tableinfo.relkind == 'c'):
         headers.append('Modifiers')
         show_modifiers = True
 
@@ -963,8 +980,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
          #* don't print anything.
          #*/
 
-    elif (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
-            tableinfo.relkind == 'f'):
+    elif (tableinfo.relkind == 'r' or tableinfo.relkind == 'p' or
+          tableinfo.relkind == 'm' or tableinfo.relkind == 'f'):
         #/* Footer information about a table */
 
         if (tableinfo.hasindex):
@@ -1086,7 +1103,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Check constraints:\n")
             for row in cur:
                 #/* untranslated contraint name and def */
-                status.append("    \"%s\" %s" % row)
+                status.append("    \"%s\" %s" % tuple(row))
                 status.append('\n')
 
         #/* print foreign-key constraints (there are none if no triggers) */
@@ -1102,7 +1119,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Foreign-key constraints:\n")
             for row in cur:
                 #/* untranslated constraint name and def */
-                status.append("    \"%s\" %s\n" % row)
+                status.append("    \"%s\" %s\n" % tuple(row))
 
         #/* print incoming foreign-key references (none if no triggers) */
         if (tableinfo.hastriggers):
@@ -1116,7 +1133,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if (cur.rowcount > 0):
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append("    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % row)
+                status.append("    TABLE \"%s\" CONSTRAINT \"%s\" %s\n" % tuple(row))
 
         # /* print rules */
         if (tableinfo.hasrules and tableinfo.relkind != 'm'):
@@ -1157,6 +1174,59 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         # /* Everything after "CREATE RULE" is echoed verbatim */
                         ruledef = row[1]
                         status.append("    %s" % ruledef)
+
+        #/* print partition info */
+        if tableinfo.relispartition:
+            sql = ("select quote_ident(np.nspname) || '.' ||\n"
+                   "       quote_ident(cp.relname) || ' ' ||\n"
+                   "       pg_get_expr(cc.relpartbound, cc.oid, true) as partition_of,\n"
+                   "       pg_get_partition_constraintdef(cc.oid) as partition_constraint\n"
+                   "from pg_inherits i\n"
+                   "inner join pg_class cp\n"
+                   "on cp.oid = i.inhparent\n"
+                   "inner join pg_namespace np\n"
+                   "on np.oid = cp.relnamespace\n"
+                   "inner join pg_class cc\n"
+                   "on cc.oid = i.inhrelid\n"
+                   "inner join pg_namespace nc\n"
+                   "on nc.oid = cc.relnamespace\n"
+                   "where cc.oid = %s" % oid)
+            log.debug(sql)
+            cur.execute(sql)
+            for row in cur:
+                status.append("Partition of: %s\n" % row[0])
+                status.append("Partition constraint: %s\n" % row[1])
+
+        if tableinfo.relkind == 'p':
+            #/* print partition key */
+            sql = ("select pg_get_partkeydef(%s)" % oid)
+            log.debug(sql)
+            cur.execute(sql)
+            for row in cur:
+                status.append("Partition key: %s\n" % row[0])
+            #/* print list of partitions */
+            sql = ("select quote_ident(n.nspname) || '.' ||\n"
+                   "       quote_ident(c.relname) || ' ' ||\n"
+                   "       pg_get_expr(c.relpartbound, c.oid, true)\n"
+                   "from pg_inherits i\n"
+                   "inner join pg_class c\n"
+                   "on c.oid = i.inhrelid\n"
+                   "inner join pg_namespace n\n"
+                   "on n.oid = c.relnamespace\n"
+                   "where i.inhparent = %s order by 1" % oid)
+            log.debug(sql)
+            cur.execute(sql)
+            if cur.rowcount > 0:
+                if verbose:
+                    first = True
+                    for row in cur:
+                        if first:
+                            status.append("Partitions: %s\n" % row[0])
+                            first = False
+                        else:
+                            status.append("            %s\n" % row[0])
+                else:
+                    status.append("Number of partitions %i: (Use \\d+ to list them.)\n" % cur.rowcount)
 
     if (view_def):
         #/* Footer information about a view */
@@ -1281,26 +1351,25 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("FDW Options: (%s)\n" % row[1])
 
         #/* print inherited tables */
-        sql = ("SELECT c.oid::pg_catalog.regclass\n"
-               "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
-               "WHERE c.oid = i.inhparent\n"
-               "  AND i.inhrelid = '%s'\n"
-               "ORDER BY inhseqno" % oid)
-
-        log.debug(sql)
-        cur.execute(sql)
-
-        spacer = ''
-        if cur.rowcount > 0:
-            status.append("Inherits")
-            spacer = ':'
-            trailer = ',\n'
-            for idx, row in enumerate(cur, 1):
-                if idx == 2:
-                    spacer = ' ' * (len('Inherits') + 1)
-                if idx == cur.rowcount:
-                    trailer = '\n'
-                status.append("%s %s%s" % (spacer, row[0], trailer))
+        if not tableinfo.relispartition:
+            sql = ("SELECT c.oid::pg_catalog.regclass\n"
+                   "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
+                   "WHERE c.oid = i.inhparent\n"
+                   "  AND i.inhrelid = '%s'\n"
+                   "ORDER BY inhseqno" % oid)
+            log.debug(sql)
+            cur.execute(sql)
+            spacer = ''
+            if cur.rowcount > 0:
+                status.append("Inherits")
+                spacer = ':'
+                trailer = ',\n'
+                for idx, row in enumerate(cur, 1):
+                    if idx == 2:
+                        spacer = ' ' * (len('Inherits') + 1)
+                    if idx == cur.rowcount:
+                        trailer = '\n'
+                    status.append("%s %s%s" % (spacer, row[0], trailer))
 
         #/* print child tables */
         if cur.connection.server_version > 90000:
