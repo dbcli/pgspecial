@@ -1,7 +1,10 @@
-Upcoming
-========
+1.11.2
+======
 
-TODO
+Bug fixes:
+----------
+
+* Support for PG 10 partitioning and fix for https://github.com/OmniDB/OmniDB/issues/424. (Thanks: `William Ivanski`_).
 
 1.11.1
 ======
@@ -168,3 +171,4 @@ Features:
 .. _`Catherine Devlin`: https://github.com/catherinedevlin
 .. _`Jason Ribeiro`: https://github.com/jrib
 .. _`Dick Marinus`: https://github.com/meeuw
+.. _`William Ivanski`: https://github.com/wind39
