@@ -1,3 +1,11 @@
+Upcoming
+========
+
+Bug fixes:
+----------
+
+* Fixed the IndexError caused by ``\ef`` without a function name. (Thanks: `Amjith Ramanujam`_)
+
 1.11.2
 ======
 
