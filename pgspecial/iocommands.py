@@ -28,7 +28,7 @@ def editor_command(command):
     # for both conditions.
 
     stripped = command.strip()
-    for sought in ('\\e ', '\\ev ', '\\ef'):
+    for sought in ('\\e ', '\\ev ', '\\ef '):
         if stripped.startswith(sought):
             return sought.strip()
     for sought in ('\\e', ):
