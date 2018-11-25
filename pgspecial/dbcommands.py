@@ -613,7 +613,7 @@ def describe_table_details(cur, pattern, verbose):
 
 
 def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
-    if verbose:
+    if verbose and cur.connection.server_version >= 80200:
         suffix = """pg_catalog.array_to_string(c.reloptions || array(select
         'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')"""
     else:
