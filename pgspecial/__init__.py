@@ -1,5 +1,5 @@
 __all__ = []
-__version__ = '1.11.3'
+__version__ = '1.11.4'
 
 
 def export(defn):
