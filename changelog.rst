@@ -1,3 +1,11 @@
+1.11.4
+=======
+
+Bug fixes:
+----------
+
+* Fixed broken completion for special commands with prompt-toolkit 2.0. (Thanks: `Amjith Ramanujam`_)
+
 1.11.3
 =======
 
