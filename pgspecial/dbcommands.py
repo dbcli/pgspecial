@@ -1531,4 +1531,4 @@ def show_function_definition(cur, pattern, verbose):
 def shell_command(cur, pattern, verbose):
     cur, headers = [], []
     params = shlex.split(pattern)
-    return [(None, cur, headers, subprocess.run(params).stdout)]
+    return [(None, cur, headers, subprocess.call(params))]
