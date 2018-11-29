@@ -1527,6 +1527,7 @@ def show_function_definition(cur, pattern, verbose):
         headers = None
     return [(None, cur, headers, None)]
 
+
 @special_command('\\!', '\\![+] [commands]', 'Pass commands to shell.')
 def shell_command(cur, pattern, verbose):
     cur, headers = [], []
