@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 import logging
+import shlex
+import subprocess
 from collections import namedtuple
 
 from .main import special_command, RAW_QUERY
@@ -1524,3 +1526,9 @@ def show_function_definition(cur, pattern, verbose):
     else:
         headers = None
     return [(None, cur, headers, None)]
+
+@special_command('\\!', '\\![+] [commands]', 'Pass commands to shell.')
+def shell_command(cur, pattern, verbose):
+    cur, headers = [], []
+    params = shlex.split(pattern)
+    return [(None, cur, headers, subprocess.run([param for param in params]).stdout)]
