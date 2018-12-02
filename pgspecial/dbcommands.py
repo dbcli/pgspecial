@@ -566,6 +566,10 @@ def list_domains(cur, pattern, verbose):
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
+@special_command('\\dF', '\\dF[+] [pattern]', 'List text search configurations.')
+def list_text_search_configurations(cur, pattern, verbose):
+    pass
+
 
 @special_command('describe', 'DESCRIBE [pattern]', '', hidden=True, case_sensitive=False)
 @special_command('\\d', '\\d[+] [pattern]', 'List or describe tables, views and sequences.')
