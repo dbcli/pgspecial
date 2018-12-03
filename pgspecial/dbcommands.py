@@ -629,13 +629,11 @@ def list_text_search_configurations(cur, pattern, verbose):
     if verbose:
         configs = _find_text_search_configs(cur, pattern)
 
-        results = []
         for oid, cfgname in configs:
-            title = 'Objects in extension "%s"' % cfgname
+            title = '\nObjects in extension "%s"' % cfgname
             cur, headers, status = _fetch_oid_details(cur, oid)
-            results.append((title, cur, headers, status))
-
-            return results
+            results = (title, cur, headers, status)
+            yield results
 
     sql = '''\
         SELECT n.nspname AS "Schema",
