@@ -1,3 +1,11 @@
+1.11.5
+=======
+
+Features:
+---------
+
+* Add support for the ``\!`` command. (Thanks: `Ignacio Campabadal`_).
+
 1.11.4
 =======
 
