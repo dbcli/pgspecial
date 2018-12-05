@@ -572,10 +572,10 @@ def list_text_search_configurations(cur, pattern, verbose):
     def _find_text_search_configs(cur, pattern):
         sql = '''
             SELECT c.oid,
-                 c.cfgname /*,
+                 c.cfgname,
                  n.nspname,
                  p.prsname,
-                 np.nspname AS pnspname*/
+                 np.nspname AS pnspname
             FROM pg_catalog.pg_ts_config c
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace,
                                                  pg_catalog.pg_ts_parser p
@@ -624,16 +624,18 @@ def list_text_search_configurations(cur, pattern, verbose):
     if cur.connection.server_version < 80300:
         not_supported = "Server versions below 8.3 do not support full text search."
         cur, headers = [], []
-        return [(None, cur, None, not_supported)]
+        yield None, cur, None, not_supported
 
     if verbose:
         configs = _find_text_search_configs(cur, pattern)
 
-        for oid, cfgname in configs:
-            title = '\nObjects in extension "%s"' % cfgname
+        for oid, cfgname, nspname, prsname, pnspname in configs:
+            extension = '\nText search configuration "%s.%s"' % (nspname, cfgname)
+            parser = '\nParser: "%s.%s"' % (pnspname, prsname)
+            title = extension + parser
             cur, headers, status = _fetch_oid_details(cur, oid)
-            results = (title, cur, headers, status)
-            yield results
+            yield title, cur, headers, status
+        return
 
     sql = '''\
         SELECT n.nspname AS "Schema",
@@ -650,7 +652,7 @@ def list_text_search_configurations(cur, pattern, verbose):
     cur.execute(sql)
     if cur.description:
         headers = [x[0] for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+        yield None, cur, headers, cur.statusmessage
 
 
 @special_command('describe', 'DESCRIBE [pattern]', '', hidden=True, case_sensitive=False)
