@@ -625,6 +625,7 @@ def list_text_search_configurations(cur, pattern, verbose):
         not_supported = "Server versions below 8.3 do not support full text search."
         cur, headers = [], []
         yield None, cur, None, not_supported
+        return
 
     if verbose:
         configs = _find_text_search_configs(cur, pattern)
