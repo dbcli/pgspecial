@@ -584,10 +584,10 @@ def list_text_search_configurations(cur, pattern, verbose):
         '''
 
         if pattern:
-            sql = cur.mogrify(sql + ' WHERE e.extname ~ {}'.format(pattern))
+            _, schema = sql_name_pattern(pattern)
+            sql += 'AND c.cfgname ~ %s'
 
-        sql += ' ORDER BY 1'
-
+        sql = cur.mogrify(sql + 'ORDER BY 1, 2;', [schema])
         log.debug(sql)
         cur.execute(sql)
         return cur.fetchall()
@@ -598,12 +598,12 @@ def list_text_search_configurations(cur, pattern, verbose):
               (SELECT t.alias
                FROM pg_catalog.ts_token_type(c.cfgparser) AS t
                WHERE t.tokid = m.maptokentype ) AS "Token",
-                   pg_catalog.btrim( ARRAY
+                   pg_catalog.btrim(ARRAY
                                       (SELECT mm.mapdict::pg_catalog.regdictionary
                                        FROM pg_catalog.pg_ts_config_map AS mm
                                        WHERE mm.mapcfg = m.mapcfg
                                          AND mm.maptokentype = m.maptokentype
-                                       ORDER BY mapcfg, maptokentype, mapseqno ) :: pg_catalog.text, '{}') AS "Dictionaries"
+                                       ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
             FROM pg_catalog.pg_ts_config AS c,
                  pg_catalog.pg_ts_config_map AS m
             WHERE c.oid = %s
@@ -638,7 +638,7 @@ def list_text_search_configurations(cur, pattern, verbose):
             yield title, cur, headers, status
         return
 
-    sql = '''\
+    sql = '''
         SELECT n.nspname AS "Schema",
                c.cfgname AS "Name",
                pg_catalog.obj_description(c.oid, 'pg_ts_config') AS "Description"
@@ -647,6 +647,10 @@ def list_text_search_configurations(cur, pattern, verbose):
         '''
 
     params = []
+    if pattern:
+        _, schema = sql_name_pattern(pattern)
+        sql += 'WHERE c.cfgname ~ %s'
+        params.append(schema)
 
     sql = cur.mogrify(sql + 'ORDER BY 1, 2', params)
     log.debug(sql)
