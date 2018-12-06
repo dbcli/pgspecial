@@ -566,6 +566,7 @@ def list_domains(cur, pattern, verbose):
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
+
 @special_command('\\dF', '\\dF[+] [pattern]', 'List text search configurations.')
 def list_text_search_configurations(cur, pattern, verbose):
 
