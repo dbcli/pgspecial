@@ -583,11 +583,13 @@ def list_text_search_configurations(cur, pattern, verbose):
             WHERE p.oid = c.cfgparser
         '''
 
+        params = []
         if pattern:
             _, schema = sql_name_pattern(pattern)
             sql += 'AND c.cfgname ~ %s'
+            params.append(schema)
 
-        sql = cur.mogrify(sql + 'ORDER BY 1, 2;', [schema])
+        sql = cur.mogrify(sql + 'ORDER BY 1, 2;', params)
         log.debug(sql)
         cur.execute(sql)
         return cur.fetchall()
