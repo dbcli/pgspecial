@@ -340,22 +340,26 @@ def test_slash_dD_verbose(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+
 @dbtest
 def test_slash_dF(executor):
     title, rows, header, status = executor('\dF')
     assert title is None
     assert header == ['Schema', 'Name', 'Description']
-    assert ('pg_catalog', 'spanish', 'configuration for spanish language') in rows
+    assert ('pg_catalog', 'spanish',
+            'configuration for spanish language') in rows
 
     results = executor('\dD *ian')
     assert title is None
     assert header == ['Schema', 'Name', 'Description']
-    assert ('pg_catalog', 'russian', 'configuration for russian language') in rows
+    assert ('pg_catalog', 'russian',
+            'configuration for russian language') in rows
 
     results = executor('\dD ge*')
     assert title is None
     assert header == ['Schema', 'Name', 'Description']
     assert ('pg_catalog', 'german', 'configuration for german language') in rows
+
 
 @dbtest
 def test_slash_dF_verbose(executor):

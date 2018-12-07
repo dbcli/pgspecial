@@ -634,7 +634,8 @@ def list_text_search_configurations(cur, pattern, verbose):
         configs = _find_text_search_configs(cur, pattern)
 
         for oid, cfgname, nspname, prsname, pnspname in configs:
-            extension = '\nText search configuration "%s.%s"' % (nspname, cfgname)
+            extension = '\nText search configuration "%s.%s"' % (
+                nspname, cfgname)
             parser = '\nParser: "%s.%s"' % (pnspname, prsname)
             title = extension + parser
             cur, headers, status = _fetch_oid_details(cur, oid)
