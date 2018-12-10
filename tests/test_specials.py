@@ -372,6 +372,10 @@ def test_slash_dF_verbose(executor):
     results = executor('\dF+ swed*')[1]
     assert ('asciihword', 'swedish_stem') in results
 
+    results = executor('\dF+ jap')
+    assert results == [None, None, None,
+                       'Did not find any results for pattern "jap".']
+
 @dbtest
 def test_slash_db(executor):
     """List all tablespaces."""
