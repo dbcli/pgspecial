@@ -633,13 +633,16 @@ def list_text_search_configurations(cur, pattern, verbose):
     if verbose:
         configs = _find_text_search_configs(cur, pattern)
 
-        for oid, cfgname, nspname, prsname, pnspname in configs:
-            extension = '\nText search configuration "%s.%s"' % (
-                nspname, cfgname)
-            parser = '\nParser: "%s.%s"' % (pnspname, prsname)
-            title = extension + parser
-            cur, headers, status = _fetch_oid_details(cur, oid)
-            yield title, cur, headers, status
+        if configs:
+            for oid, cfgname, nspname, prsname, pnspname in configs:
+                extension = '\nText search configuration "%s.%s"' % (
+                    nspname, cfgname)
+                parser = '\nParser: "%s.%s"' % (pnspname, prsname)
+                title = extension + parser
+                cur, headers, status = _fetch_oid_details(cur, oid)
+                yield title, cur, headers, status
+        else:
+            yield None, None, None, 'Did not find any results for pattern "{}".'.format(pattern)
         return
 
     sql = '''
