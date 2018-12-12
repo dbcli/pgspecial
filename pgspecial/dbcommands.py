@@ -567,6 +567,106 @@ def list_domains(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
+@special_command('\\dF', '\\dF[+] [pattern]', 'List text search configurations.')
+def list_text_search_configurations(cur, pattern, verbose):
+
+    def _find_text_search_configs(cur, pattern):
+        sql = '''
+            SELECT c.oid,
+                 c.cfgname,
+                 n.nspname,
+                 p.prsname,
+                 np.nspname AS pnspname
+            FROM pg_catalog.pg_ts_config c
+            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace,
+                                                 pg_catalog.pg_ts_parser p
+            LEFT JOIN pg_catalog.pg_namespace np ON np.oid = p.prsnamespace
+            WHERE p.oid = c.cfgparser
+        '''
+
+        params = []
+        if pattern:
+            _, schema = sql_name_pattern(pattern)
+            sql += 'AND c.cfgname ~ %s'
+            params.append(schema)
+
+        sql = cur.mogrify(sql + 'ORDER BY 1, 2;', params)
+        log.debug(sql)
+        cur.execute(sql)
+        return cur.fetchall()
+
+    def _fetch_oid_details(cur, oid):
+        sql = '''
+            SELECT
+              (SELECT t.alias
+               FROM pg_catalog.ts_token_type(c.cfgparser) AS t
+               WHERE t.tokid = m.maptokentype ) AS "Token",
+                   pg_catalog.btrim(ARRAY
+                                      (SELECT mm.mapdict::pg_catalog.regdictionary
+                                       FROM pg_catalog.pg_ts_config_map AS mm
+                                       WHERE mm.mapcfg = m.mapcfg
+                                         AND mm.maptokentype = m.maptokentype
+                                       ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
+            FROM pg_catalog.pg_ts_config AS c,
+                 pg_catalog.pg_ts_config_map AS m
+            WHERE c.oid = %s
+              AND m.mapcfg = c.oid
+            GROUP BY m.mapcfg,
+                     m.maptokentype,
+                     c.cfgparser
+            ORDER BY 1;
+        '''
+
+        sql = cur.mogrify(sql, [oid])
+        log.debug(sql)
+        cur.execute(sql)
+
+        headers = [x[0] for x in cur.description]
+        return cur, headers, cur.statusmessage
+
+    if cur.connection.server_version < 80300:
+        not_supported = "Server versions below 8.3 do not support full text search."
+        cur, headers = [], []
+        yield None, cur, None, not_supported
+        return
+
+    if verbose:
+        configs = _find_text_search_configs(cur, pattern)
+
+        if configs:
+            for oid, cfgname, nspname, prsname, pnspname in configs:
+                extension = '\nText search configuration "%s.%s"' % (
+                    nspname, cfgname)
+                parser = '\nParser: "%s.%s"' % (pnspname, prsname)
+                title = extension + parser
+                cur, headers, status = _fetch_oid_details(cur, oid)
+                yield title, cur, headers, status
+        else:
+            yield None, None, None, 'Did not find any results for pattern "{}".'.format(pattern)
+        return
+
+    sql = '''
+        SELECT n.nspname AS "Schema",
+               c.cfgname AS "Name",
+               pg_catalog.obj_description(c.oid, 'pg_ts_config') AS "Description"
+        FROM pg_catalog.pg_ts_config c
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
+        '''
+
+    params = []
+    if pattern:
+        _, schema = sql_name_pattern(pattern)
+        sql += 'WHERE c.cfgname ~ %s'
+        params.append(schema)
+
+    sql = cur.mogrify(sql + 'ORDER BY 1, 2', params)
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        yield None, cur, headers, cur.statusmessage
+
+
 @special_command('describe', 'DESCRIBE [pattern]', '', hidden=True, case_sensitive=False)
 @special_command('\\d', '\\d[+] [pattern]', 'List or describe tables, views and sequences.')
 def describe_table_details(cur, pattern, verbose):

@@ -5,6 +5,7 @@ Features:
 ---------
 
 * Add support for the ``\!`` command. (Thanks: `Ignacio Campabadal`_).
+* Add support for describing text search configurations `\dF``. (Thanks: `Ignacio Campabadal`_).
 
 1.11.4
 =======

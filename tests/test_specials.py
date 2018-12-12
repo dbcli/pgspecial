@@ -342,6 +342,41 @@ def test_slash_dD_verbose(executor):
 
 
 @dbtest
+def test_slash_dF(executor):
+    title, rows, header, status = executor('\dF')
+    assert title is None
+    assert header == ['Schema', 'Name', 'Description']
+    assert ('pg_catalog', 'spanish',
+            'configuration for spanish language') in rows
+
+    results = executor('\dD *ian')
+    assert title is None
+    assert header == ['Schema', 'Name', 'Description']
+    assert ('pg_catalog', 'russian',
+            'configuration for russian language') in rows
+
+    results = executor('\dD ge*')
+    assert title is None
+    assert header == ['Schema', 'Name', 'Description']
+    assert ('pg_catalog', 'german', 'configuration for german language') in rows
+
+
+@dbtest
+def test_slash_dF_verbose(executor):
+    results = executor('\dF+')[1]
+    assert ('asciihword', 'simple') in results
+
+    results = executor('\dF+ *panish')[1]
+    assert ('asciihword', 'spanish_stem') in results
+
+    results = executor('\dF+ swed*')[1]
+    assert ('asciihword', 'swedish_stem') in results
+
+    results = executor('\dF+ jap')
+    assert results == [None, None, None,
+                       'Did not find any results for pattern "jap".']
+
+@dbtest
 def test_slash_db(executor):
     """List all tablespaces."""
     title, rows, header, status = executor('\db')
