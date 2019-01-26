@@ -1,3 +1,11 @@
+TBD
+===
+
+Internal:
+---------
+
+* Add missing psycopg2 dependency. (Thanks: `Dick Marinus`_).
+
 1.11.5
 =======
 
