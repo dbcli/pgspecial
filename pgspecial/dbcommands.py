@@ -164,17 +164,22 @@ def list_schemas(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
+# https://github.com/postgres/postgres/blob/master/src/bin/psql/describe.c#L5471-L5638
 @special_command('\\dx', '\\dx[+] [pattern]', 'List extensions.')
 def list_extensions(cur, pattern, verbose):
 
     def _find_extensions(cur, pattern):
-        sql = 'SELECT e.extname, e.oid FROM pg_catalog.pg_extension e'
+        sql = '''
+            SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
+        '''
 
+        params = []
         if pattern:
-            sql = cur.mogrify(sql + ' WHERE e.extname ~ %s', [pattern])
+            _, schema = sql_name_pattern(pattern)
+            sql += 'WHERE e.extname ~ %s'
+            params.append(schema)
 
-        sql += ' ORDER BY 1'
-
+        sql = cur.mogrify(sql + 'ORDER BY 1, 2;', params)
         log.debug(sql)
         cur.execute(sql)
         return cur.fetchall()
@@ -196,23 +201,23 @@ def list_extensions(cur, pattern, verbose):
         headers = [x[0] for x in cur.description]
         return cur, headers, cur.statusmessage
 
-    # Note: psql \dx command seems to ignore schema patterns
-    _, name_pattern = sql_name_pattern(pattern)
+    if cur.connection.server_version < 90100:
+        not_supported = "Server versions below 9.1 do not support extensions."
+        cur, headers = [], []
+        yield None, cur, None, not_supported
+        return
 
     if verbose:
-        extensions = _find_extensions(cur, name_pattern)
+        extensions = _find_extensions(cur, pattern)
 
-        if not extensions:
-            msg = 'Did not find any extension named "%s"' % pattern
-            return [(None, cur, [], msg)]
-
-        results = []
-        for ext_name, oid in extensions:
-            title = 'Objects in extension "%s"' % ext_name
-            cur, headers, status = _describe_extension(cur, oid)
-            results.append((title, cur, headers, status))
-
-        return results
+        if extensions:
+            for ext_name, oid in extensions:
+                title = '\nObjects in extension "%s"' % ext_name
+                cur, headers, status = _describe_extension(cur, oid)
+                yield title, cur, headers, status
+        else:
+            yield None, None, None, 'Did not find any extension named "{}".'.format(pattern)
+        return
 
     sql = '''
       SELECT e.extname AS "Name",
@@ -227,16 +232,18 @@ def list_extensions(cur, pattern, verbose):
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
       '''
 
-    if name_pattern:
-        sql = cur.mogrify(
-            sql + ' WHERE e.extname ~ %s ORDER BY 1', [name_pattern])
-    else:
-        sql += ' ORDER BY 1'
+    params = []
+    if pattern:
+        _, schema = sql_name_pattern(pattern)
+        sql += 'WHERE e.extname ~ %s'
+        params.append(schema)
 
+    sql = cur.mogrify(sql + 'ORDER BY 1, 2', params)
     log.debug(sql)
     cur.execute(sql)
-    headers = [x[0] for x in cur.description]
-    return [(None, cur, headers, cur.statusmessage)]
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        yield None, cur, headers, cur.statusmessage
 
 
 def list_objects(cur, pattern, verbose, relkinds):
