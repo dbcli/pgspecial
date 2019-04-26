@@ -184,7 +184,6 @@ def list_extensions(cur, pattern, verbose):
         cur.execute(sql)
         return cur.fetchall()
 
-
     def _describe_extension(cur, oid):
         sql = '''
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
