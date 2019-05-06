@@ -289,6 +289,33 @@ def test_slash_di_verbose(executor):
 
 
 @dbtest
+def test_slash_dx(executor):
+    """List all extensions."""
+    results = executor('\dx')
+    title = None
+    row = [('plpgsql', '1.0', 'pg_catalog', 'PL/pgSQL procedural language')]
+    headers = ['Name', 'Version', 'Schema', 'Description']
+    status = 'SELECT 1'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dx_verbose(executor):
+    """List all extensions in verbose mode."""
+    results = executor('\dx+')
+    title = '\nObjects in extension "plpgsql"'
+    row = [('function plpgsql_call_handler()',),
+           ('function plpgsql_inline_handler(internal)',),
+           ('function plpgsql_validator(oid)',),
+           ('language plpgsql',)]
+    headers = ['Object Description']
+    status = 'SELECT 4'
+    expected = [title, row, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dT(executor):
     """List all datatypes."""
     results = executor('\dT')

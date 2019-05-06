@@ -5,6 +5,7 @@ Internal:
 ---------
 
 * Add missing psycopg2 dependency. (Thanks: `Dick Marinus`_).
+* Fix issues when using the ``\dx+`` command. (Thanks: `Ignacio Campabadal`_).
 
 1.11.5
 =======
