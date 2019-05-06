@@ -166,3 +166,14 @@ def foreign_db_environ():
     setup_foreign(conn2)
     yield
     teardown_foreign(conn2)
+
+try:
+    with foreign_db_environ():
+        CAN_CREATE_FDW_EXTENSION = True
+except:
+    CAN_CREATE_FDW_EXTENSION = False
+
+fdw_test = pytest.mark.skipif(
+    not CAN_CREATE_FDW_EXTENSION,
+    reason="Unable to create a postgres_fdw extension.")
+
