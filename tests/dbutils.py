@@ -30,7 +30,7 @@ dbtest = pytest.mark.skipif(
 
 
 def create_db(dbname=TEST_DB_NAME):
-    with db_connection().cursor() as cur:
+    with db_connection(dbname=None).cursor() as cur:
         try:
             cur.execute('''CREATE DATABASE %s''' % dbname)
         except:
