@@ -1,7 +1,7 @@
   #!/usr/bin/python
   # -*- coding: utf-8 -*-
 
-from dbutils import dbtest, POSTGRES_USER
+from dbutils import dbtest, POSTGRES_USER, foreign_db_environ
 import itertools
 
 objects_listing_headers = ['Schema', 'Name', 'Type', 'Owner', 'Size', 'Description']
@@ -553,3 +553,48 @@ def test_slash_sf_verbose(executor):
     status = None
     expected = [title, rows, headers, status]
     assert results == expected
+
+@dbtest
+def test_slash_dE(executor):
+
+    with foreign_db_environ():
+        results = executor('\dE')
+        title = None
+        rows = [('public', 'foreign_foo', 'foreign table', 'postgres')]
+        headers =  ['Schema', 'Name', 'Type', 'Owner']
+        status = 'SELECT 1'
+        expected = [title, rows, headers, status]
+        assert results == expected
+
+@dbtest
+def test_slash_dE_with_pattern(executor):
+
+    with foreign_db_environ():
+        results = executor('\dE foreign_foo')
+        title = None
+        rows = [('public', 'foreign_foo', 'foreign table', 'postgres')]
+        headers =  ['Schema', 'Name', 'Type', 'Owner']
+        status = 'SELECT 1'
+        expected = [title, rows, headers, status]
+        assert results == expected
+
+        results = executor('\dE *_foo')
+        assert results == expected
+
+        results = executor('\dE no_such_table')
+        rows = []
+        status = 'SELECT 0'
+        expected = [title, rows, headers, status]
+        assert results == expected
+
+@dbtest
+def test_slash_dE_verbose(executor):
+
+    with foreign_db_environ():
+        results = executor('\dE+')
+        title = None
+        rows = [('public', 'foreign_foo', 'foreign table', 'postgres', '0 bytes', None)]
+        headers = ['Schema', 'Name', 'Type', 'Owner', 'Size', 'Description']
+        status = 'SELECT 1'
+        expected = [title, rows, headers, status]
+        assert results == expected
