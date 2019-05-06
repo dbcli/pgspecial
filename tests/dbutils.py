@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import pytest
 import psycopg2
 import psycopg2.extras
@@ -7,6 +9,7 @@ import psycopg2.extras
 POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
 
 TEST_DB_NAME = '_test_db'
+FOREIGN_TEST_DB_NAME = '_foreign_test_db'
 
 def db_connection(dbname=None):
     conn = psycopg2.connect(user=POSTGRES_USER, host=POSTGRES_HOST,
@@ -86,3 +89,42 @@ def teardown_db(conn):
             CREATE SCHEMA public;
             DROP SCHEMA IF EXISTS schema1 CASCADE;
             DROP SCHEMA IF EXISTS schema2 CASCADE''')
+
+
+def setup_foreign(conn):
+
+    foreign_conn = db_connection(FOREIGN_TEST_DB_NAME)
+    with foreign_conn.cursor() as foreign_cur:
+        foreign_cur.execute('create table foreign_foo (a int, b text)')
+
+    with conn.cursor() as cur:
+
+        # foreign database wrapper
+        cur.execute("create extension if not exists postgres_fdw")
+        cur.execute("create server if not exists foreign_db_server "
+                    "foreign data wrapper postgres_fdw "
+                    "options (host '127.0.0.1', dbname %s )", 
+                    (FOREIGN_TEST_DB_NAME, ))
+        cur.execute("create user mapping for current_user "
+                    "server foreign_db_server "
+                    "options (user 'postgres') ")
+        cur.execute("create foreign table foreign_foo (a int, b text) "
+                    "server foreign_db_server "
+                    "options (schema_name 'public', table_name 'foreign_foo') ")
+       
+def teardown_foreign(conn):
+
+    with conn.cursor() as cur:
+
+        cur.execute("drop server if exists foreign_db_server cascade")
+        cur.execute("drop extension if exists postgres_fdw")
+        cur.execute("drop database if exists %s" % FOREIGN_TEST_DB_NAME) 
+
+
+@contextmanager
+def foreign_db_environ():
+    conn2 = db_connection(dbname=TEST_DB_NAME)
+    create_db(FOREIGN_TEST_DB_NAME)
+    setup_foreign(conn2)
+    yield
+    teardown_foreign(conn2)

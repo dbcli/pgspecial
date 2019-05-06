@@ -1,7 +1,7 @@
   #!/usr/bin/python
   # -*- coding: utf-8 -*-
 
-from dbutils import dbtest, POSTGRES_USER
+from dbutils import dbtest, POSTGRES_USER, foreign_db_environ
 import itertools
 
 objects_listing_headers = ['Schema', 'Name', 'Type', 'Owner', 'Size', 'Description']
@@ -526,3 +526,15 @@ def test_slash_sf_verbose(executor):
     status = None
     expected = [title, rows, headers, status]
     assert results == expected
+
+@dbtest
+def test_slash_dE(executor):
+
+    with foreign_db_environ():
+        results = executor('\dE')
+        title = None
+        rows = [('public', 'foreign_foo', 'foreign table', 'postgres')]
+        headers =  ['Schema', 'Name', 'Type', 'Owner']
+        status = 'SELECT 1'
+        expected = [title, rows, headers, status]
+        assert results == expected
