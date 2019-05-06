@@ -1,16 +1,23 @@
 import pytest
 import psycopg2
 import psycopg2.extras
+from os import getenv
 
 
 # TODO: should this be somehow be divined from environment?
-POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
+POSTGRES_USER = getenv('PGUSER', 'postgres')
+POSTGRES_HOST = getenv('PGHOST', 'localhost')
+POSTGRES_PORT = getenv('PGPORT', 5432)
+POSTGRES_PASSWORD = getenv('PGPASSWORD', '')
 
 TEST_DB_NAME = '_test_db'
 
 def db_connection(dbname=None):
-    conn = psycopg2.connect(user=POSTGRES_USER, host=POSTGRES_HOST,
-        database=dbname)
+    conn = psycopg2.connect(user=POSTGRES_USER,
+                            host=POSTGRES_HOST,
+                            password=POSTGRES_PASSWORD,
+                            port=POSTGRES_PORT,
+                            database=dbname)
     conn.autocommit = True
     return conn
 
@@ -46,6 +53,8 @@ def setup_db(conn):
         # tables
         cur.execute('create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))')
         cur.execute('create table tbl2(id2 serial, txt2 text)')
+        cur.execute('create table schema2.tbl2(id2 serial, txt2 text)')
+        cur.execute('create table schema1.tbl2(id2 serial, txt2 text)')
         cur.execute('create table schema1.s1_tbl1(id1 integer, txt1 text)')
         cur.execute('create table tbl3(c3 circle, exclude using gist (c3 with &&))')
         cur.execute('create table "Inh1"(value1 integer) inherits (tbl1)')
