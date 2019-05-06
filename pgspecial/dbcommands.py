@@ -1634,14 +1634,28 @@ def shell_command(cur, pattern, verbose):
     params = shlex.split(pattern)
     return [(None, cur, headers, subprocess.call(params))]
 
-# @special_command('\\l', '\\l[+] [pattern]', 'List databases.', aliases=('\\list',))
 @special_command('\\dE', '\\dE[+] [pattern]', 'List foreign tables.', aliases=() )
 def list_foreign_tables(cur, pattern, verbose):
+
+    if verbose:
+        verbose_cols = '''
+            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
+            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" '''
+    else:
+        verbose_cols = ''
+
+    if pattern:
+        _, tbl_name = sql_name_pattern(pattern)
+        filter = " AND c.relname OPERATOR(pg_catalog.~) '^(%s)$' " % tbl_name
+    else:
+        filter = ''
+
     query = '''
         SELECT n.nspname as "Schema",
         c.relname as "Name",
         CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
         pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
+        %s
         FROM pg_catalog.pg_class c
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind IN ('f','')
@@ -1649,8 +1663,10 @@ def list_foreign_tables(cur, pattern, verbose):
             AND n.nspname <> 'information_schema'
             AND n.nspname !~ '^pg_toast'
         AND pg_catalog.pg_table_is_visible(c.oid)
+        %s
         ORDER BY 1,2;
-        '''
+        ''' % (verbose_cols, filter)
+
     cur.execute(query)
     if cur.description:
         headers = [x[0] for x in cur.description]

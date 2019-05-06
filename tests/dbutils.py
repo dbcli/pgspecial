@@ -95,7 +95,7 @@ def setup_foreign(conn):
 
     foreign_conn = db_connection(FOREIGN_TEST_DB_NAME)
     with foreign_conn.cursor() as foreign_cur:
-        foreign_cur.execute('create table foreign_foo (a int, b text)')
+        foreign_cur.execute('create table if not exists foreign_foo (a int, b text)')
 
     with conn.cursor() as cur:
 
@@ -105,10 +105,10 @@ def setup_foreign(conn):
                     "foreign data wrapper postgres_fdw "
                     "options (host '127.0.0.1', dbname %s )", 
                     (FOREIGN_TEST_DB_NAME, ))
-        cur.execute("create user mapping for current_user "
+        cur.execute("create user mapping if not exists for current_user "
                     "server foreign_db_server "
                     "options (user 'postgres') ")
-        cur.execute("create foreign table foreign_foo (a int, b text) "
+        cur.execute("create foreign table if not exists foreign_foo (a int, b text) "
                     "server foreign_db_server "
                     "options (schema_name 'public', table_name 'foreign_foo') ")
        
