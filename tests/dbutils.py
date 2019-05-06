@@ -6,6 +6,7 @@ import psycopg2.extras
 # TODO: should this be somehow be divined from environment?
 POSTGRES_USER, POSTGRES_HOST = 'postgres', 'localhost'
 
+TEST_DB_NAME = '_test_db'
 
 def db_connection(dbname=None):
     conn = psycopg2.connect(user=POSTGRES_USER, host=POSTGRES_HOST,
@@ -13,9 +14,8 @@ def db_connection(dbname=None):
     conn.autocommit = True
     return conn
 
-
 try:
-    conn = db_connection()
+    conn = db_connection(dbname=None)
     CAN_CONNECT_TO_DB = True
     SERVER_VERSION = conn.server_version
 except:
@@ -29,10 +29,10 @@ dbtest = pytest.mark.skipif(
            "'%s'" % POSTGRES_USER)
 
 
-def create_db(dbname):
-    with db_connection().cursor() as cur:
+def create_db(dbname=TEST_DB_NAME):
+    with db_connection(dbname=None).cursor() as cur:
         try:
-            cur.execute('''CREATE DATABASE _test_db''')
+            cur.execute('''CREATE DATABASE %s''' % dbname)
         except:
             pass
 

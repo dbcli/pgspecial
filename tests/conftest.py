@@ -1,12 +1,11 @@
 import pytest
-from dbutils import (create_db, db_connection, setup_db, teardown_db)
+from dbutils import (create_db, db_connection, setup_db, teardown_db, TEST_DB_NAME)
 from pgspecial.main import PGSpecial
-
 
 @pytest.yield_fixture(scope='module')
 def connection():
-    create_db('_test_db')
-    connection = db_connection('_test_db')
+    create_db(TEST_DB_NAME)
+    connection = db_connection(TEST_DB_NAME)
     setup_db(connection)
     yield connection
 
