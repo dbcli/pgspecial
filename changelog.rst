@@ -1,6 +1,11 @@
 TBD
 ===
 
+Bug fixes:
+----------
+
+* Scope the results of `\d foo` command to the current schema. (Thanks: `Amjith Ramanujam`_)
+
 Internal:
 ---------
 

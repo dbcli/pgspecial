@@ -688,15 +688,14 @@ def describe_table_details(cur, pattern, verbose):
     where = []
     params = []
 
-    if not pattern:
-        where.append('pg_catalog.pg_table_is_visible(c.oid)')
+    where.append('pg_catalog.pg_table_is_visible(c.oid)')
 
     if schema:
         where.append('n.nspname ~ %s')
         params.append(schema)
 
     if relname:
-        where.append('c.relname ~ %s')
+        where.append('c.relname OPERATOR(pg_catalog.~) %s')
         params.append(relname)
 
     sql = """SELECT c.oid, n.nspname, c.relname
