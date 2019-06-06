@@ -726,9 +726,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     else:
         suffix = "''"
 
+    if cur.connection.server_version >= 120000:
+        relhasoids = "false as relhasoids"
+    else:
+        relhasoids = "c.relhasoids"
+
     if cur.connection.server_version >= 100000:
         sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
-                    c.relhasrules, c.relhastriggers, c.relhasoids,
+                    c.relhasrules, c.relhastriggers, %s,
                     %s,
                     c.reltablespace,
                     CASE WHEN c.reloftype = 0 THEN ''
@@ -738,7 +743,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     c.relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '%s'""" % (suffix, oid)
+                 WHERE c.oid = '%s'""" % (relhasoids, suffix, oid)
     elif cur.connection.server_version > 90000:
         sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
                     c.relhasrules, c.relhastriggers, c.relhasoids,
