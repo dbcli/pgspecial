@@ -1,7 +1,7 @@
-TBD
-===
+1.11.7
+======
 
-Bug fixes:
+Internal:
 ----------
 
 * Allow usage of newer versions of psycopg2. (Thanks: `Aluísio Augusto Silva Gonçalves`_).
