@@ -1,3 +1,11 @@
+TBD
+===
+
+Bug fixes:
+----------
+
+* Allow usage of newer versions of psycopg2. (Thanks: `Aluísio Augusto Silva Gonçalves`_).
+
 1.11.6
 ======
 
@@ -212,3 +220,4 @@ Features:
 .. _`Jason Ribeiro`: https://github.com/jrib
 .. _`Dick Marinus`: https://github.com/meeuw
 .. _`William Ivanski`: https://github.com/wind39
+.. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
