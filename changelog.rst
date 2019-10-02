@@ -1,3 +1,11 @@
+TBD
+===
+
+Bug fixes:
+----------
+
+* ``\d some_schema.some_table`` will now work when ``some_schema`` is not in your ``search_path``.
+
 1.11.7
 ======
 
