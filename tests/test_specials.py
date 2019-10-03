@@ -145,6 +145,19 @@ def test_slash_d_table_with_exclusion(executor):
 
 
 @dbtest
+def test_slash_d_table_2_in_schema(executor):
+    results = executor('\d schema2.tbl2')
+    title = None
+    rows = [['id2', 'integer', " not null default nextval('schema2.tbl2_id2_seq'::regclass)"],
+            ['txt2', 'text', ''],
+            ]
+    headers = ['Column', 'Type', 'Modifiers']
+    status = ''
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dn(executor):
     """List all schemas."""
     results = executor('\dn')
