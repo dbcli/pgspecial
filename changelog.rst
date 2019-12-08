@@ -1,5 +1,21 @@
-TBD
-===
+1.11.8
+======
+
+Bug fixes:
+----------
+
+* ``\d some_schema.some_table`` will now work when ``some_schema`` is not in your ``search_path``.
+
+1.11.7
+======
+
+Internal:
+----------
+
+* Allow usage of newer versions of psycopg2. (Thanks: `Aluísio Augusto Silva Gonçalves`_).
+
+1.11.6
+======
 
 Bug fixes:
 ----------
@@ -213,4 +229,5 @@ Features:
 .. _`Jason Ribeiro`: https://github.com/jrib
 .. _`Dick Marinus`: https://github.com/meeuw
 .. _`William Ivanski`: https://github.com/wind39
+.. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
 .. _`Ignacio Campabadal`: https://github.com/igncampa
