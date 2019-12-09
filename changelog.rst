@@ -21,6 +21,7 @@ Bug fixes:
 ----------
 
 * Scope the results of `\d foo` command to the current schema. (Thanks: `Amjith Ramanujam`_)
+* Fix for `\d foo` command crash in PostgreSQL 12. (Thanks: `Irina Truong`_)
 
 Internal:
 ---------
@@ -229,3 +230,4 @@ Features:
 .. _`Dick Marinus`: https://github.com/meeuw
 .. _`William Ivanski`: https://github.com/wind39
 .. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
+.. _`Ignacio Campabadal`: https://github.com/igncampa
