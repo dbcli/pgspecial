@@ -1,3 +1,11 @@
+1.11.9
+======
+
+Bug fixes:
+----------
+
+* Fix for `\d foo` command crash in PostgreSQL 12. (Thanks: `Irina Truong`_)
+
 1.11.8
 ======
 
@@ -21,7 +29,6 @@ Bug fixes:
 ----------
 
 * Scope the results of `\d foo` command to the current schema. (Thanks: `Amjith Ramanujam`_)
-* Fix for `\d foo` command crash in PostgreSQL 12. (Thanks: `Irina Truong`_)
 
 Internal:
 ---------
