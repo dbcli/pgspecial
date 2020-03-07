@@ -1,3 +1,12 @@
+1.11.10
+======
+
+Bug fixes:
+----------
+
+* Allows `\d foo` to display information about `IDENTITY` columns. (Thanks: `Denis Gantsev`_)
+
+
 1.11.9
 ======
 
