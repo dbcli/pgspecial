@@ -848,7 +848,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # index, or partitioned index
     if tableinfo.relkind == 'i' or tableinfo.relkind == 'I':
         if cur.connection.server_version >= 110000:
-            sql+=",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i " \
+            sql += ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i " \
                  "WHERE i.indexrelid = '%s') THEN 'yes' ELSE 'no' END AS is_key" % oid
             att_cols['indexkey'] = cols
             cols += 1
