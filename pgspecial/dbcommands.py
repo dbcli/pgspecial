@@ -940,8 +940,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             cell.append(seq_values[i])
 
         # Index column
-        if TableInfo.relkind == 'i':
-            cell.append(row[6])
+        if tableinfo.relkind == 'i':
+            cell.append(row[att_cols['indexdef']])
 
         # /* FDW options for foreign table column, only for 9.2 or later */
         if tableinfo.relkind == 'f':
