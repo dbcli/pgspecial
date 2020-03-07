@@ -73,6 +73,7 @@ def test_slash_d_table_2(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+
 @dbtest
 def test_slash_d_test_generated_default(executor):
     results = executor('\d schema3.test_generated_default')
@@ -83,6 +84,7 @@ def test_slash_d_test_generated_default(executor):
     assert rows == results[1]
     assert headers == results[2]
     assert status == results[3]
+
 
 @dbtest
 def test_slash_d_table_verbose_1(executor):
