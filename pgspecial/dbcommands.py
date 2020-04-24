@@ -809,67 +809,86 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         seq_values = cur.fetchone()
 
     # Get column info
-    if cur.connection.server_version > 90000:
-        sql = """SELECT a.attname,
-                    pg_catalog.format_type(a.atttypid, a.atttypmod),
-                    (
-                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
-                        FROM pg_catalog.pg_attrdef d
-                        WHERE d.adrelid = a.attrelid
-                            AND d.adnum = a.attnum
-                            AND a.atthasdef
-                    ),
-                    a.attnotnull,
-                    a.attnum,
-                    (
-                        SELECT c.collname
-                        FROM pg_catalog.pg_collation c,
-                            pg_catalog.pg_type t
-                        WHERE c.oid = a.attcollation
-                            AND t.oid = a.atttypid
-                            AND a.attcollation <> t.typcollation
-                    ) AS attcollation
-                """
+    cols = 0
+    att_cols = {}
+    sql = """SELECT a.attname, 
+    pg_catalog.format_type(a.atttypid, a.atttypmod)
+    , (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) for 128)
+                     FROM pg_catalog.pg_attrdef d
+                     WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef)
+                    , a.attnotnull"""
+    att_cols['attname'] = cols
+    cols += 1
+    att_cols['atttype'] = cols
+    cols += 1
+    att_cols['attrdef'] = cols
+    cols += 1
+    att_cols['attnotnull'] = cols
+    cols += 1
+    if cur.connection.server_version >= 90100:
+        sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
+                    WHERE c.oid = a.attcollation 
+                    AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
     else:
-        sql = """SELECT a.attname,
-                    pg_catalog.format_type(a.atttypid, a.atttypmod),
-                    (
-                        SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid) for 128)
-                        FROM pg_catalog.pg_attrdef d
-                        WHERE d.adrelid = a.attrelid
-                            AND d.adnum = a.attnum
-                            AND a.atthasdef
-                    ),
-                    a.attnotnull,
-                    a.attnum,
-                    NULL AS attcollation
-                """
-
-
-    if tableinfo.relkind == 'i':
-        sql += """, pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE)
-                AS indexdef"""
+        sql += ",\n  NULL AS attcollation"
+    att_cols['attcollation'] = cols
+    cols += 1
+    if cur.connection.server_version >= 100000:
+        sql += ",\n  a.attidentity"
     else:
-        sql += """, NULL AS indexdef"""
-
-    if tableinfo.relkind == 'f':
+        sql += ",\n  ''::pg_catalog.char AS attidentity"
+    att_cols['attidentity'] = cols
+    cols += 1
+    if cur.connection.server_version >= 120000:
+        sql += ",\n  a.attgenerated"
+    else:
+        sql += ",\n  ''::pg_catalog.char AS attgenerated"
+    att_cols['attgenerated'] = cols
+    cols += 1
+    # index, or partitioned index
+    if tableinfo.relkind == 'i' or tableinfo.relkind == 'I':
+        if cur.connection.server_version >= 110000:
+            sql += ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i " \
+                "WHERE i.indexrelid = '%s') THEN 'yes' ELSE 'no' END AS is_key" % oid
+            att_cols['indexkey'] = cols
+            cols += 1
+        sql += ",\n pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef"
+    else:
+        sql += """,\n NULL AS indexdef"""
+    att_cols['indexdef'] = cols
+    cols += 1
+    if tableinfo.relkind == 'f' and cur.connection.server_version >= 90200:
         sql += """, CASE WHEN attfdwoptions IS NULL THEN '' ELSE '(' ||
                 array_to_string(ARRAY(SELECT quote_ident(option_name) ||  ' '
                 || quote_literal(option_value)  FROM
-                pg_options_to_table(attfdwoptions)), ', ') || ')' END AS
-        attfdwoptions"""
+                pg_options_to_table(attfdwoptions)), ', ') || ')' END AS attfdwoptions"""
     else:
         sql += """, NULL AS attfdwoptions"""
-
+    att_cols['attfdwoptions'] = cols
+    cols += 1
     if verbose:
         sql += """, a.attstorage"""
-        sql += """, CASE WHEN a.attstattarget=-1 THEN NULL ELSE
-                a.attstattarget END AS attstattarget"""
-        if (tableinfo.relkind == 'r' or tableinfo.relkind == 'v' or
-                tableinfo.relkind == 'm' or tableinfo.relkind == 'f' or
-                tableinfo.relkind == 'c' or tableinfo.relkind == 'p'):
-            sql += """, pg_catalog.col_description(a.attrelid,
-                    a.attnum)"""
+        att_cols['attstorage'] = cols
+        cols += 1
+        if tableinfo.relkind == 'r' \
+                or tableinfo.relkind == 'i'\
+                or tableinfo.relkind == 'I'\
+                or tableinfo.relkind == 'm'\
+                or tableinfo.relkind == 'f'\
+                or tableinfo.relkind == 'p':
+            sql += ",\n  CASE WHEN a.attstattarget=-1 THEN " \
+                   "NULL ELSE a.attstattarget END AS attstattarget"
+            att_cols['attstattarget'] = cols
+            cols += 1
+        if tableinfo.relkind == 'r' \
+                or tableinfo.relkind == 'v' \
+                or tableinfo.relkind == 'm' \
+                or tableinfo.relkind == 'f' \
+                or tableinfo.relkind == 'p' \
+                or tableinfo.relkind == 'c':
+            sql += ",\n  pg_catalog.col_description(a.attrelid, a.attnum)"
+            att_cols['attdescr'] = cols
+            cols += 1
 
     sql += """ FROM pg_catalog.pg_attribute a WHERE a.attrelid = '%s' AND
     a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum; """ % oid
@@ -888,16 +907,16 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         headers.append('Modifiers')
         show_modifiers = True
 
-    if (tableinfo.relkind == 'S'):
+    if tableinfo.relkind == 'S':
             headers.append("Value")
 
-    if (tableinfo.relkind == 'i'):
+    if tableinfo.relkind == 'i':
             headers.append("Definition")
 
-    if (tableinfo.relkind == 'f'):
+    if tableinfo.relkind == 'f':
             headers.append("FDW Options")
 
-    if (verbose):
+    if verbose:
         headers.append("Storage")
         if (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
                 tableinfo.relkind == 'f'):
@@ -910,7 +929,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     view_def = ''
     # /* Check if table is a view or materialized view */
-    if ((tableinfo.relkind == 'v' or tableinfo.relkind == 'm') and verbose):
+    if (tableinfo.relkind == 'v' or tableinfo.relkind == 'm') and verbose:
         sql = """SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)""" % oid
         log.debug(sql)
         cur.execute(sql)
@@ -921,18 +940,23 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cells = []
     for i, row in enumerate(res):
         cell = []
-        cell.append(row[0])   # Column
-        cell.append(row[1])   # Type
+        cell.append(row[att_cols['attname']])   # Column
+        cell.append(row[att_cols['atttype']])   # Type
 
         if show_modifiers:
             modifier = ''
-            if row[5]:
-                modifier += ' collate %s' % row[5]
-            if row[3]:
+            if row[att_cols['attcollation']]:
+                modifier += ' collate %s' % row[att_cols['attcollation']]
+            if row[att_cols['attnotnull']]:
                 modifier += ' not null'
-            if row[2]:
-                modifier += ' default %s' % row[2]
-
+            if row[att_cols['attrdef']]:
+                modifier += ' default %s' % row[att_cols['attrdef']]
+            if row[att_cols['attidentity']] == 'a':
+                modifier += " generated always as identity"
+            elif row[att_cols['attidentity']] == 'd':
+                modifier += " generated by default as identity"
+            elif row[att_cols['attgenerated']] == 's':
+                modifier += " generated always as (%s) stored" % row[att_cols['attrdef']]
             cell.append(modifier)
 
         # Sequence
@@ -940,15 +964,15 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             cell.append(seq_values[i])
 
         # Index column
-        if TableInfo.relkind == 'i':
-            cell.append(row[6])
+        if tableinfo.relkind == 'i':
+            cell.append(row[att_cols['indexdef']])
 
         # /* FDW options for foreign table column, only for 9.2 or later */
         if tableinfo.relkind == 'f':
-            cell.append(row[7])
+            cell.append(att_cols['attfdwoptions'])
 
         if verbose:
-            storage = row[8]
+            storage = row[att_cols['attstorage']]
 
             if storage[0] == 'p':
                 cell.append('plain')
@@ -963,19 +987,19 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
             if (tableinfo.relkind == 'r' or tableinfo.relkind == 'm' or
                     tableinfo.relkind == 'f'):
-                cell.append(row[9])
+                cell.append(row[att_cols['attstattarget']])
 
             #  /* Column comments, if the relkind supports this feature. */
             if (tableinfo.relkind == 'r' or tableinfo.relkind == 'v' or
                     tableinfo.relkind == 'm' or
                     tableinfo.relkind == 'c' or tableinfo.relkind == 'f'):
-                cell.append(row[10])
+                cell.append(row[att_cols['attdescr']])
         cells.append(cell)
 
     # Make Footers
 
     status = []
-    if (tableinfo.relkind == 'i'):
+    if tableinfo.relkind == 'i':
         # /* Footer information about an index */
 
         if cur.connection.server_version > 90000:
@@ -1395,8 +1419,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             #* configurations.
             #*/
             for category in range(4):
-                have_heading = False;
-                list_trigger = False;
+                have_heading = False
+                list_trigger = False
                 for row in cur:
                     #/*
                     # * Check if this trigger falls into the current category
@@ -1415,7 +1439,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         if (tgenabled == 'R'):
                             list_trigger = True
                     if list_trigger == False:
-                        continue;
+                        continue
 
                     # /* Print the category heading once */
                     if not have_heading:
@@ -1434,7 +1458,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     tgdef = row[1]
                     triggerpos = tgdef.find(" TRIGGER ")
                     if triggerpos >= 0:
-                        tgdef = triggerpos + 9;
+                        tgdef = triggerpos + 9
 
                     status.append("    %s\n" % row[1][tgdef:])
 
@@ -1446,14 +1470,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         #/* print foreign server name */
         if tableinfo.relkind == 'f':
             #/* Footer information about foreign table */
-            sql = ("SELECT s.srvname,\n"
-                   "       array_to_string(ARRAY(SELECT "
-                   "       quote_ident(option_name) ||  ' ' || "
-                   "       quote_literal(option_value)  FROM "
-                   "       pg_options_to_table(ftoptions)),  ', ') "
-                   "FROM pg_catalog.pg_foreign_table f,\n"
-                   "     pg_catalog.pg_foreign_server s\n"
-                   "WHERE f.ftrelid = %s AND s.oid = f.ftserver;" % oid)
+            sql = ("""SELECT s.srvname,\n
+                          array_to_string(ARRAY(SELECT 
+                          quote_ident(option_name) ||  ' ' || 
+                          quote_literal(option_value)  FROM 
+                          pg_options_to_table(ftoptions)),  ', ') 
+                   FROM pg_catalog.pg_foreign_table f,\n
+                        pg_catalog.pg_foreign_server s\n
+                   WHERE f.ftrelid = %s AND s.oid = f.ftserver;""" % oid)
             log.debug(sql)
             cur.execute(sql)
             row = cur.fetchone()
