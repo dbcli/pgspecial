@@ -198,10 +198,12 @@ def test_slash_dp(executor):
             ('public', 'tbl3', 'table', None, '', ''),
             ('public', 'vw1', 'view', None, '', '')]
 
-    headers = ['Schema', 'Name', 'Type', 'Access privileges', 'Column privileges', 'Policies']
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
     status = 'SELECT %s' % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected
+
 
 @dbtest
 def test_slash_dp_pattern(executor):
@@ -209,10 +211,12 @@ def test_slash_dp_pattern(executor):
     results = executor('\dp i*2')
     title = None
     rows = [('public', 'inh2', 'table', None, '', '')]
-    headers = ['Schema', 'Name', 'Type', 'Access privileges', 'Column privileges', 'Policies']
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
     status = 'SELECT %s' % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected
+
 
 @dbtest
 def test_slash_dp_pattern_alias(executor):
@@ -220,7 +224,8 @@ def test_slash_dp_pattern_alias(executor):
     results = executor('\z i*2')
     title = None
     rows = [('public', 'inh2', 'table', None, '', '')]
-    headers = ['Schema', 'Name', 'Type', 'Access privileges', 'Column privileges', 'Policies']
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
     status = 'SELECT %s' % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected

@@ -108,9 +108,7 @@ def list_roles(cur, pattern, verbose):
 
 @special_command('\\dp', '\\dp [pattern]', 'List roles.', aliases=('\\z',))
 def list_privileges(cur, pattern, verbose):
-    """
-    Returns (title, rows, headers, status)
-    """
+    """Returns (title, rows, headers, status)"""
     sql = '''
         SELECT n.nspname as "Schema",
           c.relname as "Name",
@@ -169,12 +167,12 @@ def list_privileges(cur, pattern, verbose):
     if pattern:
         _, schema = sql_name_pattern(pattern)
         where_clause = where_clause.format(
-                pattern=' AND c.relname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default ')
+            pattern=' AND c.relname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default ')
         params.append(schema)
     else:
         where_clause = where_clause.format(
-                pattern='')
-    sql = cur.mogrify(sql + where_clause +  " ORDER BY 1, 2", params)
+            pattern='')
+    sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
     print(sql)
 
     log.debug(sql)
