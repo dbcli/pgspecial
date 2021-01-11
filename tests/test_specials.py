@@ -184,6 +184,7 @@ def test_slash_dn(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
+
 @dbtest
 def test_slash_dp(executor):
     """List all schemas."""
@@ -229,6 +230,7 @@ def test_slash_dp_pattern_alias(executor):
     status = 'SELECT %s' % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected
+
 
 @dbtest
 def test_slash_dt(executor):
