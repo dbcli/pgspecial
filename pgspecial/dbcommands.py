@@ -106,7 +106,7 @@ def list_roles(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
-@special_command('\\dp', '\\dp [pattern]', 'List roles.')
+@special_command('\\dp', '\\dp [pattern]', 'List roles.', aliases=('\\z',))
 def list_privileges(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)

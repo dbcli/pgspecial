@@ -215,6 +215,17 @@ def test_slash_dp_pattern(executor):
     assert results == expected
 
 @dbtest
+def test_slash_dp_pattern_alias(executor):
+    """List all schemas."""
+    results = executor('\z i*2')
+    title = None
+    rows = [('public', 'inh2', 'table', None, '', '')]
+    headers = ['Schema', 'Name', 'Type', 'Access privileges', 'Column privileges', 'Policies']
+    status = 'SELECT %s' % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+@dbtest
 def test_slash_dt(executor):
     """List all tables in public schema."""
     results = executor('\dt')
