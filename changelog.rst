@@ -1,3 +1,11 @@
+1.11.11
+========
+
+Features:
+---------
+
+* Add support for the `\dp` metacommand that lists the privileges of Postgres objects (Thanks: `Guru Devanla`_)
+
 1.11.10
 ======
 

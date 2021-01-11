@@ -106,6 +106,82 @@ def list_roles(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
 
 
+@special_command('\\dp', '\\dp [pattern]', 'List roles.', aliases=('\\z',))
+def list_privileges(cur, pattern, verbose):
+    """Returns (title, rows, headers, status)"""
+    sql = '''
+        SELECT n.nspname as "Schema",
+          c.relname as "Name",
+          CASE c.relkind WHEN 'r' THEN 'table'
+                         WHEN 'v' THEN 'view'
+                         WHEN 'm' THEN 'materialized view'
+                         WHEN 'S' THEN 'sequence'
+                         WHEN 'f' THEN 'foreign table'
+                         WHEN 'p' THEN 'partitioned table' END as "Type",
+          pg_catalog.array_to_string(c.relacl, E'\n') AS "Access privileges",
+          pg_catalog.array_to_string(ARRAY(
+            SELECT attname || E':\n  ' || pg_catalog.array_to_string(attacl, E'\n  ')
+            FROM pg_catalog.pg_attribute a
+            WHERE attrelid = c.oid AND NOT attisdropped AND attacl IS NOT NULL
+          ), E'\n') AS "Column privileges",
+          pg_catalog.array_to_string(ARRAY(
+            SELECT polname
+            || CASE WHEN NOT polpermissive THEN
+               E' (RESTRICTIVE)'
+               ELSE '' END
+            || CASE WHEN polcmd != '*' THEN
+                   E' (' || polcmd || E'):'
+               ELSE E':'
+               END
+            || CASE WHEN polqual IS NOT NULL THEN
+                   E'\n  (u): ' || pg_catalog.pg_get_expr(polqual, polrelid)
+               ELSE E''
+               END
+            || CASE WHEN polwithcheck IS NOT NULL THEN
+                   E'\n  (c): ' || pg_catalog.pg_get_expr(polwithcheck, polrelid)
+               ELSE E''
+               END    || CASE WHEN polroles <> '{0}' THEN
+                   E'\n  to: ' || pg_catalog.array_to_string(
+                       ARRAY(
+                           SELECT rolname
+                           FROM pg_catalog.pg_roles
+                           WHERE oid = ANY (polroles)
+                           ORDER BY 1
+                       ), E', ')
+               ELSE E''
+               END
+            FROM pg_catalog.pg_policy pol
+            WHERE polrelid = c.oid), E'\n')
+            AS "Policies"
+        FROM pg_catalog.pg_class c
+             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    '''
+
+    where_clause = '''
+        WHERE c.relkind IN ('r','v','m','S','f','p')
+          {pattern}
+          AND n.nspname !~ '^pg_' AND pg_catalog.pg_table_is_visible(c.oid)
+    '''
+
+    params = []
+    if pattern:
+        _, schema = sql_name_pattern(pattern)
+        where_clause = where_clause.format(
+            pattern=' AND c.relname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default ')
+        params.append(schema)
+    else:
+        where_clause = where_clause.format(
+            pattern='')
+    sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
+    print(sql)
+
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+
+
 @special_command('\\db', '\\db[+] [pattern]', 'List tablespaces.')
 def list_tablespaces(cur, pattern, **_):
     """
@@ -811,7 +887,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # Get column info
     cols = 0
     att_cols = {}
-    sql = """SELECT a.attname, 
+    sql = """SELECT a.attname,
     pg_catalog.format_type(a.atttypid, a.atttypmod)
     , (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) for 128)
                      FROM pg_catalog.pg_attrdef d
@@ -827,7 +903,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cols += 1
     if cur.connection.server_version >= 90100:
         sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
-                    WHERE c.oid = a.attcollation 
+                    WHERE c.oid = a.attcollation
                     AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
     else:
         sql += ",\n  NULL AS attcollation"
@@ -1471,10 +1547,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         if tableinfo.relkind == 'f':
             #/* Footer information about foreign table */
             sql = ("""SELECT s.srvname,\n
-                          array_to_string(ARRAY(SELECT 
-                          quote_ident(option_name) ||  ' ' || 
-                          quote_literal(option_value)  FROM 
-                          pg_options_to_table(ftoptions)),  ', ') 
+                          array_to_string(ARRAY(SELECT
+                          quote_ident(option_name) ||  ' ' ||
+                          quote_literal(option_value)  FROM
+                          pg_options_to_table(ftoptions)),  ', ')
                    FROM pg_catalog.pg_foreign_table f,\n
                         pg_catalog.pg_foreign_server s\n
                    WHERE f.ftrelid = %s AND s.oid = f.ftserver;""" % oid)
@@ -1706,4 +1782,3 @@ def list_foreign_tables(cur, pattern, verbose):
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
-

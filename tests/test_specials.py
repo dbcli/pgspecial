@@ -186,6 +186,53 @@ def test_slash_dn(executor):
 
 
 @dbtest
+def test_slash_dp(executor):
+    """List all schemas."""
+    results = executor('\dp')
+    title = None
+    rows = [('public', 'Inh1', 'table', None, '', ''),
+            ('public', 'inh2', 'table', None, '', ''),
+            ('public', 'mvw1', 'materialized view', None, '', ''),
+            ('public', 'tbl1', 'table', None, '', ''),
+            ('public', 'tbl2', 'table', None, '', ''),
+            ('public', 'tbl2_id2_seq', 'sequence', None, '', ''),
+            ('public', 'tbl3', 'table', None, '', ''),
+            ('public', 'vw1', 'view', None, '', '')]
+
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
+    status = 'SELECT %s' % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dp_pattern(executor):
+    """List all schemas."""
+    results = executor('\dp i*2')
+    title = None
+    rows = [('public', 'inh2', 'table', None, '', '')]
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
+    status = 'SELECT %s' % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_dp_pattern_alias(executor):
+    """List all schemas."""
+    results = executor('\z i*2')
+    title = None
+    rows = [('public', 'inh2', 'table', None, '', '')]
+    headers = ['Schema', 'Name', 'Type',
+               'Access privileges', 'Column privileges', 'Policies']
+    status = 'SELECT %s' % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dt(executor):
     """List all tables in public schema."""
     results = executor('\dt')
