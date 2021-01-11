@@ -4,7 +4,7 @@
 Features:
 ---------
 
-* Add support for the `\dp` metacommand that list privileges of Postgres objects (Thanks: Guru Devanla)
+* Add support for the `\dp` metacommand that list privileges of Postgres objects (Thanks: `Guru Devanla`_)
 
 1.11.10
 ======
