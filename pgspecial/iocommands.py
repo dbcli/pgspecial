@@ -234,6 +234,30 @@ def list_named_queries(verbose):
         status = ''
     return [('', rows, headers, status)]
 
+@special_command('\\np', '\\np name', 'Print a named query.')
+def print_named_query(pattern, **_):
+    """Save a new named query.
+    Returns (title, rows, headers, status)"""
+
+    usage = 'Syntax: \\np name.\n\n' + NamedQueries.instance.usage
+    if not pattern:
+        return [(None, None, None, usage)]
+
+    name = pattern.strip()
+    if (not name):
+        return [(None, None, None,
+            usage + 'Err: A name is required.')]
+
+    headers = ["Name", "Query"]
+    rows = [(r, NamedQueries.instance.get(r))
+            for r in NamedQueries.instance.list() if r == name]
+
+    status = ''
+    if not rows:
+        status = 'No match found'
+
+    return [('', rows, headers, status)]
+
 
 @special_command('\\ns', '\\ns name query', 'Save a named query.')
 def save_named_query(pattern, **_):
