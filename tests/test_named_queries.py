@@ -34,7 +34,7 @@ def test_print_named_queries(named_query):
     PGSpecial().execute(None, '\\ns test_name select * from bar')
     assert 'test_name' in NamedQueries.instance.list()
 
-    result = PGSpecial().execute(None, '\\np test_name')
+    result = PGSpecial().execute(None, '\\np test_n.*')
     assert result == [('', [('test_name', 'select * from bar')], ['Name', 'Query'], '')]
 
     result = PGSpecial().execute(None, '\\np')
