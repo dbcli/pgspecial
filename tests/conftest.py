@@ -2,7 +2,7 @@ import pytest
 from dbutils import (create_db, db_connection, setup_db, teardown_db, TEST_DB_NAME)
 from pgspecial.main import PGSpecial
 
-@pytest.yield_fixture(scope='module')
+@pytest.fixture(scope='module')
 def connection():
     create_db(TEST_DB_NAME)
     connection = db_connection(TEST_DB_NAME)
