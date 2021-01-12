@@ -234,11 +234,15 @@ def list_named_queries(verbose):
         status = ''
     return [('', rows, headers, status)]
 
+
 @special_command('\\np', '\\np name_pattern', 'Print a named query.')
 def get_named_query(pattern, **_):
-    """Get a named query that matches name_pattern. The named pattern can be
-    a regular expression.
-    Returns (title, rows, headers, status)"""
+    """Get a named query that matches name_pattern.
+
+    The named pattern can be a regular expression. Returns (title,
+    rows, headers, status)
+
+    """
 
     usage = 'Syntax: \\np name.\n\n' + NamedQueries.instance.usage
     if not pattern:
@@ -247,7 +251,7 @@ def get_named_query(pattern, **_):
     name = pattern.strip()
     if (not name):
         return [(None, None, None,
-            usage + 'Err: A name is required.')]
+                 usage + 'Err: A name is required.')]
 
     headers = ["Name", "Query"]
     rows = [(r, NamedQueries.instance.get(r))
@@ -278,7 +282,6 @@ def save_named_query(pattern, **_):
 
     NamedQueries.instance.save(name, query)
     return [(None, None, None, "Saved.")]
-
 
 @special_command('\\nd', '\\nd [name]', 'Delete a named query.')
 def delete_named_query(pattern, **_):
