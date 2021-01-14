@@ -1,7 +1,5 @@
-# coding: utf-8
-
-  #!/usr/bin/python
-  # -*- coding: utf-8 -*-
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 from dbutils import dbtest, POSTGRES_USER, foreign_db_environ
 import itertools
