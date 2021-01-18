@@ -1,4 +1,4 @@
-1.11.11
+Upcoming
 ========
 
 Features:
@@ -6,6 +6,11 @@ Features:
 
 * Add support for the `\dp` metacommand that lists the privileges of Postgres objects (Thanks: `Guru Devanla`_)
 * Add support for the `\np <named_query_pattern>` metacommand that returns named queries matching the pattern (Thanks: `Guru Devanla`_)
+
+Internal:
+---------
+
+* Use Black to format the code and run CI style checks.
 
 1.11.10
 ======
