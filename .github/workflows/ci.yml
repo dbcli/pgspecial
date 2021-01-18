@@ -44,8 +44,9 @@ jobs:
       - name: Run unit tests
         run: coverage run --source pgspecial -m py.test
 
-      - name: Lint
-        run: pep8radius HEAD --docformatter --diff --error-status
+      - name: Run Black
+        run: black --check .
+        if: matrix.python-version == '3.6'
 
       - name: Coverage
         run: |
