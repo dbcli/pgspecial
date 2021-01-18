@@ -25,17 +25,16 @@ def parse(file_name):
         desc = get_description(doc)
         synopsis = get_section(doc, "synopsis")
         if desc and synopsis:
-            return {
-                "description": desc,
-                "synopsis": synopsis
-            }
+            return {"description": desc, "synopsis": synopsis}
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Parse postgres SGML reference files into JSON")
         print("Usage:")
-        print("echo -n \"commands = \" > command_help.py; python parser.py ref/ | python -mjson.tool | sed 's/\"\: null/\": None/g' >>  command_help.py")
+        print(
+            'echo -n "commands = " > command_help.py; python parser.py ref/ | python -mjson.tool | sed \'s/"\: null/": None/g\' >>  command_help.py'
+        )
         print("")
         sys.exit(0)
 

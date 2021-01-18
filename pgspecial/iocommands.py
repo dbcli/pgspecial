@@ -30,19 +30,18 @@ def editor_command(command):
     # for both conditions.
 
     stripped = command.strip()
-    for sought in ('\\e ', '\\ev ', '\\ef '):
+    for sought in ("\\e ", "\\ev ", "\\ef "):
         if stripped.startswith(sought):
             return sought.strip()
-    for sought in ('\\e', ):
+    for sought in ("\\e",):
         if stripped.endswith(sought):
             return sought
 
 
-
 @export
 def get_filename(sql):
-    if sql.strip().startswith('\\e'):
-        command, _, filename = sql.partition(' ')
+    if sql.strip().startswith("\\e"):
+        command, _, filename = sql.partition(" ")
         return filename.strip() or None
 
 
@@ -63,9 +62,9 @@ def get_editor_query(sql):
     # The reason we can't simply do .strip('\e') is that it strips characters,
     # not a substring. So it'll strip "e" in the end of the sql also!
     # Ex: "select * from style\e" -> "select * from styl".
-    pattern = re.compile('(^\\\e|\\\e$)')
+    pattern = re.compile("(^\\\e|\\\e$)")
     while pattern.search(sql):
-        sql = pattern.sub('', sql)
+        sql = pattern.sub("", sql)
 
     return sql
 
@@ -79,24 +78,27 @@ def open_external_editor(filename=None, sql=None):
     """
 
     message = None
-    filename = filename.strip().split(' ', 1)[0] if filename else None
+    filename = filename.strip().split(" ", 1)[0] if filename else None
 
-    sql = sql or ''
-    MARKER = '# Type your query above this line.\n'
+    sql = sql or ""
+    MARKER = "# Type your query above this line.\n"
 
     # Populate the editor buffer with the partial sql (if available) and a
     # placeholder comment.
-    query = click.edit(u'{sql}\n\n{marker}'.format(sql=sql, marker=MARKER),
-                       filename=filename, extension='.sql')
+    query = click.edit(
+        "{sql}\n\n{marker}".format(sql=sql, marker=MARKER),
+        filename=filename,
+        extension=".sql",
+    )
 
     if filename:
         try:
             query = read_from_file(filename)
         except IOError:
-            message = 'Error reading file: %s.' % filename
+            message = "Error reading file: %s." % filename
 
     if query is not None:
-        query = query.split(MARKER, 1)[0].rstrip('\n')
+        query = query.split(MARKER, 1)[0].rstrip("\n")
     else:
         # Don't return None for the caller to deal with.
         # Empty string is ok.
@@ -106,7 +108,7 @@ def open_external_editor(filename=None, sql=None):
 
 
 def read_from_file(path):
-    with io.open(expanduser(path), encoding='utf-8') as f:
+    with io.open(expanduser(path), encoding="utf-8") as f:
         contents = f.read()
     return contents
 
@@ -123,13 +125,16 @@ def _paused_thread():
 
 def _index_of_file_name(tokenlist):
     for (idx, token) in reversed(list(enumerate(tokenlist[:-2]))):
-        if token.is_keyword and token.value.upper() in ('TO', 'FROM'):
+        if token.is_keyword and token.value.upper() in ("TO", "FROM"):
             return idx + 2
     return None
 
 
-@special_command('\\copy', '\\copy [tablename] to/from [filename]',
-                 'Copy data between a file and a table.')
+@special_command(
+    "\\copy",
+    "\\copy [tablename] to/from [filename]",
+    "Copy data between a file and a table.",
+)
 def copy(cur, pattern, verbose):
     """Copies table data to/from files"""
 
@@ -138,25 +143,28 @@ def copy(cur, pattern, verbose):
     tokenlist = parsed[0].tokens
     idx = _index_of_file_name(tokenlist)
     file_name = tokenlist[idx].value
-    before_file_name = ''.join(t.value for t in tokenlist[:idx])
-    after_file_name = ''.join(t.value for t in tokenlist[idx+1:])
+    before_file_name = "".join(t.value for t in tokenlist[:idx])
+    after_file_name = "".join(t.value for t in tokenlist[idx + 1 :])
 
-    direction = tokenlist[idx-2].value.upper()
-    replacement_file_name = 'STDIN' if direction == 'FROM' else 'STDOUT'
-    query = u'{0} {1} {2}'.format(before_file_name, replacement_file_name,
-                                  after_file_name)
-    open_mode = 'r' if direction == 'FROM' else 'w'
+    direction = tokenlist[idx - 2].value.upper()
+    replacement_file_name = "STDIN" if direction == "FROM" else "STDOUT"
+    query = "{0} {1} {2}".format(
+        before_file_name, replacement_file_name, after_file_name
+    )
+    open_mode = "r" if direction == "FROM" else "w"
     if file_name.startswith("'") and file_name.endswith("'"):
-        file = io.open(expanduser(file_name.strip("'")), mode=open_mode, encoding='utf-8')
-    elif 'stdin' in file_name.lower():
+        file = io.open(
+            expanduser(file_name.strip("'")), mode=open_mode, encoding="utf-8"
+        )
+    elif "stdin" in file_name.lower():
         file = sys.stdin
-    elif 'stdout' in file_name.lower():
+    elif "stdout" in file_name.lower():
         file = sys.stdout
     else:
-        raise Exception('Enclose filename in single quotes')
+        raise Exception("Enclose filename in single quotes")
 
     with _paused_thread():
-        cur.copy_expert('copy ' + query, file)
+        cur.copy_expert("copy " + query, file)
 
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -168,30 +176,41 @@ def copy(cur, pattern, verbose):
 def subst_favorite_query_args(query, args):
     """replace positional parameters ($1,$2,...$n) in query."""
     for idx, val in enumerate(args):
-        subst_var = '$' + str(idx + 1)
+        subst_var = "$" + str(idx + 1)
         if subst_var not in query:
-            return [None, 'query does not have substitution parameter ' + subst_var + ':\n  ' + query]
+            return [
+                None,
+                "query does not have substitution parameter "
+                + subst_var
+                + ":\n  "
+                + query,
+            ]
 
         query = query.replace(subst_var, val)
 
-    match = re.search('\\$\d+', query)
+    match = re.search("\\$\d+", query)
     if match:
-        return[None, 'missing substitution for ' + match.group(0) + ' in query:\n  ' + query]
+        return [
+            None,
+            "missing substitution for " + match.group(0) + " in query:\n  " + query,
+        ]
 
     return [query, None]
 
 
-@special_command('\\n', '\\n[+] [name] [param1 param2 ...]', 'List or execute named queries.')
+@special_command(
+    "\\n", "\\n[+] [name] [param1 param2 ...]", "List or execute named queries."
+)
 def execute_named_query(cur, pattern, **_):
     """Returns (title, rows, headers, status)"""
-    if pattern == '':
+    if pattern == "":
         return list_named_queries(True)
 
     params = shlex.split(pattern)
     pattern = params.pop(0)
 
     query = NamedQueries.instance.get(pattern)
-    title = '> {}'.format(query)
+    title = "> {}".format(query)
     if query is None:
         message = "No named query: {}".format(pattern)
         return [(None, None, None, message)]
@@ -204,8 +223,10 @@ def execute_named_query(cur, pattern, **_):
         cur.execute(query)
     except psycopg2.ProgrammingError as e:
         if e.pgcode == psycopg2.errorcodes.SYNTAX_ERROR and "%s" in query:
-            raise Exception('Bad arguments: '
-                            'please use "$1", "$2", etc. for named queries instead of "%s"')
+            raise Exception(
+                "Bad arguments: "
+                'please use "$1", "$2", etc. for named queries instead of "%s"'
+            )
         else:
             raise
     except (IndexError, TypeError):
@@ -226,14 +247,13 @@ def list_named_queries(verbose):
         headers = ["Name"]
     else:
         headers = ["Name", "Query"]
-        rows = [[r, NamedQueries.instance.get(r)]
-                for r in NamedQueries.instance.list()]
+        rows = [[r, NamedQueries.instance.get(r)] for r in NamedQueries.instance.list()]
 
     if not rows:
         status = NamedQueries.instance.usage
     else:
-        status = ''
-    return [('', rows, headers, status)]
+        status = ""
+    return [("", rows, headers, status)]
 
 
 @special_command('\\np', '\\np name_pattern', 'Print a named query.')
@@ -265,30 +285,29 @@ def get_named_query(pattern, **_):
     return [('', rows, headers, status)]
 
 
-@special_command('\\ns', '\\ns name query', 'Save a named query.')
+@special_command("\\ns", "\\ns name query", "Save a named query.")
 def save_named_query(pattern, **_):
     """Save a new named query.
     Returns (title, rows, headers, status)"""
 
-    usage = 'Syntax: \\ns name query.\n\n' + NamedQueries.instance.usage
+    usage = "Syntax: \\ns name query.\n\n" + NamedQueries.instance.usage
     if not pattern:
         return [(None, None, None, usage)]
 
-    name, _, query = pattern.partition(' ')
+    name, _, query = pattern.partition(" ")
 
     # If either name or query is missing then print the usage and complain.
     if (not name) or (not query):
-        return [(None, None, None,
-            usage + 'Err: Both name and query are required.')]
+        return [(None, None, None, usage + "Err: Both name and query are required.")]
 
     NamedQueries.instance.save(name, query)
     return [(None, None, None, "Saved.")]
 
-@special_command('\\nd', '\\nd [name]', 'Delete a named query.')
+
+@special_command("\\nd", "\\nd [name]", "Delete a named query.")
 def delete_named_query(pattern, **_):
-    """Delete an existing named query.
-    """
-    usage = 'Syntax: \\nd name.\n\n' + NamedQueries.instance.usage
+    """Delete an existing named query."""
+    usage = "Syntax: \\nd name.\n\n" + NamedQueries.instance.usage
     if not pattern:
         return [(None, None, None, usage)]
 

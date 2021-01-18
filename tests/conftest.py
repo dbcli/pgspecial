@@ -1,9 +1,9 @@
 import pytest
-from dbutils import (create_db, db_connection, setup_db, teardown_db, TEST_DB_NAME)
+from dbutils import create_db, db_connection, setup_db, teardown_db, TEST_DB_NAME
 from pgspecial.main import PGSpecial
 
 
-@pytest.fixture(scope='module')
+@pytest.yield_fixture(scope="module")
 def connection():
     create_db(TEST_DB_NAME)
     connection = db_connection(TEST_DB_NAME)
@@ -33,4 +33,5 @@ def executor(connection):
             else:
                 results.extend((title, None, headers, status))
         return results
+
     return query_runner

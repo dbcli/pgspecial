@@ -1,5 +1,5 @@
 __all__ = []
-__version__ = '1.11.10'
+__version__ = "1.11.10"
 
 
 def export(defn):
@@ -7,6 +7,7 @@ def export(defn):
     globals()[defn.__name__] = defn
     __all__.append(defn.__name__)
     return defn
+
 
 from . import dbcommands
 from . import iocommands
