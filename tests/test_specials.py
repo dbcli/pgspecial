@@ -791,34 +791,34 @@ def test_slash_h_alias(executor):
 def test_slash_copy_to_tsv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
     executor(
-        u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
+        "\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
     )
     infile = filepath.open(encoding="utf-8")
     contents = infile.read()
     assert len(contents.splitlines()) == 1
-    assert u"Montréal" in contents
+    assert "Montréal" in contents
 
 
 @dbtest
 def test_slash_copy_to_stdout(executor, capsys):
-    executor(u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO stdout")
+    executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO stdout")
     (out, err) = capsys.readouterr()
-    assert out == u"Montréal\tPortland\tCleveland\n"
+    assert out == "Montréal\tPortland\tCleveland\n"
 
 
 @dbtest
 def test_slash_copy_to_csv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
     executor(
-        u"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(
+        "\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(
             filepath
         )
     )
     infile = filepath.open(encoding="utf-8")
     contents = infile.read()
     assert len(contents.splitlines()) == 1
-    assert u"Montréal" in contents
-    assert u"," in contents
+    assert "Montréal" in contents
+    assert "," in contents
 
 
 @dbtest

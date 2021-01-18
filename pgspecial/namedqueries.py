@@ -3,7 +3,7 @@ class NamedQueries(object):
 
     section_name = "named queries"
 
-    usage = u"""Named Queries are a way to save frequently used queries
+    usage = """Named Queries are a way to save frequently used queries
 with a short name. Think of them as favorites.
 Examples:
 
