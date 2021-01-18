@@ -26,13 +26,14 @@ following imports:
 
     from pgspecial.main import PGSpecial
     from pgspecial.namedqueries import NamedQueries
+    from psycopg2.extensions import cursor
 
 Then you will create and use an instance of PGSpecial:
 
 .. code-block:: python
 
         pgspecial = PGSpecial()
-        for result in pgspecial.execute(cur, sql):
+        for result in pgspecial.execute(cur: cursor, sql):
             # Do something
 
 If you want to import named queries from an existing config file, it is
