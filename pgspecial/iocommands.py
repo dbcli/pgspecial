@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 from contextlib import contextmanager
 import re
+import fnmatch
 import sys
 import logging
 import click
@@ -235,6 +236,35 @@ def list_named_queries(verbose):
     return [('', rows, headers, status)]
 
 
+@special_command('\\np', '\\np name_pattern', 'Print a named query.')
+def get_named_query(pattern, **_):
+    """Get a named query that matches name_pattern.
+
+    The named pattern can be a regular expression. Returns (title,
+    rows, headers, status)
+
+    """
+
+    usage = 'Syntax: \\np name.\n\n' + NamedQueries.instance.usage
+    if not pattern:
+        return [(None, None, None, usage)]
+
+    name = pattern.strip()
+    if (not name):
+        return [(None, None, None,
+                 usage + 'Err: A name is required.')]
+
+    headers = ["Name", "Query"]
+    rows = [(r, NamedQueries.instance.get(r))
+            for r in NamedQueries.instance.list() if re.search(name, r)]
+
+    status = ''
+    if not rows:
+        status = 'No match found'
+
+    return [('', rows, headers, status)]
+
+
 @special_command('\\ns', '\\ns name query', 'Save a named query.')
 def save_named_query(pattern, **_):
     """Save a new named query.
@@ -253,7 +283,6 @@ def save_named_query(pattern, **_):
 
     NamedQueries.instance.save(name, query)
     return [(None, None, None, "Saved.")]
-
 
 @special_command('\\nd', '\\nd [name]', 'Delete a named query.')
 def delete_named_query(pattern, **_):
