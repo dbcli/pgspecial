@@ -256,7 +256,7 @@ def list_named_queries(verbose):
     return [("", rows, headers, status)]
 
 
-@special_command('\\np', '\\np name_pattern', 'Print a named query.')
+@special_command("\\np", "\\np name_pattern", "Print a named query.")
 def get_named_query(pattern, **_):
     """Get a named query that matches name_pattern.
 
@@ -265,24 +265,26 @@ def get_named_query(pattern, **_):
 
     """
 
-    usage = 'Syntax: \\np name.\n\n' + NamedQueries.instance.usage
+    usage = "Syntax: \\np name.\n\n" + NamedQueries.instance.usage
     if not pattern:
         return [(None, None, None, usage)]
 
     name = pattern.strip()
-    if (not name):
-        return [(None, None, None,
-                 usage + 'Err: A name is required.')]
+    if not name:
+        return [(None, None, None, usage + "Err: A name is required.")]
 
     headers = ["Name", "Query"]
-    rows = [(r, NamedQueries.instance.get(r))
-            for r in NamedQueries.instance.list() if re.search(name, r)]
+    rows = [
+        (r, NamedQueries.instance.get(r))
+        for r in NamedQueries.instance.list()
+        if re.search(name, r)
+    ]
 
-    status = ''
+    status = ""
     if not rows:
-        status = 'No match found'
+        status = "No match found"
 
-    return [('', rows, headers, status)]
+    return [("", rows, headers, status)]
 
 
 @special_command("\\ns", "\\ns name query", "Save a named query.")
