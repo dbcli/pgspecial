@@ -120,17 +120,31 @@ After that, tests can be run with:
     $ cd tests
     $ py.test
 
-PEP8 checks (lint)
------------------_
+Enforcing the code style (linting)
+------------------------------
 
 When you submit a PR, the changeset is checked for pep8 compliance using
-`pep8radius <https://github.com/hayd/pep8radius>`_. If you see a build failing because
-of these checks, install pep8radius and apply style fixes:
+`black <https://github.com/psf/black>`_. If you see a build failing because
+of these checks, install ``black`` and apply style fixes:
 
 ::
 
-    $ pip install pep8radius
-    $ pep8radius master --docformatter --diff # view a diff of proposed fixes
-    $ pep8radius master --docformatter --in-place # apply the fixes
+    $ pip install black
+    $ black .
 
 Then commit and push the fixes.
+
+To enforce ``black`` applied on every commit, we also suggest installing ``pre-commit`` and
+using the ``pre-commit`` hooks available in this repo:
+
+::
+
+    $ pip install pre-commit
+    $ pre-commit install
+
+Git blame
+---------
+
+Use ``git blame my_file.py --ignore-revs-file .git-blame-ignore-revs`` to exclude irrelevant commits
+(specifically Black) from ``git blame``. For more information,
+see `here <https://github.com/psf/black#migrating-your-code-style-without-ruining-git-blame>`_.
