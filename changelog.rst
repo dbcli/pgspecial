@@ -1,3 +1,11 @@
+1.13.0
+========
+
+Features:
+---------
+
+* Add support for the `\ddp` metacommand that lists the default privileges of Postgres objects (Thanks: `Roberto Dedoro`_)
+
 1.12.1
 ======
 
