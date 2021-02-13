@@ -186,7 +186,6 @@ def list_privileges(cur, pattern, verbose):
     else:
         where_clause = where_clause.format(pattern="")
     sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
-    print(sql)
 
     log.debug(sql)
     cur.execute(sql)
