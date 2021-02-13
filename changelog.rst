@@ -1,3 +1,8 @@
+1.12.1
+======
+
+* Fix for broken `MANIFEST.in` that prevented source installation (#101. Thanks: `Dave Hirschfeld`_).
+
 1.12.0
 ======
 
@@ -261,3 +266,4 @@ Features:
 .. _`William Ivanski`: https://github.com/wind39
 .. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
 .. _`Ignacio Campabadal`: https://github.com/igncampa
+.. _`Dave Hirschfeld`: https://github.com/dhirschfeld`
