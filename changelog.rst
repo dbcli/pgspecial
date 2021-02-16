@@ -275,3 +275,4 @@ Features:
 .. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
 .. _`Ignacio Campabadal`: https://github.com/igncampa
 .. _`Dave Hirschfeld`: https://github.com/dhirschfeld`
+.. _`Roberto Dedoro`: https://github.com/mirobertod`
