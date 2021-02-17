@@ -1,3 +1,11 @@
+1.13.0
+========
+
+Features:
+---------
+
+* Add support for the `\ddp` metacommand that lists the default privileges of Postgres objects (Thanks: `Roberto Dedoro`_)
+
 1.12.1
 ======
 
@@ -266,4 +274,5 @@ Features:
 .. _`William Ivanski`: https://github.com/wind39
 .. _`Aluísio Augusto Silva Gonçalves`: https://github.com/AluisioASG
 .. _`Ignacio Campabadal`: https://github.com/igncampa
-.. _`Dave Hirschfeld`: https://github.com/dhirschfeld`
+.. _`Dave Hirschfeld`: https://github.com/dhirschfeld
+.. _`Roberto Dedoro`: https://github.com/mirobertod

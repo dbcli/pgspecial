@@ -279,6 +279,44 @@ def test_slash_dp_pattern_alias(executor):
 
 
 @dbtest
+def test_slash_ddp(executor):
+    """List all schemas."""
+    results = executor("\ddp")
+    title = None
+    rows = [
+        ("postgres", "schema1", "table", "test_role=r/postgres"),
+        ("postgres", "schema2", "table", "test_role=arwdDxt/postgres"),
+    ]
+
+    headers = [
+        "Owner",
+        "Schema",
+        "Type",
+        "Access privileges",
+    ]
+    status = "SELECT %s" % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
+def test_slash_ddp_pattern(executor):
+    """List all schemas."""
+    results = executor("\ddp schema2")
+    title = None
+    rows = [("postgres", "schema2", "table", "test_role=arwdDxt/postgres")]
+    headers = [
+        "Owner",
+        "Schema",
+        "Type",
+        "Access privileges",
+    ]
+    status = "SELECT %s" % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_dt(executor):
     """List all tables in public schema."""
     results = executor("\dt")

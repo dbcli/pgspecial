@@ -186,8 +186,43 @@ def list_privileges(cur, pattern, verbose):
     else:
         where_clause = where_clause.format(pattern="")
     sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
-    print(sql)
 
+    log.debug(sql)
+    cur.execute(sql)
+    if cur.description:
+        headers = [x[0] for x in cur.description]
+        return [(None, cur, headers, cur.statusmessage)]
+
+
+@special_command("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
+def list_default_privileges(cur, pattern, verbose):
+    """Returns (title, rows, headers, status)"""
+    sql = """
+    SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
+    n.nspname AS "Schema",
+    CASE d.defaclobjtype WHEN 'r' THEN 'table'
+                         WHEN 'S' THEN 'sequence'
+                         WHEN 'f' THEN 'function'
+                         WHEN 'T' THEN 'type'
+                         WHEN 'n' THEN 'schema' END AS "Type",
+    pg_catalog.array_to_string(d.defaclacl, E'\n') AS "Access privileges"
+    FROM pg_catalog.pg_default_acl d
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
+    """
+
+    where_clause = """
+        WHERE (n.nspname OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default
+        OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default)
+    """
+
+    params = []
+    if pattern:
+        _, schema = sql_name_pattern(pattern)
+        where_clause = where_clause.format(pattern=pattern)
+        sql += where_clause
+        params.append(schema)
+
+    sql = cur.mogrify(sql + " ORDER BY 1, 2, 3", params)
     log.debug(sql)
     cur.execute(sql)
     if cur.description:

@@ -109,6 +109,15 @@ def setup_db(conn):
         cur.execute("create domain schema1.bigint_t bigint")
         cur.execute("comment on domain schema1.bigint_t is" " 'a really large integer'")
 
+        # privileges
+        cur.execute("CREATE ROLE test_role;")
+        cur.execute(
+            "ALTER DEFAULT PRIVILEGES IN SCHEMA schema1 GRANT SELECT ON TABLES TO test_role;"
+        )
+        cur.execute(
+            "ALTER DEFAULT PRIVILEGES IN SCHEMA schema2 GRANT ALL ON TABLES TO test_role;"
+        )
+
 
 def teardown_db(conn):
     with conn.cursor() as cur:
@@ -118,7 +127,8 @@ def teardown_db(conn):
             CREATE SCHEMA public;
             DROP SCHEMA IF EXISTS schema1 CASCADE;
             DROP SCHEMA IF EXISTS schema2 CASCADE;
-            DROP SCHEMA IF EXISTS schema3 CASCADE;"""
+            DROP SCHEMA IF EXISTS schema3 CASCADE;
+            DROP ROLE IF EXISTS test_role;"""
         )
 
 
