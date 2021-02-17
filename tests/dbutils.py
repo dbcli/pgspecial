@@ -10,7 +10,7 @@ from os import getenv
 POSTGRES_USER = getenv("PGUSER", "postgres")
 POSTGRES_HOST = getenv("PGHOST", "localhost")
 POSTGRES_PORT = getenv("PGPORT", 5432)
-POSTGRES_PASSWORD = getenv("PGPASSWORD", "")
+POSTGRES_PASSWORD = getenv("PGPASSWORD", "postgres")
 
 TEST_DB_NAME = "_test_db"
 FOREIGN_TEST_DB_NAME = "_foreign_test_db"
@@ -166,3 +166,14 @@ def foreign_db_environ():
     setup_foreign(conn2)
     yield
     teardown_foreign(conn2)
+
+
+try:
+    with foreign_db_environ():
+        CAN_CREATE_FDW_EXTENSION = True
+except:
+    CAN_CREATE_FDW_EXTENSION = False
+
+fdw_test = pytest.mark.skipif(
+    not CAN_CREATE_FDW_EXTENSION, reason="Unable to create a postgres_fdw extension."
+)
