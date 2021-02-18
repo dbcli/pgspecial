@@ -56,9 +56,7 @@ get this running in a development setup.
 
 https://github.com/dbcli/pgspecial/blob/master/DEVELOP.rst
 
-Please feel free to reach out if you need help.
-
-mailing list: https://groups.google.com/forum/#!forum/pgcli
+Please feel free to file an issue if you need help.
 
 Projects using it:
 ------------------
@@ -74,8 +72,8 @@ OmniDB_: An web tool for database management
 If you find this module useful and include it in your project, I'll be happy
 to know about it and list it here.
 
-.. |BuildStatus| image:: https://api.travis-ci.org/dbcli/pgspecial.svg?branch=master
-    :target: https://travis-ci.org/dbcli/pgspecial
+.. |Build Status| image:: https://github.com/dbcli/pgspecial/workflows/pgspecial/badge.svg
+    :target: https://github.com/dbcli/pgspecial/actions?query=workflow%3Apgspecial
 
 .. |PyPI| image:: https://badge.fury.io/py/pgspecial.svg
     :target: https://pypi.python.org/pypi/pgspecial/
