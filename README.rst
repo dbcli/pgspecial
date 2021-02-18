@@ -1,7 +1,7 @@
 Meta-commands for Postgres
 --------------------------
 
-|BuildStatus|  |PyPI|
+|Build Status|  |PyPI|
 
 This package provides an API to execute meta-commands (AKA "special", or
 "backslash commands") on PostgreSQL.
