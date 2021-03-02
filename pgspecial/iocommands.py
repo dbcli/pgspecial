@@ -20,7 +20,7 @@ _logger = logging.getLogger(__name__)
 @export
 def editor_command(command):
     """
-    Is this an external editor command?  (\e or \ev)
+    Is this an external editor command?  (\\e or \\ev)
 
     :param command: string
 
@@ -47,7 +47,7 @@ def get_filename(sql):
 
 @export
 def get_watch_command(command):
-    match = re.match("(.*?)[\s]*\\\\watch (\d+);?$", command)
+    match = re.match("(.*?)[\\s]*\\\\watch (\\d+);?$", command)
     if match:
         groups = match.groups()
         return groups[0], int(groups[1])
@@ -188,7 +188,7 @@ def subst_favorite_query_args(query, args):
 
         query = query.replace(subst_var, val)
 
-    match = re.search("\\$\d+", query)
+    match = re.search("\\$\\d+", query)
     if match:
         return [
             None,

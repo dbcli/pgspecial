@@ -11,6 +11,11 @@ Features:
 
 * Fix for broken `MANIFEST.in` that prevented source installation (#101. Thanks: `Dave Hirschfeld`_).
 
+Bug fixes:
+----------
+
+* Fix deprecation warnings with stricter backslash escaping in strings. (Thanks: `Benjamin Beasley`_)
+
 1.12.0
 ======
 

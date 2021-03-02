@@ -1805,7 +1805,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             # /* print the number of child tables, if any */
             if cur.rowcount > 0:
                 status.append(
-                    "Number of child tables: %d (Use \d+ to list"
+                    "Number of child tables: %d (Use \\d+ to list"
                     " them.)\n" % cur.rowcount
                 )
         else:

@@ -66,7 +66,7 @@ class PGSpecial(object):
             self.call_pset,
             "\\pset",
             "\\pset [key] [value]",
-            "A limited version of traditional \pset",
+            "A limited version of traditional \\pset",
             arg_type=PARSED_QUERY,
         )
 
@@ -151,7 +151,7 @@ class PGSpecial(object):
                 message += helpcommand["synopsis"]
         else:
             message = 'No help available for "%s"' % pattern
-            message += "\nTry \h with no arguments to see available help."
+            message += "\nTry \\h with no arguments to see available help."
 
         return [(None, None, None, message)]
 
