@@ -9,7 +9,7 @@ objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Descripti
 
 @dbtest
 def test_slash_d(executor):
-    results = executor("\d")
+    results = executor(r"\d")
     title = None
     rows = [
         ("public", "Inh1", "table", POSTGRES_USER),
@@ -30,7 +30,7 @@ def test_slash_d(executor):
 
 @dbtest
 def test_slash_d_verbose(executor):
-    results = executor("\d+")
+    results = executor(r"\d+")
     title = None
     rows = [
         ("public", "Inh1", "table", POSTGRES_USER, "8192 bytes", None),
@@ -51,7 +51,7 @@ def test_slash_d_verbose(executor):
 
 @dbtest
 def test_slash_d_table_1(executor):
-    results = executor("\d tbl1")
+    results = executor(r"\d tbl1")
     title = None
     rows = [
         ["id1", "integer", " not null"],
@@ -68,7 +68,7 @@ def test_slash_d_table_1(executor):
 
 @dbtest
 def test_slash_d_table_2(executor):
-    results = executor("\d tbl2")
+    results = executor(r"\d tbl2")
     title = None
     rows = [
         ["id2", "integer", " not null default nextval('tbl2_id2_seq'::regclass)"],
@@ -82,7 +82,7 @@ def test_slash_d_table_2(executor):
 
 @dbtest
 def test_slash_d_test_generated_default(executor):
-    results = executor("\d schema3.test_generated_default")
+    results = executor(r"\d schema3.test_generated_default")
     headers = ["Column", "Type", "Modifiers"]
     status = 'Indexes:\n    "test_generated_default_pkey" PRIMARY KEY, btree (id)\n'
     rows = [
@@ -99,7 +99,7 @@ def test_slash_d_table_verbose_1(executor):
     title = None
     headers = ["Column", "Type", "Modifiers", "Storage", "Stats target", "Description"]
 
-    results = executor("\d+ tbl1")
+    results = executor(r"\d+ tbl1")
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -129,7 +129,7 @@ def test_slash_d_table_verbose_2(executor):
     title = None
     headers = ["Column", "Type", "Modifiers", "Storage", "Stats target", "Description"]
 
-    results = executor("\d+ tbl2")
+    results = executor(r"\d+ tbl2")
     rows = [
         [
             "id2",
@@ -145,7 +145,7 @@ def test_slash_d_table_verbose_2(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
-    results = executor("\d+ inh2")
+    results = executor(r"\d+ inh2")
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -167,7 +167,7 @@ def test_slash_d_table_verbose_2(executor):
 
 @dbtest
 def test_slash_d_table_with_exclusion(executor):
-    results = executor("\d tbl3")
+    results = executor(r"\d tbl3")
     title = None
     rows = [["c3", "circle", ""]]
     headers = ["Column", "Type", "Modifiers"]
@@ -178,7 +178,7 @@ def test_slash_d_table_with_exclusion(executor):
 
 @dbtest
 def test_slash_d_table_2_in_schema(executor):
-    results = executor("\d schema2.tbl2")
+    results = executor(r"\d schema2.tbl2")
     title = None
     rows = [
         [
@@ -197,7 +197,7 @@ def test_slash_d_table_2_in_schema(executor):
 @dbtest
 def test_slash_dn(executor):
     """List all schemas."""
-    results = executor("\dn")
+    results = executor(r"\dn")
     title = None
     rows = [
         ("public", POSTGRES_USER),
@@ -214,7 +214,7 @@ def test_slash_dn(executor):
 @dbtest
 def test_slash_dp(executor):
     """List all schemas."""
-    results = executor("\dp")
+    results = executor(r"\dp")
     title = None
     rows = [
         ("public", "Inh1", "table", None, "", ""),
@@ -243,7 +243,7 @@ def test_slash_dp(executor):
 @dbtest
 def test_slash_dp_pattern(executor):
     """List all schemas."""
-    results = executor("\dp i*2")
+    results = executor(r"\dp i*2")
     title = None
     rows = [("public", "inh2", "table", None, "", "")]
     headers = [
@@ -281,7 +281,7 @@ def test_slash_dp_pattern_alias(executor):
 @dbtest
 def test_slash_ddp(executor):
     """List all schemas."""
-    results = executor("\ddp")
+    results = executor(r"\ddp")
     title = None
     rows = [
         ("postgres", "schema1", "table", "test_role=r/postgres"),
@@ -302,7 +302,7 @@ def test_slash_ddp(executor):
 @dbtest
 def test_slash_ddp_pattern(executor):
     """List all schemas."""
-    results = executor("\ddp schema2")
+    results = executor(r"\ddp schema2")
     title = None
     rows = [("postgres", "schema2", "table", "test_role=arwdDxt/postgres")]
     headers = [
@@ -319,7 +319,7 @@ def test_slash_ddp_pattern(executor):
 @dbtest
 def test_slash_dt(executor):
     """List all tables in public schema."""
-    results = executor("\dt")
+    results = executor(r"\dt")
     title = None
     rows = [
         ("public", "Inh1", "table", POSTGRES_USER),
@@ -337,7 +337,7 @@ def test_slash_dt(executor):
 @dbtest
 def test_slash_dt_verbose(executor):
     """List all tables in public schema in verbose mode."""
-    results = executor("\dt+")
+    results = executor(r"\dt+")
     title = None
     rows = [
         ("public", "Inh1", "table", POSTGRES_USER, "8192 bytes", None),
@@ -355,7 +355,7 @@ def test_slash_dt_verbose(executor):
 @dbtest
 def test_slash_dv(executor):
     """List all views in public schema."""
-    results = executor("\dv")
+    results = executor(r"\dv")
     title = None
     row = [("public", "vw1", "view", POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
@@ -367,7 +367,7 @@ def test_slash_dv(executor):
 @dbtest
 def test_slash_dv_verbose(executor):
     """List all views in s1 schema in verbose mode."""
-    results = executor("\dv+ schema1.*")
+    results = executor(r"\dv+ schema1.*")
     title = None
     row = [("schema1", "s1_vw1", "view", POSTGRES_USER, "0 bytes", None)]
     headers = objects_listing_headers
@@ -379,7 +379,7 @@ def test_slash_dv_verbose(executor):
 @dbtest
 def test_slash_dm(executor):
     """List all materialized views in schema1."""
-    results = executor("\dm schema1.*")
+    results = executor(r"\dm schema1.*")
     title = None
     row = [("schema1", "s1_mvw1", "materialized view", POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
@@ -391,7 +391,7 @@ def test_slash_dm(executor):
 @dbtest
 def test_slash_dm_verbose(executor):
     """List all materialized views in public schema in verbose mode."""
-    results = executor("\dm+")
+    results = executor(r"\dm+")
     title = None
     row = [("public", "mvw1", "materialized view", POSTGRES_USER, "8192 bytes", None)]
     headers = objects_listing_headers
@@ -403,7 +403,7 @@ def test_slash_dm_verbose(executor):
 @dbtest
 def test_slash_ds(executor):
     """List all sequences in public schema."""
-    results = executor("\ds")
+    results = executor(r"\ds")
     title = None
     row = [("public", "tbl2_id2_seq", "sequence", POSTGRES_USER)]
     headers = objects_listing_headers[:-2]
@@ -415,7 +415,7 @@ def test_slash_ds(executor):
 @dbtest
 def test_slash_ds_verbose(executor):
     """List all sequences in public schema in verbose mode."""
-    results = executor("\ds+")
+    results = executor(r"\ds+")
     title = None
     row = [("public", "tbl2_id2_seq", "sequence", POSTGRES_USER, "8192 bytes", None)]
     headers = objects_listing_headers
@@ -427,7 +427,7 @@ def test_slash_ds_verbose(executor):
 @dbtest
 def test_slash_di(executor):
     """List all indexes in public schema."""
-    results = executor("\di")
+    results = executor(r"\di")
     title = None
     row = [
         ("public", "id_text", "index", POSTGRES_USER),
@@ -442,7 +442,7 @@ def test_slash_di(executor):
 @dbtest
 def test_slash_di_verbose(executor):
     """List all indexes in public schema in verbose mode."""
-    results = executor("\di+")
+    results = executor(r"\di+")
     title = None
     row = [
         ("public", "id_text", "index", POSTGRES_USER, "8192 bytes", None),
@@ -457,7 +457,7 @@ def test_slash_di_verbose(executor):
 @dbtest
 def test_slash_dx(executor):
     """List all extensions."""
-    results = executor("\dx")
+    results = executor(r"\dx")
     title = None
     row = [("plpgsql", "1.0", "pg_catalog", "PL/pgSQL procedural language")]
     headers = ["Name", "Version", "Schema", "Description"]
@@ -469,7 +469,7 @@ def test_slash_dx(executor):
 @dbtest
 def test_slash_dx_verbose(executor):
     """List all extensions in verbose mode."""
-    results = executor("\dx+")
+    results = executor(r"\dx+")
     title = '\nObjects in extension "plpgsql"'
     row = [
         ("function plpgsql_call_handler()",),
@@ -486,7 +486,7 @@ def test_slash_dx_verbose(executor):
 @dbtest
 def test_slash_dT(executor):
     """List all datatypes."""
-    results = executor("\dT")
+    results = executor(r"\dT")
     title = None
     rows = [("public", "foo", None), ("public", "gender_t", None)]
     headers = ["Schema", "Name", "Description"]
@@ -499,7 +499,7 @@ def test_slash_dT(executor):
 def test_slash_dD(executor):
     title = None
     headers = ["Schema", "Name", "Type", "Modifier", "Check"]
-    results = executor("\dD")
+    results = executor(r"\dD")
     rows = [
         (
             "public",
@@ -513,7 +513,7 @@ def test_slash_dD(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
-    results = executor("\dD schema1.*")
+    results = executor(r"\dD schema1.*")
     rows = [
         ("schema1", "bigint_t", "bigint", "", ""),
         ("schema1", "smallint_t", "smallint", "", ""),
@@ -535,7 +535,7 @@ def test_slash_dD_verbose(executor):
         "Access privileges",
         "Description",
     ]
-    results = executor("\dD+")
+    results = executor(r"\dD+")
     rows = [
         (
             "public",
@@ -551,7 +551,7 @@ def test_slash_dD_verbose(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
-    results = executor("\dD+ schema1.bigint_t")
+    results = executor(r"\dD+ schema1.bigint_t")
     rows = [("schema1", "bigint_t", "bigint", "", "", None, "a really large integer")]
     status = "SELECT 1"
     expected = [title, rows, headers, status]
@@ -560,17 +560,17 @@ def test_slash_dD_verbose(executor):
 
 @dbtest
 def test_slash_dF(executor):
-    title, rows, header, status = executor("\dF")
+    title, rows, header, status = executor(r"\dF")
     assert title is None
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "spanish", "configuration for spanish language") in rows
 
-    results = executor("\dD *ian")
+    results = executor(r"\dD *ian")
     assert title is None
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "russian", "configuration for russian language") in rows
 
-    results = executor("\dD ge*")
+    results = executor(r"\dD ge*")
     assert title is None
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "german", "configuration for german language") in rows
@@ -578,23 +578,23 @@ def test_slash_dF(executor):
 
 @dbtest
 def test_slash_dF_verbose(executor):
-    results = executor("\dF+")[1]
+    results = executor(r"\dF+")[1]
     assert ("asciihword", "simple") in results
 
-    results = executor("\dF+ *panish")[1]
+    results = executor(r"\dF+ *panish")[1]
     assert ("asciihword", "spanish_stem") in results
 
-    results = executor("\dF+ swed*")[1]
+    results = executor(r"\dF+ swed*")[1]
     assert ("asciihword", "swedish_stem") in results
 
-    results = executor("\dF+ jap")
+    results = executor(r"\dF+ jap")
     assert results == [None, None, None, 'Did not find any results for pattern "jap".']
 
 
 @dbtest
 def test_slash_db(executor):
     """List all tablespaces."""
-    title, rows, header, status = executor("\db")
+    title, rows, header, status = executor(r"\db")
     assert title is None
     assert header == ["Name", "Owner", "Location"]
     assert "pg_default" in rows[0]
@@ -603,7 +603,7 @@ def test_slash_db(executor):
 @dbtest
 def test_slash_db_name(executor):
     """List tablespace by name."""
-    title, rows, header, status = executor("\db pg_default")
+    title, rows, header, status = executor(r"\db pg_default")
     assert title is None
     assert header == ["Name", "Owner", "Location"]
     assert "pg_default" in rows[0]
@@ -612,7 +612,7 @@ def test_slash_db_name(executor):
 
 @dbtest
 def test_slash_df(executor):
-    results = executor("\df")
+    results = executor(r"\df")
     title = None
     rows = [("public", "func1", "integer", "", "normal")]
     headers = ["Schema", "Name", "Result data type", "Argument data types", "Type"]
@@ -938,7 +938,7 @@ def test_slash_sf_verbose(executor):
 def test_slash_dE(executor):
 
     with foreign_db_environ():
-        results = executor("\dE")
+        results = executor(r"\dE")
         title = None
         rows = [("public", "foreign_foo", "foreign table", "postgres")]
         headers = ["Schema", "Name", "Type", "Owner"]
@@ -951,7 +951,7 @@ def test_slash_dE(executor):
 def test_slash_dE_with_pattern(executor):
 
     with foreign_db_environ():
-        results = executor("\dE foreign_foo")
+        results = executor(r"\dE foreign_foo")
         title = None
         rows = [("public", "foreign_foo", "foreign table", "postgres")]
         headers = ["Schema", "Name", "Type", "Owner"]
@@ -959,10 +959,10 @@ def test_slash_dE_with_pattern(executor):
         expected = [title, rows, headers, status]
         assert results == expected
 
-        results = executor("\dE *_foo")
+        results = executor(r"\dE *_foo")
         assert results == expected
 
-        results = executor("\dE no_such_table")
+        results = executor(r"\dE no_such_table")
         rows = []
         status = "SELECT 0"
         expected = [title, rows, headers, status]
@@ -973,7 +973,7 @@ def test_slash_dE_with_pattern(executor):
 def test_slash_dE_verbose(executor):
 
     with foreign_db_environ():
-        results = executor("\dE+")
+        results = executor(r"\dE+")
         title = None
         rows = [("public", "foreign_foo", "foreign table", "postgres", "0 bytes", None)]
         headers = ["Schema", "Name", "Type", "Owner", "Size", "Description"]

@@ -33,7 +33,7 @@ if __name__ == "__main__":
         print("Parse postgres SGML reference files into JSON")
         print("Usage:")
         print(
-            'echo -n "commands = " > command_help.py; python parser.py ref/ | python -mjson.tool | sed \'s/"\: null/": None/g\' >>  command_help.py'
+            'echo -n "commands = " > command_help.py; python parser.py ref/ | python -mjson.tool | sed \'s/"\\: null/": None/g\' >>  command_help.py'
         )
         print("")
         sys.exit(0)
