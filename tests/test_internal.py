@@ -36,3 +36,27 @@ def test_subst_favorite_query_args_missing_arg():
     subst_query, error = iocommands.subst_favorite_query_args(template_query, ("42",))
     assert subst_query is None
     assert error.startswith("missing substitution for ")
+
+
+@pytest.mark.parametrize(
+    "template_query,query_args,query",
+    [
+        (
+            "select * from foo where bar IN ($*)",
+            ("42", "1337"),
+            "select * from foo where bar IN (42, 1337)",
+        ),
+        (
+            "select * from foo where bar IN ($@)",
+            ("Alice", "Bob", "Charlie"),
+            "select * from foo where bar IN ('Alice', 'Bob', 'Charlie')",
+        ),
+    ],
+    ids=["raw aggregation", "string aggregation"],
+)
+def test_subst_favorite_query_args_aggregation(template_query, query_args, query):
+    subst_query, error = iocommands.subst_favorite_query_args(
+        template_query, query_args
+    )
+    assert error is None
+    assert subst_query == query
