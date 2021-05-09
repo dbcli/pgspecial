@@ -5,6 +5,7 @@ Features:
 ---------
 
 * Add support for the `\ddp` metacommand that lists the default privileges of Postgres objects (Thanks: `Roberto Dedoro`_)
+* Add support for named query positional parameters aggregation (Thanks: `Guilhem Charles`_)
 
 1.12.1
 ======
@@ -281,3 +282,4 @@ Features:
 .. _`Ignacio Campabadal`: https://github.com/igncampa
 .. _`Dave Hirschfeld`: https://github.com/dhirschfeld
 .. _`Roberto Dedoro`: https://github.com/mirobertod
+.. _`Guilhem Charles`: https://github.com/chagui
