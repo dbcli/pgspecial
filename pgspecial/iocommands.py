@@ -175,18 +175,23 @@ def copy(cur, pattern, verbose):
 
 def subst_favorite_query_args(query, args):
     """replace positional parameters ($1,$2,...$n) in query."""
-    for idx, val in enumerate(args):
-        subst_var = "$" + str(idx + 1)
-        if subst_var not in query:
-            return [
-                None,
-                "query does not have substitution parameter "
-                + subst_var
-                + ":\n  "
-                + query,
-            ]
+    if "$*" in query:
+        query = query.replace("$*", ", ".join(args))
+    elif "$@" in query:
+        query = query.replace("$@", ", ".join(f"'{arg}'" for arg in args))
+    else:
+        for idx, val in enumerate(args):
+            subst_var = "$" + str(idx + 1)
+            if subst_var not in query:
+                return [
+                    None,
+                    "query does not have substitution parameter "
+                    + subst_var
+                    + ":\n  "
+                    + query,
+                ]
 
-        query = query.replace(subst_var, val)
+            query = query.replace(subst_var, val)
 
     match = re.search("\\$\\d+", query)
     if match:

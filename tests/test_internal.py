@@ -20,3 +20,43 @@ def test_plain_editor_commands_detected():
 
 def test_edit_view_command_detected():
     assert iocommands.editor_command(r"\ev myview") == r"\ev"
+
+
+def test_subst_favorite_query_args():
+    template_query = "select * from foo where bar = $2 and zoo = '$1'"
+    subst_query, error = iocommands.subst_favorite_query_args(
+        template_query, ("postgres", "42")
+    )
+    assert error is None
+    assert subst_query == "select * from foo where bar = 42 and zoo = 'postgres'"
+
+
+def test_subst_favorite_query_args_missing_arg():
+    template_query = "select * from foo where bar = $2 and zoo = '$1'"
+    subst_query, error = iocommands.subst_favorite_query_args(template_query, ("42",))
+    assert subst_query is None
+    assert error.startswith("missing substitution for ")
+
+
+@pytest.mark.parametrize(
+    "template_query,query_args,query",
+    [
+        (
+            "select * from foo where bar IN ($*)",
+            ("42", "1337"),
+            "select * from foo where bar IN (42, 1337)",
+        ),
+        (
+            "select * from foo where bar IN ($@)",
+            ("Alice", "Bob", "Charlie"),
+            "select * from foo where bar IN ('Alice', 'Bob', 'Charlie')",
+        ),
+    ],
+    ids=["raw aggregation", "string aggregation"],
+)
+def test_subst_favorite_query_args_aggregation(template_query, query_args, query):
+    subst_query, error = iocommands.subst_favorite_query_args(
+        template_query, query_args
+    )
+    assert error is None
+    assert subst_query == query
