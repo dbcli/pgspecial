@@ -178,7 +178,7 @@ def subst_favorite_query_args(query, args):
     if "$*" in query:
         query = query.replace("$*", ", ".join(args))
     elif "$@" in query:
-        query = query.replace("$@", ", ".join(f"'{arg}'" for arg in args))
+        query = query.replace("$@", ", ".join(map("'{}'".format, args)))
     else:
         for idx, val in enumerate(args):
             subst_var = "$" + str(idx + 1)
