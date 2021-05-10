@@ -20,3 +20,9 @@ exclude = '''
 )/
 '''
 
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--capture=sys --showlocals -rxs"
+testpaths = [
+    "tests",
+]
