@@ -117,8 +117,9 @@ After that, tests can be run with:
 
 ::
 
-    $ cd tests
     $ py.test
+
+Pytest configuration can be found in the ``tool.pytest.ini_options`` table of the ``pyproject.toml`` file.
 
 Enforcing the code style (linting)
 ------------------------------
