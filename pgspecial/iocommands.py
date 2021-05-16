@@ -181,8 +181,8 @@ def subst_favorite_query_args(query, args):
     elif "$@" in query:
         query = query.replace("$@", ", ".join(map("'{}'".format, args)))
     else:
-        for idx, val in enumerate(args):
-            subst_var = "$" + str(idx + 1)
+        for idx, val in enumerate(args, start=1):
+            subst_var = "$" + str(idx)
             if subst_var not in query:
                 return [
                     None,
