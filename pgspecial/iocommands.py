@@ -176,23 +176,39 @@ def copy(cur, pattern, verbose):
 
 def subst_favorite_query_args(query, args):
     """replace positional parameters ($1,$2,...$n) in query."""
+    is_query_with_aggregation = ("$*" in query) or ("$@" in query)
+
+    # In case of arguments aggregation we replace all positional arguments until the
+    # first one not present in the query. Then we aggregate all the remaining ones and
+    # replace the placeholder with them.
+    for idx, val in enumerate(args, start=1):
+        subst_var = "$" + str(idx)
+        if subst_var not in query:
+            if is_query_with_aggregation:
+                # remove consumed arguments ( - 1 to include current value)
+                args = args[idx - 1 :]
+                break
+
+            return [
+                None,
+                "query does not have substitution parameter "
+                + subst_var
+                + ":\n  "
+                + query,
+            ]
+
+        query = query.replace(subst_var, val)
+    # we consumed all arguments
+    else:
+        args = []
+
+    if is_query_with_aggregation and not args:
+        return [None, "missing substitution for $* or $@ in query:\n" + query]
+
     if "$*" in query:
         query = query.replace("$*", ", ".join(args))
     elif "$@" in query:
         query = query.replace("$@", ", ".join(map("'{}'".format, args)))
-    else:
-        for idx, val in enumerate(args, start=1):
-            subst_var = "$" + str(idx)
-            if subst_var not in query:
-                return [
-                    None,
-                    "query does not have substitution parameter "
-                    + subst_var
-                    + ":\n  "
-                    + query,
-                ]
-
-            query = query.replace(subst_var, val)
 
     match = re.search("\\$\\d+", query)
     if match:
