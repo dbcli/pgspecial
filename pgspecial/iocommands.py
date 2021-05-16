@@ -13,6 +13,8 @@ from .namedqueries import NamedQueries
 from . import export
 from .main import special_command
 
+NAMED_QUERY_PLACEHOLDERS = frozenset({"$1", "$*", "$@"})
+
 _logger = logging.getLogger(__name__)
 
 
@@ -220,7 +222,7 @@ def execute_named_query(cur, pattern, **_):
         return [(None, None, None, message)]
 
     try:
-        if "$1" in query:
+        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS):
             query, params = subst_favorite_query_args(query, params)
             if query is None:
                 raise Exception("Bad arguments\n" + params)
