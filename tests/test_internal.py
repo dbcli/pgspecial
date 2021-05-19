@@ -87,9 +87,9 @@ def test_subst_favorite_query_args_missing_arg(named_query, query_args):
             "select * from foo where bar IN ('Alice', 'Bob', 'Charlie')",
         ),
         (
-            "select * from foo where (id = $1 or id = $2) AND bar IN ($@)",
+            "select * from foo where bar IN ($@) and (id = $1 or id = $2)",
             ("42", "1337", "Alice", "Bob", "Charlie"),
-            "select * from foo where (id = 42 or id = 1337) AND bar IN ('Alice', 'Bob', 'Charlie')",
+            "select * from foo where bar IN ('Alice', 'Bob', 'Charlie') and (id = 42 or id = 1337)",
         ),
     ],
     ids=["raw aggregation", "string aggregation", "positional and aggregation"],
