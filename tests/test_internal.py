@@ -31,9 +31,44 @@ def test_subst_favorite_query_args():
     assert subst_query == "select * from foo where bar = 42 and zoo = 'postgres'"
 
 
-def test_subst_favorite_query_args_missing_arg():
-    template_query = "select * from foo where bar = $2 and zoo = '$1'"
-    subst_query, error = iocommands.subst_favorite_query_args(template_query, ("42",))
+def test_subst_favorite_query_args_bad_arg_positional():
+    template_query = "select * from foo where bar = $1"
+    subst_query, error = iocommands.subst_favorite_query_args(
+        template_query, ("1337", "42")
+    )
+    assert subst_query is None
+    assert error.startswith("query does not have substitution parameter $2")
+
+
+@pytest.mark.parametrize(
+    "named_query,query_args",
+    [
+        (
+            "select * from foo where bar = $2 and zoo = '$1'",
+            ("42",),
+        ),
+        (
+            "select * from foo where bar IN ($@)",
+            tuple(),
+        ),
+        (
+            "select * from foo where (id = $1 or id = $2) AND bar IN ($@)",
+            ("1337", "42"),
+        ),
+        (
+            "select * from foo where (id = $1 or id = $3) AND bar IN ($@)",
+            ("1337", "postgres", "42"),
+        ),
+    ],
+    ids=[
+        "missing positional argument",
+        "missing aggregation arguments",
+        "missing aggregation arguments with positional",
+        "missing positional argument after aggregation",
+    ],
+)
+def test_subst_favorite_query_args_missing_arg(named_query, query_args):
+    subst_query, error = iocommands.subst_favorite_query_args(named_query, query_args)
     assert subst_query is None
     assert error.startswith("missing substitution for ")
 
@@ -51,8 +86,13 @@ def test_subst_favorite_query_args_missing_arg():
             ("Alice", "Bob", "Charlie"),
             "select * from foo where bar IN ('Alice', 'Bob', 'Charlie')",
         ),
+        (
+            "select * from foo where bar IN ($@) and (id = $1 or id = $2)",
+            ("42", "1337", "Alice", "Bob", "Charlie"),
+            "select * from foo where bar IN ('Alice', 'Bob', 'Charlie') and (id = 42 or id = 1337)",
+        ),
     ],
-    ids=["raw aggregation", "string aggregation"],
+    ids=["raw aggregation", "string aggregation", "positional and aggregation"],
 )
 def test_subst_favorite_query_args_aggregation(template_query, query_args, query):
     subst_query, error = iocommands.subst_favorite_query_args(

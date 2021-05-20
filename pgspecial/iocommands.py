@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 from contextlib import contextmanager
 import re
-import fnmatch
 import sys
 import logging
 import click
@@ -13,6 +12,8 @@ from os.path import expanduser
 from .namedqueries import NamedQueries
 from . import export
 from .main import special_command
+
+NAMED_QUERY_PLACEHOLDERS = frozenset({"$1", "$*", "$@"})
 
 _logger = logging.getLogger(__name__)
 
@@ -175,23 +176,39 @@ def copy(cur, pattern, verbose):
 
 def subst_favorite_query_args(query, args):
     """replace positional parameters ($1,$2,...$n) in query."""
+    is_query_with_aggregation = ("$*" in query) or ("$@" in query)
+
+    # In case of arguments aggregation we replace all positional arguments until the
+    # first one not present in the query. Then we aggregate all the remaining ones and
+    # replace the placeholder with them.
+    for idx, val in enumerate(args, start=1):
+        subst_var = "$" + str(idx)
+        if subst_var not in query:
+            if is_query_with_aggregation:
+                # remove consumed arguments ( - 1 to include current value)
+                args = args[idx - 1 :]
+                break
+
+            return [
+                None,
+                "query does not have substitution parameter "
+                + subst_var
+                + ":\n  "
+                + query,
+            ]
+
+        query = query.replace(subst_var, val)
+    # we consumed all arguments
+    else:
+        args = []
+
+    if is_query_with_aggregation and not args:
+        return [None, "missing substitution for $* or $@ in query:\n" + query]
+
     if "$*" in query:
         query = query.replace("$*", ", ".join(args))
     elif "$@" in query:
         query = query.replace("$@", ", ".join(map("'{}'".format, args)))
-    else:
-        for idx, val in enumerate(args):
-            subst_var = "$" + str(idx + 1)
-            if subst_var not in query:
-                return [
-                    None,
-                    "query does not have substitution parameter "
-                    + subst_var
-                    + ":\n  "
-                    + query,
-                ]
-
-            query = query.replace(subst_var, val)
 
     match = re.search("\\$\\d+", query)
     if match:
@@ -221,7 +238,7 @@ def execute_named_query(cur, pattern, **_):
         return [(None, None, None, message)]
 
     try:
-        if "$1" in query:
+        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS):
             query, params = subst_favorite_query_args(query, params)
             if query is None:
                 raise Exception("Bad arguments\n" + params)
