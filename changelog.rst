@@ -1,3 +1,11 @@
+1.13.1
+======
+
+Internal:
+---------
+
+* Drop unused dev/test dependency on mock (Thanks: `Benjamin Beasley`_).
+
 1.13.0
 ======
 
