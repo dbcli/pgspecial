@@ -113,7 +113,7 @@ def test_slash_d_table_verbose_1(executor):
     expected = [title, rows, headers, status]
     assert results == expected
 
-    results = executor('\d+ "Inh1"')
+    results = executor(r'\d+ "Inh1"')
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -262,7 +262,7 @@ def test_slash_dp_pattern(executor):
 @dbtest
 def test_slash_dp_pattern_alias(executor):
     """List all schemas."""
-    results = executor("\z i*2")
+    results = executor(r"\z i*2")
     title = None
     rows = [("public", "inh2", "table", None, "", "")]
     headers = [
@@ -803,7 +803,7 @@ help_rows = [
 @dbtest
 def test_slash_h(executor):
     """List all commands."""
-    results = executor("\h")
+    results = executor(r"\h")
     expected = [None, help_rows, [], None]
     assert results == expected
 
@@ -812,16 +812,16 @@ def test_slash_h(executor):
 def test_slash_h_command(executor):
     """Check help is returned for all commands"""
     for command in itertools.chain(*help_rows):
-        results = executor("\h %s" % command)
+        results = executor(r"\h %s" % command)
         assert results[3].startswith("Description\n")
         assert "Syntax" in results[3]
 
 
 @dbtest
 def test_slash_h_alias(executor):
-    """\? is properly aliased to \h"""
-    h_results = executor("\h SELECT")
-    results = executor("\? SELECT")
+    r"""\? is properly aliased to \h"""
+    h_results = executor(r"\h SELECT")
+    results = executor(r"\? SELECT")
     assert results[3] == h_results[3]
 
 
@@ -829,7 +829,7 @@ def test_slash_h_alias(executor):
 def test_slash_copy_to_tsv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
     executor(
-        "\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
+        r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
     )
     infile = filepath.open(encoding="utf-8")
     contents = infile.read()
@@ -839,7 +839,7 @@ def test_slash_copy_to_tsv(executor, tmpdir):
 
 @dbtest
 def test_slash_copy_to_stdout(executor, capsys):
-    executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO stdout")
+    executor(r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO stdout")
     (out, err) = capsys.readouterr()
     assert out == "Montréal\tPortland\tCleveland\n"
 
@@ -848,7 +848,7 @@ def test_slash_copy_to_stdout(executor, capsys):
 def test_slash_copy_to_csv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
     executor(
-        "\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(
+        r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(
             filepath
         )
     )
@@ -862,8 +862,8 @@ def test_slash_copy_to_csv(executor, tmpdir):
 @dbtest
 def test_slash_copy_from_csv(executor, connection, tmpdir):
     filepath = tmpdir.join("tbl1.csv")
-    executor("\copy (SELECT 22, 'elephant') TO '{0}' WITH csv".format(filepath))
-    executor("\copy tbl1 FROM '{0}' WITH csv".format(filepath))
+    executor(r"\copy (SELECT 22, 'elephant') TO '{0}' WITH csv".format(filepath))
+    executor(r"\copy tbl1 FROM '{0}' WITH csv".format(filepath))
     cur = connection.cursor()
     cur.execute("SELECT * FROM tbl1 WHERE id1 = 22")
     row = cur.fetchone()
@@ -872,7 +872,7 @@ def test_slash_copy_from_csv(executor, connection, tmpdir):
 
 @dbtest
 def test_slash_sf(executor):
-    results = executor("\sf func1")
+    results = executor(r"\sf func1")
     title = None
     rows = [
         (
@@ -891,7 +891,7 @@ def test_slash_sf(executor):
 @dbtest
 def test_slash_sf_unknown(executor):
     try:
-        executor("\sf non_existing")
+        executor(r"\sf non_existing")
     except Exception as e:
         assert "non_existing" in str(e)
     else:
@@ -900,7 +900,7 @@ def test_slash_sf_unknown(executor):
 
 @dbtest
 def test_slash_sf_parens(executor):
-    results = executor("\sf func1()")
+    results = executor(r"\sf func1()")
     title = None
     rows = [
         (
@@ -918,7 +918,7 @@ def test_slash_sf_parens(executor):
 
 @dbtest
 def test_slash_sf_verbose(executor):
-    results = executor("\sf+ schema1.s1_func1")
+    results = executor(r"\sf+ schema1.s1_func1")
     title = None
     rows = [
         (
