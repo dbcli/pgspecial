@@ -291,3 +291,4 @@ Features:
 .. _`Dave Hirschfeld`: https://github.com/dhirschfeld
 .. _`Roberto Dedoro`: https://github.com/mirobertod
 .. _`Guilhem Charles`: https://github.com/chagui
+.. _`Benjamin Beasley`: https://github.com/musicinmybrain
