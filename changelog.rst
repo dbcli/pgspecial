@@ -6,6 +6,12 @@ Features:
 
 * Add support for the `\ddp` metacommand that lists the default privileges of Postgres objects (Thanks: `Roberto Dedoro`_)
 
+Bug fixes:
+----------
+
+* Throw an exception if the TO/FROM keyword is missing in the `\copy` command. (Thanks: `Amjith`_)
+
+
 1.12.1
 ======
 

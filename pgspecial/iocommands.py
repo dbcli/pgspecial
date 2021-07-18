@@ -127,7 +127,7 @@ def _index_of_file_name(tokenlist):
     for (idx, token) in reversed(list(enumerate(tokenlist[:-2]))):
         if token.is_keyword and token.value.upper() in ("TO", "FROM"):
             return idx + 2
-    return None
+    raise Exception("Missing keyword in \\copy command. Either TO or FROM is required.")
 
 
 @special_command(
