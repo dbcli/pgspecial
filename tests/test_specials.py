@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import pytest
 from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test
 import itertools
 
@@ -835,6 +836,16 @@ def test_slash_copy_to_tsv(executor, tmpdir):
     contents = infile.read()
     assert len(contents.splitlines()) == 1
     assert "Montréal" in contents
+
+
+@dbtest
+def test_slash_copy_throws_error_without_TO_or_FROM(executor):
+    with pytest.raises(Exception) as exc_info:
+        executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') INTO stdout ")
+    assert (
+        str(exc_info.value)
+        == "Missing keyword in \\copy command. Either TO or FROM is required."
+    )
 
 
 @dbtest
