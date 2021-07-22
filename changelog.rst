@@ -1,3 +1,11 @@
+Upcoming
+========
+
+Bug fixes:
+----------
+
+* Throw an exception if the TO/FROM keyword is missing in the `\copy` command. (Thanks: `Amjith`_)
+
 1.13.1
 ======
 
@@ -14,12 +22,6 @@ Features:
 
 * Add support for the `\ddp` metacommand that lists the default privileges of Postgres objects (Thanks: `Roberto Dedoro`_)
 * Add support for named query positional parameters aggregation (Thanks: `Guilhem Charles`_)
-
-Bug fixes:
-----------
-
-* Throw an exception if the TO/FROM keyword is missing in the `\copy` command. (Thanks: `Amjith`_)
-
 
 1.12.1
 ======
