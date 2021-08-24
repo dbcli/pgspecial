@@ -5,6 +5,7 @@ Bug fixes:
 ----------
 
 * Throw an exception if the TO/FROM keyword is missing in the `\copy` command. (Thanks: `Amjith`_)
+* Allow multiline SQL and use default of 2s timing for the `\watch` command. (Thanks: `Saif Hakim`_)
 
 1.13.1
 ======

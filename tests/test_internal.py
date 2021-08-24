@@ -6,6 +6,24 @@ import pytest
 from pgspecial import iocommands
 
 
+@pytest.mark.parametrize(
+    "command,expected_watch_command,expected_timing",
+    [
+        ("SELECT * FROM foo \\watch", "SELECT * FROM foo", 2),
+        ("SELECT * FROM foo \\watch 123", "SELECT * FROM foo", 123),
+        ("SELECT *\nFROM foo \\watch 1", "SELECT *\nFROM foo", 1),
+        ("SELECT * FROM foo \\watch   1  ", "SELECT * FROM foo", 1),
+        ("SELECT * FROM foo; \\watch    1 ; ", "SELECT * FROM foo;", 1),
+        ("SELECT * FROM foo;\\watch 1;", "SELECT * FROM foo;", 1),
+    ],
+)
+def test_get_watch_command(command, expected_watch_command, expected_timing):
+    assert iocommands.get_watch_command(command) == (
+        expected_watch_command,
+        expected_timing,
+    )
+
+
 def test_plain_editor_commands_detected():
     assert not iocommands.editor_command("select * from foo")
     assert not iocommands.editor_command(r"\easy does it")

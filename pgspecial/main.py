@@ -234,6 +234,23 @@ def parse_special_command(sql):
     return (command, verbose, arg.strip())
 
 
+def show_extra_help_command(command, syntax, description):
+    """
+    A decorator used internally for registering help for a command that is not
+    automatically executed via PGSpecial.execute, but invoked manually by the
+    caller (e.g. \watch).
+    """
+
+    @special_command(command, syntax, description, arg_type=NO_QUERY)
+    def placeholder():
+        raise RuntimeError
+
+    def wrapper(wrapped):
+        return wrapped
+
+    return wrapper
+
+
 def special_command(
     command,
     syntax,
