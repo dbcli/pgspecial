@@ -11,9 +11,11 @@ import psycopg2
 from os.path import expanduser
 from .namedqueries import NamedQueries
 from . import export
-from .main import special_command
+from .main import show_extra_help_command, special_command
 
 NAMED_QUERY_PLACEHOLDERS = frozenset({"$1", "$*", "$@"})
+
+DEFAULT_WATCH_SECONDS = 2
 
 _logger = logging.getLogger(__name__)
 
@@ -47,10 +49,15 @@ def get_filename(sql):
 
 
 @export
+@show_extra_help_command(
+    "\\watch",
+    f"\\watch [sec={DEFAULT_WATCH_SECONDS}]",
+    "Execute query every `sec` seconds.",
+)
 def get_watch_command(command):
-    match = re.match("(.*?)[\\s]*\\\\watch (\\d+);?$", command)
+    match = re.match(r"(.*?)[\s]*\\watch(\s+\d+)?\s*;?\s*$", command, re.DOTALL)
     if match:
-        groups = match.groups()
+        groups = match.groups(default=f"{DEFAULT_WATCH_SECONDS}")
         return groups[0], int(groups[1])
     return None, None
 
