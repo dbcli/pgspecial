@@ -173,7 +173,7 @@ def list_privileges(cur, pattern, verbose):
     where_clause = """
         WHERE c.relkind IN ('r','v','m','S','f','p')
           {pattern}
-        AND n.nspname !~ '^pg_'
+          AND n.nspname !~ '^pg_'
     """
 
     params = []
