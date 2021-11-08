@@ -242,11 +242,32 @@ def test_slash_dp(executor):
 
 
 @dbtest
-def test_slash_dp_pattern(executor):
+def test_slash_dp_pattern_table(executor):
     """List all schemas."""
     results = executor(r"\dp i*2")
     title = None
     rows = [("public", "inh2", "table", None, "", "")]
+    headers = [
+        "Schema",
+        "Name",
+        "Type",
+        "Access privileges",
+        "Column privileges",
+        "Policies",
+    ]
+    status = "SELECT %s" % len(rows)
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+def test_slash_dp_pattern_schema(executor):
+    """List all schemas."""
+    results = executor(r"\dp schema2.*")
+    title = None
+    rows = [
+        ("schema2", "tbl2", "table", None, "", ""),
+        ("schema2", "tbl2_id2_seq", "sequence", None, "", ""),
+    ]
     headers = [
         "Schema",
         "Name",
