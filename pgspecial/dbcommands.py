@@ -56,6 +56,10 @@ def list_databases(cur, pattern, verbose):
         """
         _, schema = sql_name_pattern(pattern)
         params.append(schema)
+    # pg3: mogrify is no more on psycopg 3
+    # pg3: if you really want to compose the query client side you should use
+    # pg3: `sql.SQL(query).format(params)`, but with `{}` instead of `%s` placeholders
+    # pg3: thinking about something similar in psycopg 3.1 but plans not finalised yet
     query = cur.mogrify(query + " ORDER BY 1", params)
     cur.execute(query)
     if cur.description:
@@ -71,6 +75,7 @@ def list_roles(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
+    # pg3: cur.connection.info.server_version
     if cur.connection.server_version > 90000:
         sql = """
             SELECT r.rolname,
