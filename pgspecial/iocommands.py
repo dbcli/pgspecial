@@ -171,10 +171,14 @@ def copy(cur, pattern, verbose):
     else:
         raise Exception("Enclose filename in single quotes")
 
+    # pg3: I don't know what is pause_thread for here.
     with _paused_thread():
+        # pg3: COPY changed in psycopg3 and is no more file based: examples at
+        # pg3: https://www.psycopg.org/psycopg3/docs/basic/copy.html#copying-block-by-block
         cur.copy_expert("copy " + query, file)
 
     if cur.description:
+        # pg3 (and 2): x.name is probably more readable than x[0]
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
@@ -250,6 +254,7 @@ def execute_named_query(cur, pattern, **_):
             if query is None:
                 raise Exception("Bad arguments\n" + params)
         cur.execute(query)
+    # pg3: (but psycopg2 too): you can use `except psycopg.errors.SyntaxError`
     except psycopg2.ProgrammingError as e:
         if e.pgcode == psycopg2.errorcodes.SYNTAX_ERROR and "%s" in query:
             raise Exception(
