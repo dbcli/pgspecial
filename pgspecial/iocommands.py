@@ -7,7 +7,7 @@ import click
 import io
 import shlex
 import sqlparse
-import psycopg2
+import psycopg
 from os.path import expanduser
 from .namedqueries import NamedQueries
 from . import export
