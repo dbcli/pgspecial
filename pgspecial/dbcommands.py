@@ -323,7 +323,7 @@ def list_extensions(cur, pattern, verbose):
             sql += "WHERE e.extname ~ %(extname)s"
             params["extname"] = schema
 
-        sql += "ORDER BY 1, 2;"
+        sql += " ORDER BY 1, 2;"
         log.debug(f"{sql}, {params}")
         cur.execute(sql, params)
         return cur.fetchall()
@@ -381,7 +381,7 @@ def list_extensions(cur, pattern, verbose):
         sql += "WHERE e.extname ~ %(extname)s"
         params["extname"] = schema
 
-    sql += "ORDER BY 1, 2"
+    sql += " ORDER BY 1, 2"
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
@@ -759,7 +759,7 @@ def list_text_search_configurations(cur, pattern, verbose):
             sql += "AND c.cfgname ~ %(cfgname)s"
             params["cfgname"] = schema
 
-        sql += "ORDER BY 1, 2;"
+        sql += " ORDER BY 1, 2;"
         log.debug(f"{sql}, {params}")
         cur.execute(sql, params)
         return cur.fetchall()
@@ -829,7 +829,7 @@ def list_text_search_configurations(cur, pattern, verbose):
         sql += "WHERE c.cfgname ~ %(cfgname)s"
         params["cfgname"] = schema
 
-    sql += "ORDER BY 1, 2"
+    sql += " ORDER BY 1, 2"
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
