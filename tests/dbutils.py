@@ -1,8 +1,7 @@
 from contextlib import contextmanager
 
 import pytest
-import psycopg2
-import psycopg2.extras
+import psycopg
 from os import getenv
 
 
@@ -17,12 +16,12 @@ FOREIGN_TEST_DB_NAME = "_foreign_test_db"
 
 
 def db_connection(dbname=None):
-    conn = psycopg2.connect(
+    conn = psycopg.connect(
         user=POSTGRES_USER,
         host=POSTGRES_HOST,
         password=POSTGRES_PASSWORD,
         port=POSTGRES_PORT,
-        database=dbname,
+        dbname=dbname,
     )
     conn.autocommit = True
     return conn
@@ -32,7 +31,8 @@ try:
     conn = db_connection(dbname=None)
     CAN_CONNECT_TO_DB = True
     SERVER_VERSION = conn.server_version
-except:
+except Exception as x:
+    print(x)
     CAN_CONNECT_TO_DB = False
     SERVER_VERSION = 0
 

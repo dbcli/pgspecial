@@ -49,19 +49,15 @@ def list_databases(cur, pattern, verbose):
         query += """
         JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
         """
-    params = []
+    params = {}
     if pattern:
         query += """
-        WHERE d.datname ~ %s
+        WHERE d.datname ~ %(schema_pattern)s
         """
         _, schema = sql_name_pattern(pattern)
-        params.append(schema)
-    # pg3: mogrify is no more on psycopg 3
-    # pg3: if you really want to compose the query client side you should use
-    # pg3: `sql.SQL(query).format(params)`, but with `{}` instead of `%s` placeholders
-    # pg3: thinking about something similar in psycopg 3.1 but plans not finalised yet
-    query = cur.mogrify(query + " ORDER BY 1", params)
-    cur.execute(query)
+        params["schema_pattern"] = schema
+    query = query + " ORDER BY 1"
+    cur.execute(query, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -75,8 +71,7 @@ def list_roles(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
-    # pg3: cur.connection.info.server_version
-    if cur.connection.server_version > 90000:
+    if cur.connection.info.server_version > 90000:
         sql = """
             SELECT r.rolname,
                 r.rolsuper,
@@ -110,15 +105,15 @@ def list_roles(cur, pattern, verbose):
             FROM pg_catalog.pg_user u
             """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE r.rolname ~ %s"
-        params.append(schema)
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
+        sql += "WHERE r.rolname ~ %(rolname)s"
+        params["rolname"] = schema
+    sql += " ORDER BY 1"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -181,28 +176,28 @@ def list_privileges(cur, pattern, verbose):
           AND n.nspname !~ '^pg_'
     """
 
-    params = []
+    params = {}
     if pattern:
         schema, table = sql_name_pattern(pattern)
         if table:
             pattern = (
-                " AND c.relname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default "
+                " AND c.relname OPERATOR(pg_catalog.~) %(table_pattern)s COLLATE pg_catalog.default "
             )
-            params.append(table)
+            params["table_pattern"] = table
         if schema:
             pattern = (
                 pattern
-                + " AND n.nspname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default "
+                + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
             )
-            params.append(schema)
+            params["schema_pattern"] = schema
     else:
         pattern = " AND pg_catalog.pg_table_is_visible(c.oid) "
 
     where_clause = where_clause.format(pattern=pattern)
-    sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
+    sql += where_clause + " ORDER BY 1, 2"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -229,14 +224,12 @@ def list_default_privileges(cur, pattern, verbose):
         OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default)
     """
 
-    params = []
     if pattern:
         _, schema = sql_name_pattern(pattern)
         where_clause = where_clause.format(pattern=pattern)
         sql += where_clause
-        params.append(schema)
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2, 3", params)
+    sql += " ORDER BY 1, 2, 3"
     log.debug(sql)
     cur.execute(sql)
     if cur.description:
@@ -266,15 +259,15 @@ def list_tablespaces(cur, pattern, **_):
     sql += """ AS "Location"
     FROM pg_catalog.pg_tablespace n"""
 
-    params = []
+    params = {}
     if pattern:
         _, tbsp = sql_name_pattern(pattern)
-        sql += " WHERE n.spcname ~ %s"
-        params.append(tbsp)
+        sql += " WHERE n.spcname ~ %(spcname)s"
+        params["spcname"] = tbsp
 
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
 
     headers = [x[0] for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
@@ -300,17 +293,17 @@ def list_schemas(cur, pattern, verbose):
     FROM pg_catalog.pg_namespace n WHERE n.nspname """
     )
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "~ %s"
-        params.append(schema)
+        sql += "~ %(schema_name)s"
+        params["schema_name"] = schema
     else:
         sql += "!~ '^pg_' AND n.nspname <> 'information_schema'"
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
+    sql += " ORDER BY 1"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -324,29 +317,29 @@ def list_extensions(cur, pattern, verbose):
             SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
         """
 
-        params = []
+        params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "WHERE e.extname ~ %s"
-            params.append(schema)
+            sql += "WHERE e.extname ~ %(extname)s"
+            params["extname"] = schema
 
-        sql = cur.mogrify(sql + "ORDER BY 1, 2;", params)
-        log.debug(sql)
-        cur.execute(sql)
+        sql += "ORDER BY 1, 2;"
+        log.debug(f"{sql}, {params}")
+        cur.execute(sql, params)
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
+        params = {"object_id": oid}
         sql = """
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                     AS "Object Description"
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-                    AND refobjid = %s
+                    AND refobjid = %(object_id)s
                     AND deptype = 'e'
             ORDER BY 1"""
-        sql = cur.mogrify(sql, [oid])
-        log.debug(sql)
-        cur.execute(sql)
+        log.debug(f"{sql}, {params}")
+        cur.execute(sql, params)
 
         headers = [x[0] for x in cur.description]
         return cur, headers, cur.statusmessage
@@ -384,15 +377,15 @@ def list_extensions(cur, pattern, verbose):
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
       """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE e.extname ~ %s"
-        params.append(schema)
+        sql += "WHERE e.extname ~ %(extname)s"
+        params["extname"] = schema
 
-    sql = cur.mogrify(sql + "ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += "ORDER BY 1, 2"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         yield None, cur, headers, cur.statusmessage
@@ -434,14 +427,14 @@ def list_objects(cur, pattern, verbose, relkinds):
             FROM    pg_catalog.pg_class c
                     LEFT JOIN pg_catalog.pg_namespace n
                       ON n.oid = c.relnamespace
-            WHERE   c.relkind = ANY(%s) """
+            WHERE   c.relkind = ANY(%(relkind)s) """
     )
 
-    params = [relkinds]
+    params = {"relkind": relkinds}
 
     if schema_pattern:
         sql += " AND n.nspname ~ %s"
-        params.append(schema_pattern)
+        params["nspname"] = schema_pattern
     else:
         sql += """
             AND n.nspname <> 'pg_catalog'
@@ -451,12 +444,12 @@ def list_objects(cur, pattern, verbose, relkinds):
 
     if table_pattern:
         sql += " AND c.relname ~ %s"
-        params.append(table_pattern)
+        params["relname"] = table_pattern
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
+    sql += " ORDER BY 1, 2"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
 
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -581,26 +574,26 @@ def list_functions(cur, pattern, verbose):
         )
 
     schema_pattern, func_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
 
     if schema_pattern:
-        sql += " n.nspname ~ %s "
-        params.append(schema_pattern)
+        sql += " n.nspname ~ %(nspname)s "
+        params["nspname"] = schema_pattern
     else:
         sql += " pg_catalog.pg_function_is_visible(p.oid) "
 
     if func_pattern:
-        sql += " AND p.proname ~ %s "
-        params.append(func_pattern)
+        sql += " AND p.proname ~ %(proname)s "
+        params["proname"] = func_pattern
 
     if not (schema_pattern or func_pattern):
         sql += """ AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' """
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2, 4", params)
+    sql += " ORDER BY 1, 2, 4"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
 
     if cur.description:
         headers = [x[0] for x in cur.description]
@@ -659,26 +652,26 @@ def list_datatypes(cur, pattern, verbose):
                                 WHERE c.oid = t.typrelid)) """
 
     schema_pattern, type_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
 
     if schema_pattern:
-        sql += " AND n.nspname ~ %s "
-        params.append(schema_pattern)
+        sql += " AND n.nspname ~ %(nspname)s "
+        params["nspname"] = schema_pattern
     else:
         sql += " AND pg_catalog.pg_type_is_visible(t.oid) "
 
     if type_pattern:
-        sql += """ AND (t.typname ~ %s
-                        OR pg_catalog.format_type(t.oid, NULL) ~ %s) """
-        params.extend(2 * [type_pattern])
+        sql += """ AND (t.typname ~ %(typname)s
+                        OR pg_catalog.format_type(t.oid, NULL) ~ %(typname)s) """
+        params["typname"] = type_pattern
 
     if not (schema_pattern or type_pattern):
         sql += """ AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' """
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -727,23 +720,23 @@ def list_domains(cur, pattern, verbose):
     )
 
     schema_pattern, name_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
     if schema_pattern or name_pattern:
         if schema_pattern:
-            sql += " AND n.nspname ~ %s"
-            params.append(schema_pattern)
+            sql += " AND n.nspname ~ %(nspname)s"
+            params["nspname"] = schema_pattern
         if name_pattern:
-            sql += " AND t.typname ~ %s"
-            params.append(name_pattern)
+            sql += " AND t.typname ~ %(typname)s"
+            params["typname"] = name_pattern
     else:
         sql += """
           AND (n.nspname <> 'pg_catalog')
           AND (n.nspname <> 'information_schema')
           AND pg_catalog.pg_type_is_visible(t.oid)"""
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -765,18 +758,19 @@ def list_text_search_configurations(cur, pattern, verbose):
             WHERE p.oid = c.cfgparser
         """
 
-        params = []
+        params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "AND c.cfgname ~ %s"
-            params.append(schema)
+            sql += "AND c.cfgname ~ %(cfgname)s"
+            params["cfgname"] = schema
 
-        sql = cur.mogrify(sql + "ORDER BY 1, 2;", params)
-        log.debug(sql)
-        cur.execute(sql)
+        sql += "ORDER BY 1, 2;"
+        log.debug(f"{sql}, {params}")
+        cur.execute(sql, params)
         return cur.fetchall()
 
     def _fetch_oid_details(cur, oid):
+        params = {"oid": oid}
         sql = """
             SELECT
               (SELECT t.alias
@@ -790,7 +784,7 @@ def list_text_search_configurations(cur, pattern, verbose):
                                        ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
             FROM pg_catalog.pg_ts_config AS c,
                  pg_catalog.pg_ts_config_map AS m
-            WHERE c.oid = %s
+            WHERE c.oid = %(oid)s
               AND m.mapcfg = c.oid
             GROUP BY m.mapcfg,
                      m.maptokentype,
@@ -798,9 +792,8 @@ def list_text_search_configurations(cur, pattern, verbose):
             ORDER BY 1;
         """
 
-        sql = cur.mogrify(sql, [oid])
-        log.debug(sql)
-        cur.execute(sql)
+        log.debug(f"{sql}, {params}")
+        cur.execute(sql, params)
 
         headers = [x[0] for x in cur.description]
         return cur, headers, cur.statusmessage
@@ -835,15 +828,15 @@ def list_text_search_configurations(cur, pattern, verbose):
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
         """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE c.cfgname ~ %s"
-        params.append(schema)
+        sql += "WHERE c.cfgname ~ %(cfgname)s"
+        params["cfgname"] = schema
 
-    sql = cur.mogrify(sql + "ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += "ORDER BY 1, 2"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         yield None, cur, headers, cur.statusmessage
@@ -867,17 +860,17 @@ def describe_table_details(cur, pattern, verbose):
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
     where = []
-    params = []
+    params = {}
 
     if schema:
-        where.append("n.nspname ~ %s")
-        params.append(schema)
+        where.append("n.nspname ~ %(nspname)s")
+        params["nspname"] = schema
     else:
         where.append("pg_catalog.pg_table_is_visible(c.oid)")
 
     if relname:
-        where.append("c.relname OPERATOR(pg_catalog.~) %s")
-        params.append(relname)
+        where.append("c.relname OPERATOR(pg_catalog.~) %(relname)s")
+        params["relname"] = relname
 
     sql = (
         """SELECT c.oid, n.nspname, c.relname
@@ -888,12 +881,10 @@ def describe_table_details(cur, pattern, verbose):
         + """
              ORDER BY 2,3"""
     )
-    sql = cur.mogrify(sql, params)
-
     # Execute the sql, get the results and call describe_one_table_details on each table.
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if not (cur.rowcount > 0):
         return [(None, None, None, "Did not find any relation named %s." % pattern)]
 
@@ -1915,19 +1906,19 @@ class _FakeCursor(list):
 
 @special_command("\\sf", "\\sf[+] FUNCNAME", "Show a function's definition.")
 def show_function_definition(cur, pattern, verbose):
+    params = {"pattern": pattern}
     if "(" in pattern:
-        sql = cur.mogrify(
-            "SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern]
-        )
+        sql = "SELECT %(pattern)s::pg_catalog.regprocedure::pg_catalog.oid"
     else:
-        sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
-    log.debug(sql)
-    cur.execute(sql)
+        sql = "SELECT %(pattern)s::pg_catalog.regproc::pg_catalog.oid"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     (foid,) = cur.fetchone()
 
-    sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
-    log.debug(sql)
-    cur.execute(sql)
+    params = {"foid": foid}
+    sql = "SELECT pg_catalog.pg_get_functiondef(%(foid)s) as source"
+    log.debug(f"{sql}, {params}")
+    cur.execute(sql, params)
     if cur.description:
         headers = [x[0] for x in cur.description]
         if verbose:

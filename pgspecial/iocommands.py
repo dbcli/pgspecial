@@ -120,15 +120,15 @@ def read_from_file(path):
         contents = f.read()
     return contents
 
-
-@contextmanager
-def _paused_thread():
-    try:
-        thread = psycopg2.extensions.get_wait_callback()
-        psycopg2.extensions.set_wait_callback(None)
-        yield
-    finally:
-        psycopg2.extensions.set_wait_callback(thread)
+# TODO: pg3: do we need to port this?
+# @contextmanager
+# def _paused_thread():
+#     try:
+#         thread = psycopg2.extensions.get_wait_callback()
+#         psycopg2.extensions.set_wait_callback(None)
+#         yield
+#     finally:
+#         psycopg2.extensions.set_wait_callback(thread)
 
 
 def _index_of_file_name(tokenlist):
@@ -172,14 +172,13 @@ def copy(cur, pattern, verbose):
         raise Exception("Enclose filename in single quotes")
 
     # pg3: I don't know what is pause_thread for here.
-    with _paused_thread():
+        # with _paused_thread():
         # pg3: COPY changed in psycopg3 and is no more file based: examples at
         # pg3: https://www.psycopg.org/psycopg3/docs/basic/copy.html#copying-block-by-block
-        cur.copy_expert("copy " + query, file)
+        # cur.copy_expert("copy " + query, file)
 
     if cur.description:
-        # pg3 (and 2): x.name is probably more readable than x[0]
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
@@ -254,9 +253,8 @@ def execute_named_query(cur, pattern, **_):
             if query is None:
                 raise Exception("Bad arguments\n" + params)
         cur.execute(query)
-    # pg3: (but psycopg2 too): you can use `except psycopg.errors.SyntaxError`
-    except psycopg2.ProgrammingError as e:
-        if e.pgcode == psycopg2.errorcodes.SYNTAX_ERROR and "%s" in query:
+    except psycopg.errors.SyntaxError:
+        if "%s" in query:
             raise Exception(
                 "Bad arguments: "
                 'please use "$1", "$2", etc. for named queries instead of "%s"'
