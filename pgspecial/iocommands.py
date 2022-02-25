@@ -265,7 +265,7 @@ def execute_named_query(cur, pattern, **_):
         raise Exception("Bad arguments")
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(title, cur, headers, cur.statusmessage)]
     else:
         return [(title, None, None, cur.statusmessage)]

@@ -30,7 +30,7 @@ def db_connection(dbname=None):
 try:
     conn = db_connection(dbname=None)
     CAN_CONNECT_TO_DB = True
-    SERVER_VERSION = conn.server_version
+    SERVER_VERSION = conn.info.server_version
 except Exception as x:
     print(x)
     CAN_CONNECT_TO_DB = False

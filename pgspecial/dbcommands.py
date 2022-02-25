@@ -59,7 +59,7 @@ def list_databases(cur, pattern, verbose):
     query = query + " ORDER BY 1"
     cur.execute(query, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
@@ -115,7 +115,7 @@ def list_roles(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -199,7 +199,7 @@ def list_privileges(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -233,7 +233,7 @@ def list_default_privileges(cur, pattern, verbose):
     log.debug(sql)
     cur.execute(sql)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -269,7 +269,7 @@ def list_tablespaces(cur, pattern, **_):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
 
-    headers = [x[0] for x in cur.description] if cur.description else None
+    headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -305,7 +305,7 @@ def list_schemas(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -341,10 +341,10 @@ def list_extensions(cur, pattern, verbose):
         log.debug(f"{sql}, {params}")
         cur.execute(sql, params)
 
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
 
-    if cur.connection.server_version < 90100:
+    if cur.connection.info.server_version < 90100:
         not_supported = "Server versions below 9.1 do not support extensions."
         cur, headers = [], []
         yield None, cur, None, not_supported
@@ -387,7 +387,7 @@ def list_extensions(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -452,7 +452,7 @@ def list_objects(cur, pattern, verbose, relkinds):
     cur.execute(sql, params)
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -501,7 +501,7 @@ def list_functions(cur, pattern, verbose):
     else:
         verbose_columns = verbose_table = ""
 
-    if cur.connection.server_version >= 110000:
+    if cur.connection.info.server_version >= 110000:
         sql = (
             """
             SELECT  n.nspname as "Schema",
@@ -526,7 +526,7 @@ def list_functions(cur, pattern, verbose):
             + """
             WHERE  """
         )
-    elif cur.connection.server_version > 90000:
+    elif cur.connection.info.server_version > 90000:
         sql = (
             """
             SELECT  n.nspname as "Schema",
@@ -596,7 +596,7 @@ def list_functions(cur, pattern, verbose):
     cur.execute(sql, params)
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -629,7 +629,7 @@ def list_datatypes(cur, pattern, verbose):
         sql += """  pg_catalog.obj_description(t.oid, 'pg_type')
                         as "Description" """
 
-    if cur.connection.server_version > 90000:
+    if cur.connection.info.server_version > 90000:
         sql += """  FROM    pg_catalog.pg_type t
                             LEFT JOIN pg_catalog.pg_namespace n
                               ON n.oid = t.typnamespace
@@ -673,7 +673,7 @@ def list_datatypes(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -738,7 +738,7 @@ def list_domains(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -795,10 +795,10 @@ def list_text_search_configurations(cur, pattern, verbose):
         log.debug(f"{sql}, {params}")
         cur.execute(sql, params)
 
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
 
-    if cur.connection.server_version < 80300:
+    if cur.connection.info.server_version < 80300:
         not_supported = "Server versions below 8.3 do not support full text search."
         cur, headers = [], []
         yield None, cur, None, not_supported
@@ -838,7 +838,7 @@ def list_text_search_configurations(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -896,18 +896,18 @@ def describe_table_details(cur, pattern, verbose):
 
 
 def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
-    if verbose and cur.connection.server_version >= 80200:
+    if verbose and cur.connection.info.server_version >= 80200:
         suffix = """pg_catalog.array_to_string(c.reloptions || array(select
         'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')"""
     else:
         suffix = "''"
 
-    if cur.connection.server_version >= 120000:
+    if cur.connection.info.server_version >= 120000:
         relhasoids = "false as relhasoids"
     else:
         relhasoids = "c.relhasoids"
 
-    if cur.connection.server_version >= 100000:
+    if cur.connection.info.server_version >= 100000:
         sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
                     c.relhasrules, c.relhastriggers, %s,
                     %s,
@@ -924,7 +924,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             suffix,
             oid,
         )
-    elif cur.connection.server_version > 90000:
+    elif cur.connection.info.server_version > 90000:
         sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
                     c.relhasrules, c.relhastriggers, c.relhasoids,
                     %s,
@@ -940,7 +940,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             suffix,
             oid,
         )
-    elif cur.connection.server_version >= 80400:
+    elif cur.connection.info.server_version >= 80400:
         sql = """SELECT c.relchecks,
                     c.relkind,
                     c.relhasindex,
@@ -1014,7 +1014,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cols += 1
     att_cols["attnotnull"] = cols
     cols += 1
-    if cur.connection.server_version >= 90100:
+    if cur.connection.info.server_version >= 90100:
         sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
                     WHERE c.oid = a.attcollation
                     AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
@@ -1022,13 +1022,13 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         sql += ",\n  NULL AS attcollation"
     att_cols["attcollation"] = cols
     cols += 1
-    if cur.connection.server_version >= 100000:
+    if cur.connection.info.server_version >= 100000:
         sql += ",\n  a.attidentity"
     else:
         sql += ",\n  ''::pg_catalog.char AS attidentity"
     att_cols["attidentity"] = cols
     cols += 1
-    if cur.connection.server_version >= 120000:
+    if cur.connection.info.server_version >= 120000:
         sql += ",\n  a.attgenerated"
     else:
         sql += ",\n  ''::pg_catalog.char AS attgenerated"
@@ -1036,7 +1036,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cols += 1
     # index, or partitioned index
     if tableinfo.relkind == "i" or tableinfo.relkind == "I":
-        if cur.connection.server_version >= 110000:
+        if cur.connection.info.server_version >= 110000:
             sql += (
                 ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
                 "WHERE i.indexrelid = '%s') THEN 'yes' ELSE 'no' END AS is_key" % oid
@@ -1048,7 +1048,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         sql += """,\n NULL AS indexdef"""
     att_cols["indexdef"] = cols
     cols += 1
-    if tableinfo.relkind == "f" and cur.connection.server_version >= 90200:
+    if tableinfo.relkind == "f" and cur.connection.info.server_version >= 90200:
         sql += """, CASE WHEN attfdwoptions IS NULL THEN '' ELSE '(' ||
                 array_to_string(ARRAY(SELECT quote_ident(option_name) ||  ' '
                 || quote_literal(option_value)  FROM
@@ -1223,7 +1223,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if tableinfo.relkind == "i":
         # /* Footer information about an index */
 
-        if cur.connection.server_version > 90000:
+        if cur.connection.info.server_version > 90000:
             sql = (
                 """SELECT i.indisunique,
                         i.indisprimary,
@@ -1364,7 +1364,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # /* Footer information about a table */
 
         if tableinfo.hasindex:
-            if cur.connection.server_version > 90000:
+            if cur.connection.info.server_version > 90000:
                 sql = (
                     """SELECT c2.relname,
                                 i.indisprimary,
@@ -1652,7 +1652,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # * could apply to either a table or a view.
     # */
     if tableinfo.hastriggers:
-        if cur.connection.server_version > 90000:
+        if cur.connection.info.server_version > 90000:
             sql = (
                 """SELECT t.tgname,
                         pg_catalog.pg_get_triggerdef(t.oid, true),
@@ -1780,7 +1780,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     status.append("%s %s%s" % (spacer, row[0], trailer))
 
         # /* print child tables */
-        if cur.connection.server_version > 90000:
+        if cur.connection.info.server_version > 90000:
             sql = (
                 """SELECT c.oid::pg_catalog.regclass
                         FROM pg_catalog.pg_class c,
@@ -1920,7 +1920,7 @@ def show_function_definition(cur, pattern, verbose):
     log.debug(f"{sql}, {params}")
     cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         if verbose:
             (source,) = cur.fetchone()
             rows = _FakeCursor()
@@ -1983,7 +1983,7 @@ def list_foreign_tables(cur, pattern, verbose):
 
     cur.execute(query)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
