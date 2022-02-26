@@ -1884,7 +1884,8 @@ def show_function_definition(cur, pattern, verbose):
                         rown = 1
                 else:
                     rown += 1
-                rows.append(f"{'' if rown is None else rown} {row}")
+                rown_v = '' if rown is None else rown
+                rows.append(f"{rown_v:<7} {row}")
             cur = [("\n".join(rows) + "\n",)]
     else:
         headers = None
