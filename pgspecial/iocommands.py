@@ -159,7 +159,10 @@ def copy(cur, pattern, verbose):
 
     if direction == "FROM":
         with cur.copy("copy " + query) as pgcopy:
-            while data := file.read(512):
+            while True:
+                data = file.read(512)
+                if not data:
+                    break
                 pgcopy.write(data)
     else:
         with cur.copy("copy " + query) as pgcopy:
