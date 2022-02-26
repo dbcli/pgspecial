@@ -1928,7 +1928,7 @@ def list_foreign_tables(cur, pattern, verbose):
             AND n.nspname <> 'information_schema'
             AND n.nspname !~ '^pg_toast'
         AND pg_catalog.pg_table_is_visible(c.oid)
-        %{filter}
+        {filter}
         ORDER BY 1,2;
         """
 

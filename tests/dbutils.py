@@ -145,8 +145,7 @@ def setup_foreign(conn):
         cur.execute(
             "create server if not exists foreign_db_server "
             "foreign data wrapper postgres_fdw "
-            "options (host '127.0.0.1', dbname %s )",
-            (FOREIGN_TEST_DB_NAME,),
+            f"options (host '127.0.0.1', dbname '{FOREIGN_TEST_DB_NAME}') "
         )
         cur.execute(
             "create user mapping if not exists for current_user "
@@ -161,12 +160,10 @@ def setup_foreign(conn):
 
 
 def teardown_foreign(conn):
-
     with conn.cursor() as cur:
-
         cur.execute("drop server if exists foreign_db_server cascade")
         cur.execute("drop extension if exists postgres_fdw")
-        cur.execute("drop database if exists %s" % FOREIGN_TEST_DB_NAME)
+        cur.execute(f"drop database if exists {FOREIGN_TEST_DB_NAME}")
 
 
 @contextmanager
@@ -181,7 +178,8 @@ def foreign_db_environ():
 try:
     with foreign_db_environ():
         CAN_CREATE_FDW_EXTENSION = True
-except:
+except Exception as x:
+    print(x)
     CAN_CREATE_FDW_EXTENSION = False
 
 fdw_test = pytest.mark.skipif(
