@@ -112,7 +112,7 @@ def list_roles(cur, pattern, verbose):
         params["rolname"] = schema
     sql += " ORDER BY 1"
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -194,7 +194,7 @@ def list_privileges(cur, pattern, verbose):
     where_clause = where_clause.format(pattern=pattern)
     sql += where_clause + " ORDER BY 1, 2"
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -264,7 +264,7 @@ def list_tablespaces(cur, pattern, **_):
         params["spcname"] = tbsp
 
     sql += " ORDER BY 1"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
 
     headers = [x.name for x in cur.description] if cur.description else None
@@ -300,7 +300,7 @@ def list_schemas(cur, pattern, verbose):
         sql += "!~ '^pg_' AND n.nspname <> 'information_schema'"
     sql += " ORDER BY 1"
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -322,7 +322,7 @@ def list_extensions(cur, pattern, verbose):
             params["extname"] = schema
 
         sql += " ORDER BY 1, 2;"
-        log.debug(f"{sql}, {params}")
+        log.debug("%s, %s", sql, params)
         cur.execute(sql, params)
         return cur.fetchall()
 
@@ -336,7 +336,7 @@ def list_extensions(cur, pattern, verbose):
                     AND refobjid = %(object_id)s
                     AND deptype = 'e'
             ORDER BY 1"""
-        log.debug(f"{sql}, {params}")
+        log.debug("%s, %s", sql, params)
         cur.execute(sql, params)
 
         headers = [x.name for x in cur.description]
@@ -380,7 +380,7 @@ def list_extensions(cur, pattern, verbose):
         params["extname"] = schema
 
     sql += " ORDER BY 1, 2"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -444,7 +444,7 @@ def list_objects(cur, pattern, verbose, relkinds):
 
     sql += " ORDER BY 1, 2"
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
 
     if cur.description:
@@ -588,7 +588,7 @@ def list_functions(cur, pattern, verbose):
 
     sql += " ORDER BY 1, 2, 4"
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
 
     if cur.description:
@@ -666,7 +666,7 @@ def list_datatypes(cur, pattern, verbose):
                    AND n.nspname <> 'information_schema' """
 
     sql += " ORDER BY 1, 2"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -728,7 +728,7 @@ def list_domains(cur, pattern, verbose):
           AND pg_catalog.pg_type_is_visible(t.oid)"""
 
     sql += " ORDER BY 1, 2"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -758,7 +758,7 @@ def list_text_search_configurations(cur, pattern, verbose):
             params["cfgname"] = schema
 
         sql += " ORDER BY 1, 2;"
-        log.debug(f"{sql}, {params}")
+        log.debug("%s, %s", sql, params)
         cur.execute(sql, params)
         return cur.fetchall()
 
@@ -785,7 +785,7 @@ def list_text_search_configurations(cur, pattern, verbose):
             ORDER BY 1;
         """
 
-        log.debug(f"{sql}, {params}")
+        log.debug("%s, %s", sql, params)
         cur.execute(sql, params)
 
         headers = [x.name for x in cur.description]
@@ -828,7 +828,7 @@ def list_text_search_configurations(cur, pattern, verbose):
         params["cfgname"] = schema
 
     sql += " ORDER BY 1, 2"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -876,7 +876,7 @@ def describe_table_details(cur, pattern, verbose):
     )
     # Execute the sql, get the results and call describe_one_table_details on each table.
 
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if not (cur.rowcount > 0):
         return [(None, None, None, f"Did not find any relation named {pattern}.")]
@@ -1864,13 +1864,13 @@ def show_function_definition(cur, pattern, verbose):
         sql = "SELECT %(pattern)s::pg_catalog.regprocedure::pg_catalog.oid"
     else:
         sql = "SELECT %(pattern)s::pg_catalog.regproc::pg_catalog.oid"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     (foid,) = cur.fetchone()
 
     params = {"foid": foid}
     sql = "SELECT pg_catalog.pg_get_functiondef(%(foid)s) as source"
-    log.debug(f"{sql}, {params}")
+    log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
         headers = [x.name for x in cur.description]
