@@ -31,8 +31,7 @@ try:
     conn = db_connection(dbname=None)
     CAN_CONNECT_TO_DB = True
     SERVER_VERSION = conn.info.server_version
-except Exception as x:
-    print(x)
+except:
     CAN_CONNECT_TO_DB = False
     SERVER_VERSION = 0
 
@@ -178,8 +177,7 @@ def foreign_db_environ():
 try:
     with foreign_db_environ():
         CAN_CREATE_FDW_EXTENSION = True
-except Exception as x:
-    print(x)
+except:
     CAN_CREATE_FDW_EXTENSION = False
 
 fdw_test = pytest.mark.skipif(
