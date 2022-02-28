@@ -25,7 +25,7 @@ setup(
     install_requires=[
         "click >= 4.1",
         "sqlparse >= 0.1.19",
-        "psycopg >= 3.0.9",
+        "psycopg >= 3.0.9,<3.1.0",
     ],
     classifiers=[
         "Intended Audience :: Developers",
