@@ -260,6 +260,7 @@ def test_slash_dp_pattern_table(executor):
     assert results == expected
 
 
+@dbtest
 def test_slash_dp_pattern_schema(executor):
     """List all schemas."""
     results = executor(r"\dp schema2.*")
