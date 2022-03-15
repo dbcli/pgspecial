@@ -1,3 +1,11 @@
+Upcoming
+========
+
+Bug fixes:
+----------
+
+* Add `pytest` mark `dbtest` to `test_slash_dp_pattern_schema` so it can be skipped when necessary. (Thanks: `Benjamin Beasley`_)
+
 1.13.1
 ======
 
