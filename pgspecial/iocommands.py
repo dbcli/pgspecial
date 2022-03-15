@@ -168,14 +168,11 @@ def copy(cur, pattern, verbose):
             for data in pgcopy:
                 file.write(bytes(data))
 
-    # TODO: pg3 raises an exception here, is this a bug?
-    def _safe_headers(cursor):
-        try:
-            return [x.name for x in cursor.description]
-        except psycopg.errors.InterfaceError:
-            return None
-
-    return [(None, None, _safe_headers(cur), cur.statusmessage)]
+    if cur.description:
+        headers = [x.name for x in cur.description]
+        return [(None, None, headers, cur.statusmessage)]
+    else:
+        return [(None, None, None, cur.statusmessage)]
 
 
 def subst_favorite_query_args(query, args):
