@@ -1,10 +1,15 @@
-Upcoming
-========
+Upcoming (going to bump MAJOR version to 2)
+===========================================
 
 Bug fixes:
 ----------
 
 * Add `pytest` mark `dbtest` to `test_slash_dp_pattern_schema` so it can be skipped when necessary. (Thanks: `Benjamin Beasley`_)
+
+Internal:
+---------
+
+* Switch to psycopg3 - breaking change.
 
 1.13.1
 ======
