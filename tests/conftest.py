@@ -9,7 +9,6 @@ def connection():
     connection = db_connection(TEST_DB_NAME)
     setup_db(connection)
     yield connection
-
     teardown_db(connection)
     connection.close()
 

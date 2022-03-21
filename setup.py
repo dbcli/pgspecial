@@ -25,7 +25,7 @@ setup(
     install_requires=[
         "click >= 4.1",
         "sqlparse >= 0.1.19",
-        "psycopg2 >= 2.7.4",
+        "psycopg >= 3.0.10",
     ],
     classifiers=[
         "Intended Audience :: Developers",
@@ -37,6 +37,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Programming Language :: SQL",
         "Topic :: Database",
         "Topic :: Database :: Front-Ends",

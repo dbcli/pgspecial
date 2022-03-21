@@ -1,5 +1,4 @@
 from __future__ import unicode_literals
-from contextlib import contextmanager
 import re
 import sys
 import logging
@@ -7,7 +6,7 @@ import click
 import io
 import shlex
 import sqlparse
-import psycopg2
+import psycopg
 from os.path import expanduser
 from .namedqueries import NamedQueries
 from . import export
@@ -121,16 +120,6 @@ def read_from_file(path):
     return contents
 
 
-@contextmanager
-def _paused_thread():
-    try:
-        thread = psycopg2.extensions.get_wait_callback()
-        psycopg2.extensions.set_wait_callback(None)
-        yield
-    finally:
-        psycopg2.extensions.set_wait_callback(thread)
-
-
 def _index_of_file_name(tokenlist):
     for (idx, token) in reversed(list(enumerate(tokenlist[:-2]))):
         if token.is_keyword and token.value.upper() in ("TO", "FROM"):
@@ -148,39 +137,40 @@ def copy(cur, pattern, verbose):
 
     # Replace the specified file destination with STDIN or STDOUT
     parsed = sqlparse.parse(pattern)
-    tokenlist = parsed[0].tokens
-    idx = _index_of_file_name(tokenlist)
-    file_name = tokenlist[idx].value
-    before_file_name = "".join(t.value for t in tokenlist[:idx])
-    after_file_name = "".join(t.value for t in tokenlist[idx + 1 :])
+    tokens = parsed[0].tokens
+    idx = _index_of_file_name(tokens)
+    file_name = tokens[idx].value
+    before_file_name = "".join(t.value for t in tokens[:idx])
+    after_file_name = "".join(t.value for t in tokens[idx + 1 :])
 
-    direction = tokenlist[idx - 2].value.upper()
+    direction = tokens[idx - 2].value.upper()
     replacement_file_name = "STDIN" if direction == "FROM" else "STDOUT"
-    query = "{0} {1} {2}".format(
-        before_file_name, replacement_file_name, after_file_name
-    )
-    open_mode = "r" if direction == "FROM" else "w"
+    query = f"{before_file_name} {replacement_file_name} {after_file_name}"
+    open_mode = "r" if direction == "FROM" else "wb"
     if file_name.startswith("'") and file_name.endswith("'"):
-        file = io.open(
-            expanduser(file_name.strip("'")), mode=open_mode, encoding="utf-8"
-        )
+        file = io.open(expanduser(file_name.strip("'")), mode=open_mode)
     elif "stdin" in file_name.lower():
-        file = sys.stdin
+        file = sys.stdin.buffer
     elif "stdout" in file_name.lower():
-        file = sys.stdout
+        file = sys.stdout.buffer
     else:
         raise Exception("Enclose filename in single quotes")
 
-    # pg3: I don't know what is pause_thread for here.
-    with _paused_thread():
-        # pg3: COPY changed in psycopg3 and is no more file based: examples at
-        # pg3: https://www.psycopg.org/psycopg3/docs/basic/copy.html#copying-block-by-block
-        cur.copy_expert("copy " + query, file)
+    if direction == "FROM":
+        with cur.copy("copy " + query) as pgcopy:
+            while True:
+                data = file.read(8192)
+                if not data:
+                    break
+                pgcopy.write(data)
+    else:
+        with cur.copy("copy " + query) as pgcopy:
+            for data in pgcopy:
+                file.write(bytes(data))
 
     if cur.description:
-        # pg3 (and 2): x.name is probably more readable than x[0]
-        headers = [x[0] for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+        headers = [x.name for x in cur.description]
+        return [(None, None, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
 
@@ -254,9 +244,8 @@ def execute_named_query(cur, pattern, **_):
             if query is None:
                 raise Exception("Bad arguments\n" + params)
         cur.execute(query)
-    # pg3: (but psycopg2 too): you can use `except psycopg.errors.SyntaxError`
-    except psycopg2.ProgrammingError as e:
-        if e.pgcode == psycopg2.errorcodes.SYNTAX_ERROR and "%s" in query:
+    except psycopg.errors.SyntaxError:
+        if "%s" in query:
             raise Exception(
                 "Bad arguments: "
                 'please use "$1", "$2", etc. for named queries instead of "%s"'
@@ -267,7 +256,7 @@ def execute_named_query(cur, pattern, **_):
         raise Exception("Bad arguments")
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(title, cur, headers, cur.statusmessage)]
     else:
         return [(title, None, None, cur.statusmessage)]

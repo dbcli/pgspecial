@@ -49,21 +49,17 @@ def list_databases(cur, pattern, verbose):
         query += """
         JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
         """
-    params = []
+    params = {}
     if pattern:
         query += """
-        WHERE d.datname ~ %s
+        WHERE d.datname ~ %(schema_pattern)s
         """
         _, schema = sql_name_pattern(pattern)
-        params.append(schema)
-    # pg3: mogrify is no more on psycopg 3
-    # pg3: if you really want to compose the query client side you should use
-    # pg3: `sql.SQL(query).format(params)`, but with `{}` instead of `%s` placeholders
-    # pg3: thinking about something similar in psycopg 3.1 but plans not finalised yet
-    query = cur.mogrify(query + " ORDER BY 1", params)
-    cur.execute(query)
+        params["schema_pattern"] = schema
+    query = query + " ORDER BY 1"
+    cur.execute(query, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
@@ -75,8 +71,7 @@ def list_roles(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
-    # pg3: cur.connection.info.server_version
-    if cur.connection.server_version > 90000:
+    if cur.connection.info.server_version > 90000:
         sql = """
             SELECT r.rolname,
                 r.rolsuper,
@@ -110,17 +105,17 @@ def list_roles(cur, pattern, verbose):
             FROM pg_catalog.pg_user u
             """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE r.rolname ~ %s"
-        params.append(schema)
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
+        sql += "WHERE r.rolname ~ %(rolname)s"
+        params["rolname"] = schema
+    sql += " ORDER BY 1"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -181,30 +176,28 @@ def list_privileges(cur, pattern, verbose):
           AND n.nspname !~ '^pg_'
     """
 
-    params = []
+    params = {}
     if pattern:
         schema, table = sql_name_pattern(pattern)
         if table:
-            pattern = (
-                " AND c.relname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default "
-            )
-            params.append(table)
+            pattern = " AND c.relname OPERATOR(pg_catalog.~) %(table_pattern)s COLLATE pg_catalog.default "
+            params["table_pattern"] = table
         if schema:
             pattern = (
                 pattern
-                + " AND n.nspname OPERATOR(pg_catalog.~) %s COLLATE pg_catalog.default "
+                + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
             )
-            params.append(schema)
+            params["schema_pattern"] = schema
     else:
         pattern = " AND pg_catalog.pg_table_is_visible(c.oid) "
 
     where_clause = where_clause.format(pattern=pattern)
-    sql = cur.mogrify(sql + where_clause + " ORDER BY 1, 2", params)
+    sql += where_clause + " ORDER BY 1, 2"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -229,18 +222,16 @@ def list_default_privileges(cur, pattern, verbose):
         OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default)
     """
 
-    params = []
     if pattern:
         _, schema = sql_name_pattern(pattern)
         where_clause = where_clause.format(pattern=pattern)
         sql += where_clause
-        params.append(schema)
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2, 3", params)
+    sql += " ORDER BY 1, 2, 3"
     log.debug(sql)
     cur.execute(sql)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -266,17 +257,17 @@ def list_tablespaces(cur, pattern, **_):
     sql += """ AS "Location"
     FROM pg_catalog.pg_tablespace n"""
 
-    params = []
+    params = {}
     if pattern:
         _, tbsp = sql_name_pattern(pattern)
-        sql += " WHERE n.spcname ~ %s"
-        params.append(tbsp)
+        sql += " WHERE n.spcname ~ %(spcname)s"
+        params["spcname"] = tbsp
 
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
 
-    headers = [x[0] for x in cur.description] if cur.description else None
+    headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -300,19 +291,19 @@ def list_schemas(cur, pattern, verbose):
     FROM pg_catalog.pg_namespace n WHERE n.nspname """
     )
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "~ %s"
-        params.append(schema)
+        sql += "~ %(schema_name)s"
+        params["schema_name"] = schema
     else:
         sql += "!~ '^pg_' AND n.nspname <> 'information_schema'"
-    sql = cur.mogrify(sql + " ORDER BY 1", params)
+    sql += " ORDER BY 1"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -324,34 +315,34 @@ def list_extensions(cur, pattern, verbose):
             SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
         """
 
-        params = []
+        params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "WHERE e.extname ~ %s"
-            params.append(schema)
+            sql += "WHERE e.extname ~ %(extname)s"
+            params["extname"] = schema
 
-        sql = cur.mogrify(sql + "ORDER BY 1, 2;", params)
-        log.debug(sql)
-        cur.execute(sql)
+        sql += " ORDER BY 1, 2;"
+        log.debug("%s, %s", sql, params)
+        cur.execute(sql, params)
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
+        params = {"object_id": oid}
         sql = """
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                     AS "Object Description"
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-                    AND refobjid = %s
+                    AND refobjid = %(object_id)s
                     AND deptype = 'e'
             ORDER BY 1"""
-        sql = cur.mogrify(sql, [oid])
-        log.debug(sql)
-        cur.execute(sql)
+        log.debug("%s, %s", sql, params)
+        cur.execute(sql, params)
 
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
 
-    if cur.connection.server_version < 90100:
+    if cur.connection.info.server_version < 90100:
         not_supported = "Server versions below 9.1 do not support extensions."
         cur, headers = [], []
         yield None, cur, None, not_supported
@@ -362,13 +353,11 @@ def list_extensions(cur, pattern, verbose):
 
         if extensions:
             for ext_name, oid in extensions:
-                title = '\nObjects in extension "%s"' % ext_name
+                title = f'''\nObjects in extension "{ext_name}"'''
                 cur, headers, status = _describe_extension(cur, oid)
                 yield title, cur, headers, status
         else:
-            yield None, None, None, 'Did not find any extension named "{}".'.format(
-                pattern
-            )
+            yield None, None, None, f"""Did not find any extension named "{pattern}"."""
         return
 
     sql = """
@@ -384,17 +373,17 @@ def list_extensions(cur, pattern, verbose):
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
       """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE e.extname ~ %s"
-        params.append(schema)
+        sql += "WHERE e.extname ~ %(extname)s"
+        params["extname"] = schema
 
-    sql = cur.mogrify(sql + "ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -434,14 +423,14 @@ def list_objects(cur, pattern, verbose, relkinds):
             FROM    pg_catalog.pg_class c
                     LEFT JOIN pg_catalog.pg_namespace n
                       ON n.oid = c.relnamespace
-            WHERE   c.relkind = ANY(%s) """
+            WHERE   c.relkind = ANY(%(relkind)s) """
     )
 
-    params = [relkinds]
+    params = {"relkind": relkinds}
 
     if schema_pattern:
-        sql += " AND n.nspname ~ %s"
-        params.append(schema_pattern)
+        sql += " AND n.nspname ~ %(nspname)s"
+        params["nspname"] = schema_pattern
     else:
         sql += """
             AND n.nspname <> 'pg_catalog'
@@ -450,16 +439,16 @@ def list_objects(cur, pattern, verbose, relkinds):
             AND pg_catalog.pg_table_is_visible(c.oid) """
 
     if table_pattern:
-        sql += " AND c.relname ~ %s"
-        params.append(table_pattern)
+        sql += " AND c.relname ~ %(relname)s"
+        params["relname"] = table_pattern
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
+    sql += " ORDER BY 1, 2"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -508,7 +497,7 @@ def list_functions(cur, pattern, verbose):
     else:
         verbose_columns = verbose_table = ""
 
-    if cur.connection.server_version >= 110000:
+    if cur.connection.info.server_version >= 110000:
         sql = (
             """
             SELECT  n.nspname as "Schema",
@@ -533,7 +522,7 @@ def list_functions(cur, pattern, verbose):
             + """
             WHERE  """
         )
-    elif cur.connection.server_version > 90000:
+    elif cur.connection.info.server_version > 90000:
         sql = (
             """
             SELECT  n.nspname as "Schema",
@@ -581,29 +570,29 @@ def list_functions(cur, pattern, verbose):
         )
 
     schema_pattern, func_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
 
     if schema_pattern:
-        sql += " n.nspname ~ %s "
-        params.append(schema_pattern)
+        sql += " n.nspname ~ %(nspname)s "
+        params["nspname"] = schema_pattern
     else:
         sql += " pg_catalog.pg_function_is_visible(p.oid) "
 
     if func_pattern:
-        sql += " AND p.proname ~ %s "
-        params.append(func_pattern)
+        sql += " AND p.proname ~ %(proname)s "
+        params["proname"] = func_pattern
 
     if not (schema_pattern or func_pattern):
         sql += """ AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' """
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2, 4", params)
+    sql += " ORDER BY 1, 2, 4"
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
 
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -636,7 +625,7 @@ def list_datatypes(cur, pattern, verbose):
         sql += """  pg_catalog.obj_description(t.oid, 'pg_type')
                         as "Description" """
 
-    if cur.connection.server_version > 90000:
+    if cur.connection.info.server_version > 90000:
         sql += """  FROM    pg_catalog.pg_type t
                             LEFT JOIN pg_catalog.pg_namespace n
                               ON n.oid = t.typnamespace
@@ -659,28 +648,28 @@ def list_datatypes(cur, pattern, verbose):
                                 WHERE c.oid = t.typrelid)) """
 
     schema_pattern, type_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
 
     if schema_pattern:
-        sql += " AND n.nspname ~ %s "
-        params.append(schema_pattern)
+        sql += " AND n.nspname ~ %(nspname)s "
+        params["nspname"] = schema_pattern
     else:
         sql += " AND pg_catalog.pg_type_is_visible(t.oid) "
 
     if type_pattern:
-        sql += """ AND (t.typname ~ %s
-                        OR pg_catalog.format_type(t.oid, NULL) ~ %s) """
-        params.extend(2 * [type_pattern])
+        sql += """ AND (t.typname ~ %(typname)s
+                        OR pg_catalog.format_type(t.oid, NULL) ~ %(typname)s) """
+        params["typname"] = type_pattern
 
     if not (schema_pattern or type_pattern):
         sql += """ AND n.nspname <> 'pg_catalog'
                    AND n.nspname <> 'information_schema' """
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -696,7 +685,7 @@ def list_domains(cur, pattern, verbose):
     else:
         extra_cols = extra_joins = ""
 
-    sql = """\
+    sql = f"""\
         SELECT n.nspname AS "Schema",
                t.typname AS "Name",
                pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
@@ -718,34 +707,31 @@ def list_domains(cur, pattern, verbose):
                pg_catalog.array_to_string(ARRAY(
                  SELECT pg_catalog.pg_get_constraintdef(r.oid, TRUE)
                  FROM pg_catalog.pg_constraint AS r
-                 WHERE t.oid = r.contypid), ' ') AS "Check"%s
+                 WHERE t.oid = r.contypid), ' ') AS "Check"{extra_cols}
         FROM pg_catalog.pg_type AS t
-           LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace%s
-        WHERE t.typtype = 'd' """ % (
-        extra_cols,
-        extra_joins,
-    )
+           LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace{extra_joins}
+        WHERE t.typtype = 'd' """
 
     schema_pattern, name_pattern = sql_name_pattern(pattern)
-    params = []
+    params = {}
     if schema_pattern or name_pattern:
         if schema_pattern:
-            sql += " AND n.nspname ~ %s"
-            params.append(schema_pattern)
+            sql += " AND n.nspname ~ %(nspname)s"
+            params["nspname"] = schema_pattern
         if name_pattern:
-            sql += " AND t.typname ~ %s"
-            params.append(name_pattern)
+            sql += " AND t.typname ~ %(typname)s"
+            params["typname"] = name_pattern
     else:
         sql += """
           AND (n.nspname <> 'pg_catalog')
           AND (n.nspname <> 'information_schema')
           AND pg_catalog.pg_type_is_visible(t.oid)"""
 
-    sql = cur.mogrify(sql + " ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -765,18 +751,19 @@ def list_text_search_configurations(cur, pattern, verbose):
             WHERE p.oid = c.cfgparser
         """
 
-        params = []
+        params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "AND c.cfgname ~ %s"
-            params.append(schema)
+            sql += "AND c.cfgname ~ %(cfgname)s"
+            params["cfgname"] = schema
 
-        sql = cur.mogrify(sql + "ORDER BY 1, 2;", params)
-        log.debug(sql)
-        cur.execute(sql)
+        sql += " ORDER BY 1, 2;"
+        log.debug("%s, %s", sql, params)
+        cur.execute(sql, params)
         return cur.fetchall()
 
     def _fetch_oid_details(cur, oid):
+        params = {"oid": oid}
         sql = """
             SELECT
               (SELECT t.alias
@@ -790,7 +777,7 @@ def list_text_search_configurations(cur, pattern, verbose):
                                        ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
             FROM pg_catalog.pg_ts_config AS c,
                  pg_catalog.pg_ts_config_map AS m
-            WHERE c.oid = %s
+            WHERE c.oid = %(oid)s
               AND m.mapcfg = c.oid
             GROUP BY m.mapcfg,
                      m.maptokentype,
@@ -798,14 +785,13 @@ def list_text_search_configurations(cur, pattern, verbose):
             ORDER BY 1;
         """
 
-        sql = cur.mogrify(sql, [oid])
-        log.debug(sql)
-        cur.execute(sql)
+        log.debug("%s, %s", sql, params)
+        cur.execute(sql, params)
 
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
 
-    if cur.connection.server_version < 80300:
+    if cur.connection.info.server_version < 80300:
         not_supported = "Server versions below 8.3 do not support full text search."
         cur, headers = [], []
         yield None, cur, None, not_supported
@@ -816,8 +802,8 @@ def list_text_search_configurations(cur, pattern, verbose):
 
         if configs:
             for oid, cfgname, nspname, prsname, pnspname in configs:
-                extension = '\nText search configuration "%s.%s"' % (nspname, cfgname)
-                parser = '\nParser: "%s.%s"' % (pnspname, prsname)
+                extension = f'''\nText search configuration "{nspname}.{cfgname}"'''
+                parser = f'''\nParser: "{pnspname}.{prsname}"'''
                 title = extension + parser
                 cur, headers, status = _fetch_oid_details(cur, oid)
                 yield title, cur, headers, status
@@ -835,17 +821,17 @@ def list_text_search_configurations(cur, pattern, verbose):
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
         """
 
-    params = []
+    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE c.cfgname ~ %s"
-        params.append(schema)
+        sql += "WHERE c.cfgname ~ %(cfgname)s"
+        params["cfgname"] = schema
 
-    sql = cur.mogrify(sql + "ORDER BY 1, 2", params)
-    log.debug(sql)
-    cur.execute(sql)
+    sql += " ORDER BY 1, 2"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -867,17 +853,17 @@ def describe_table_details(cur, pattern, verbose):
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
     where = []
-    params = []
+    params = {}
 
     if schema:
-        where.append("n.nspname ~ %s")
-        params.append(schema)
+        where.append("n.nspname ~ %(nspname)s")
+        params["nspname"] = schema
     else:
         where.append("pg_catalog.pg_table_is_visible(c.oid)")
 
     if relname:
-        where.append("c.relname OPERATOR(pg_catalog.~) %s")
-        params.append(relname)
+        where.append("c.relname OPERATOR(pg_catalog.~) %(relname)s")
+        params["relname"] = relname
 
     sql = (
         """SELECT c.oid, n.nspname, c.relname
@@ -888,14 +874,12 @@ def describe_table_details(cur, pattern, verbose):
         + """
              ORDER BY 2,3"""
     )
-    sql = cur.mogrify(sql, params)
-
     # Execute the sql, get the results and call describe_one_table_details on each table.
 
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if not (cur.rowcount > 0):
-        return [(None, None, None, "Did not find any relation named %s." % pattern)]
+        return [(None, None, None, f"Did not find any relation named {pattern}.")]
 
     results = []
     for oid, nspname, relname in cur.fetchall():
@@ -905,21 +889,21 @@ def describe_table_details(cur, pattern, verbose):
 
 
 def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
-    if verbose and cur.connection.server_version >= 80200:
+    if verbose and cur.connection.info.server_version >= 80200:
         suffix = """pg_catalog.array_to_string(c.reloptions || array(select
         'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')"""
     else:
         suffix = "''"
 
-    if cur.connection.server_version >= 120000:
+    if cur.connection.info.server_version >= 120000:
         relhasoids = "false as relhasoids"
     else:
         relhasoids = "c.relhasoids"
 
-    if cur.connection.server_version >= 100000:
-        sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
-                    c.relhasrules, c.relhastriggers, %s,
-                    %s,
+    if cur.connection.info.server_version >= 100000:
+        sql = f"""SELECT c.relchecks, c.relkind, c.relhasindex,
+                    c.relhasrules, c.relhastriggers, {relhasoids},
+                    {suffix},
                     c.reltablespace,
                     CASE WHEN c.reloftype = 0 THEN ''
                         ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
@@ -928,15 +912,12 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     c.relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '%s'""" % (
-            relhasoids,
-            suffix,
-            oid,
-        )
-    elif cur.connection.server_version > 90000:
-        sql = """SELECT c.relchecks, c.relkind, c.relhasindex,
+                 WHERE c.oid = '{oid}'"""
+
+    elif cur.connection.info.server_version > 90000:
+        sql = f"""SELECT c.relchecks, c.relkind, c.relhasindex,
                     c.relhasrules, c.relhastriggers, c.relhasoids,
-                    %s,
+                    {suffix},
                     c.reltablespace,
                     CASE WHEN c.reloftype = 0 THEN ''
                         ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
@@ -945,46 +926,39 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '%s'""" % (
-            suffix,
-            oid,
-        )
-    elif cur.connection.server_version >= 80400:
-        sql = """SELECT c.relchecks,
+                 WHERE c.oid = '{oid}'"""
+
+    elif cur.connection.info.server_version >= 80400:
+        sql = f"""SELECT c.relchecks,
                     c.relkind,
                     c.relhasindex,
                     c.relhasrules,
                     c.relhastriggers,
                     c.relhasoids,
-                    %s,
+                    {suffix},
                     c.reltablespace,
                     0 AS reloftype,
                     'p' AS relpersistence,
                     false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '%s'""" % (
-            suffix,
-            oid,
-        )
+                 WHERE c.oid = '{oid}'"""
+
     else:
-        sql = """SELECT c.relchecks,
+        sql = f"""SELECT c.relchecks,
                     c.relkind,
                     c.relhasindex,
                     c.relhasrules,
                     c.reltriggers > 0 AS relhastriggers,
                     c.relhasoids,
-                    %s,
+                    {suffix},
                     c.reltablespace,
                     0 AS reloftype,
                     'p' AS relpersistence,
                     false as relispartition
                  FROM pg_catalog.pg_class c
                  LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '%s'""" % (
-            suffix,
-            oid,
-        )
+                 WHERE c.oid = '{oid}'"""
 
     # Create a namedtuple called tableinfo and match what's in describe.c
 
@@ -993,16 +967,16 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if cur.rowcount > 0:
         tableinfo = TableInfo._make(cur.fetchone())
     else:
-        return (None, None, None, "Did not find any relation with OID %s." % oid)
+        return None, None, None, f"Did not find any relation with OID {oid}."
 
     # If it's a seq, fetch it's value and store it for later.
     if tableinfo.relkind == "S":
         # Do stuff here.
-        sql = '''SELECT * FROM "%s"."%s"''' % (schema_name, relation_name)
+        sql = f"""SELECT * FROM "{schema_name}"."{relation_name}"""
         log.debug(sql)
         cur.execute(sql)
         if not (cur.rowcount > 0):
-            return (None, None, None, "Something went wrong.")
+            return None, None, None, "Something went wrong."
 
         seq_values = cur.fetchone()
 
@@ -1023,7 +997,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cols += 1
     att_cols["attnotnull"] = cols
     cols += 1
-    if cur.connection.server_version >= 90100:
+    if cur.connection.info.server_version >= 90100:
         sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
                     WHERE c.oid = a.attcollation
                     AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
@@ -1031,13 +1005,13 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         sql += ",\n  NULL AS attcollation"
     att_cols["attcollation"] = cols
     cols += 1
-    if cur.connection.server_version >= 100000:
+    if cur.connection.info.server_version >= 100000:
         sql += ",\n  a.attidentity"
     else:
         sql += ",\n  ''::pg_catalog.char AS attidentity"
     att_cols["attidentity"] = cols
     cols += 1
-    if cur.connection.server_version >= 120000:
+    if cur.connection.info.server_version >= 120000:
         sql += ",\n  a.attgenerated"
     else:
         sql += ",\n  ''::pg_catalog.char AS attgenerated"
@@ -1045,10 +1019,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     cols += 1
     # index, or partitioned index
     if tableinfo.relkind == "i" or tableinfo.relkind == "I":
-        if cur.connection.server_version >= 110000:
+        if cur.connection.info.server_version >= 110000:
             sql += (
-                ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
-                "WHERE i.indexrelid = '%s') THEN 'yes' ELSE 'no' END AS is_key" % oid
+                f",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
+                "WHERE i.indexrelid = '{oid}') THEN 'yes' ELSE 'no' END AS is_key"
             )
             att_cols["indexkey"] = cols
             cols += 1
@@ -1057,7 +1031,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         sql += """,\n NULL AS indexdef"""
     att_cols["indexdef"] = cols
     cols += 1
-    if tableinfo.relkind == "f" and cur.connection.server_version >= 90200:
+    if tableinfo.relkind == "f" and cur.connection.info.server_version >= 90200:
         sql += """, CASE WHEN attfdwoptions IS NULL THEN '' ELSE '(' ||
                 array_to_string(ARRAY(SELECT quote_ident(option_name) ||  ' '
                 || quote_literal(option_value)  FROM
@@ -1096,11 +1070,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             att_cols["attdescr"] = cols
             cols += 1
 
-    sql += (
-        """ FROM pg_catalog.pg_attribute a WHERE a.attrelid = '%s' AND
+    sql += f""" FROM pg_catalog.pg_attribute a WHERE a.attrelid = '{oid}' AND
     a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum; """
-        % oid
-    )
 
     log.debug(sql)
     cur.execute(sql)
@@ -1151,7 +1122,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     view_def = ""
     # /* Check if table is a view or materialized view */
     if (tableinfo.relkind == "v" or tableinfo.relkind == "m") and verbose:
-        sql = """SELECT pg_catalog.pg_get_viewdef('%s'::pg_catalog.oid, true)""" % oid
+        sql = f"""SELECT pg_catalog.pg_get_viewdef('{oid}'::pg_catalog.oid, true)"""
         log.debug(sql)
         cur.execute(sql)
         if cur.rowcount > 0:
@@ -1167,19 +1138,17 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         if show_modifiers:
             modifier = ""
             if row[att_cols["attcollation"]]:
-                modifier += " collate %s" % row[att_cols["attcollation"]]
+                modifier += f" collate {row[att_cols['attcollation']]}"
             if row[att_cols["attnotnull"]]:
                 modifier += " not null"
             if row[att_cols["attrdef"]]:
-                modifier += " default %s" % row[att_cols["attrdef"]]
+                modifier += f" default {row[att_cols['attrdef']]}"
             if row[att_cols["attidentity"]] == "a":
                 modifier += " generated always as identity"
             elif row[att_cols["attidentity"]] == "d":
                 modifier += " generated by default as identity"
             elif row[att_cols["attgenerated"]] == "s":
-                modifier += (
-                    " generated always as (%s) stored" % row[att_cols["attrdef"]]
-                )
+                modifier += f" generated always as ({row[att_cols['attrdef']]}) stored"
             cell.append(modifier)
 
         # Sequence
@@ -1232,9 +1201,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if tableinfo.relkind == "i":
         # /* Footer information about an index */
 
-        if cur.connection.server_version > 90000:
-            sql = (
-                """SELECT i.indisunique,
+        if cur.connection.info.server_version > 90000:
+            sql = f"""SELECT i.indisunique,
                         i.indisprimary,
                         i.indisclustered,
                         i.indisvalid,
@@ -1262,15 +1230,12 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                             pg_catalog.pg_class c2,
                             pg_catalog.pg_am a
                         WHERE i.indexrelid = c.oid
-                            AND c.oid = '%s'
+                            AND c.oid = '{oid}'
                             AND c.relam = a.oid
                             AND i.indrelid = c2.oid;
                 """
-                % oid
-            )
         else:
-            sql = (
-                """SELECT i.indisunique,
+            sql = f"""SELECT i.indisunique,
                         i.indisprimary,
                         i.indisclustered,
                         't' AS indisvalid,
@@ -1284,12 +1249,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                             pg_catalog.pg_class c2,
                             pg_catalog.pg_am a
                         WHERE i.indexrelid = c.oid
-                            AND c.oid = '%s'
+                            AND c.oid = '{oid}'
                             AND c.relam = a.oid
                             AND i.indrelid = c2.oid;
                 """
-                % oid
-            )
 
         log.debug(sql)
         cur.execute(sql)
@@ -1310,13 +1273,13 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             status.append("primary key, ")
         elif indisunique:
             status.append("unique, ")
-        status.append("%s, " % indamname)
+        status.append(f"{indamname}, ")
 
         # /* we assume here that index and table are in same schema */
-        status.append('for table "%s.%s"' % (schema_name, indtable))
+        status.append(f'''for table "{schema_name}.{indtable}"''')
 
         if indpred:
-            status.append(", predicate (%s)" % indpred)
+            status.append(f", predicate ({indpred})")
 
         if indisclustered:
             status.append(", clustered")
@@ -1349,14 +1312,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             "\n a.attnum=d.refobjsubid)"
             "\nWHERE d.classid='pg_catalog.pg_class'::pg_catalog.regclass"
             "\n AND d.refclassid='pg_catalog.pg_class'::pg_catalog.regclass"
-            "\n AND d.objid=%s \n AND d.deptype='a'" % oid
+            f"\n AND d.objid={oid} \n AND d.deptype='a'"
         )
 
         log.debug(sql)
         cur.execute(sql)
         result = cur.fetchone()
         if result:
-            status.append("Owned by: %s" % result[0])
+            status.append(f"Owned by: {result[0]}")
 
         # /*
         # * If we get no rows back, don't show anything (obviously). We should
@@ -1373,9 +1336,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # /* Footer information about a table */
 
         if tableinfo.hasindex:
-            if cur.connection.server_version > 90000:
-                sql = (
-                    """SELECT c2.relname,
+            if cur.connection.info.server_version > 90000:
+                sql = f"""SELECT c2.relname,
                                 i.indisprimary,
                                 i.indisunique,
                                 i.indisclustered,
@@ -1393,18 +1355,15 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         ON conrelid = i.indrelid
                             AND conindid = i.indexrelid
                             AND contype IN ('p','u','x')
-                        WHERE c.oid = '%s'
+                        WHERE c.oid = '{oid}'
                             AND c.oid = i.indrelid
                             AND i.indexrelid = c2.oid
                         ORDER BY i.indisprimary DESC,
                             i.indisunique DESC,
                             c2.relname;
                     """
-                    % oid
-                )
             else:
-                sql = (
-                    """SELECT c2.relname,
+                sql = f"""SELECT c2.relname,
                                 i.indisprimary,
                                 i.indisunique,
                                 i.indisclustered,
@@ -1421,15 +1380,13 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         LEFT JOIN pg_catalog.pg_constraint con
                         ON conrelid = i.indrelid
                             AND contype IN ('p','u','x')
-                        WHERE c.oid = '%s'
+                        WHERE c.oid = '{oid}'
                             AND c.oid = i.indrelid
                             AND i.indexrelid = c2.oid
                         ORDER BY i.indisprimary DESC,
                             i.indisunique DESC,
                             c2.relname;
                     """
-                    % oid
-                )
 
             log.debug(sql)
             result = cur.execute(sql)
@@ -1439,7 +1396,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             for row in cur:
 
                 # /* untranslated index name */
-                status.append('    "%s"' % row[0])
+                status.append(f'''    "{row[0]}"''')
 
                 # /* If exclusion constraint, print the constraintdef */
                 if row[7] == "x":
@@ -1460,7 +1417,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     usingpos = indexdef.find(" USING ")
                     if usingpos >= 0:
                         indexdef = indexdef[(usingpos + 7) :]
-                    status.append(" %s" % indexdef)
+                    status.append(f" {indexdef}")
 
                     # /* Need these for deferrable PK/UNIQUE indexes */
                     if row[8]:
@@ -1490,8 +1447,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "SELECT r.conname, "
                 "pg_catalog.pg_get_constraintdef(r.oid, true)\n"
                 "FROM pg_catalog.pg_constraint r\n"
-                "WHERE r.conrelid = '%s' AND r.contype = 'c'\n"
-                "ORDER BY 1;" % oid
+                f"WHERE r.conrelid = '{oid}' AND r.contype = 'c'\n"
+                "ORDER BY 1;"
             )
             log.debug(sql)
             cur.execute(sql)
@@ -1499,7 +1456,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Check constraints:\n")
             for row in cur:
                 # /* untranslated contraint name and def */
-                status.append('    "%s" %s' % tuple(row))
+                status.append(f"""    "{row[0]}" {row[1]}""")
                 status.append("\n")
 
         # /* print foreign-key constraints (there are none if no triggers) */
@@ -1508,7 +1465,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "SELECT conname,\n"
                 " pg_catalog.pg_get_constraintdef(r.oid, true) as condef\n"
                 "FROM pg_catalog.pg_constraint r\n"
-                "WHERE r.conrelid = '%s' AND r.contype = 'f' ORDER BY 1;" % oid
+                f"WHERE r.conrelid = '{oid}' AND r.contype = 'f' ORDER BY 1;"
             )
             log.debug(sql)
             cur.execute(sql)
@@ -1516,7 +1473,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 status.append("Foreign-key constraints:\n")
             for row in cur:
                 # /* untranslated constraint name and def */
-                status.append('    "%s" %s\n' % tuple(row))
+                status.append(f"""    "{row[0]}" {row[1]}\n""")
 
         # /* print incoming foreign-key references (none if no triggers) */
         if tableinfo.hastriggers:
@@ -1524,14 +1481,16 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "SELECT conrelid::pg_catalog.regclass, conname,\n"
                 "  pg_catalog.pg_get_constraintdef(c.oid, true) as condef\n"
                 "FROM pg_catalog.pg_constraint c\n"
-                "WHERE c.confrelid = '%s' AND c.contype = 'f' ORDER BY 1;" % oid
+                f"WHERE c.confrelid = '{oid}' AND c.contype = 'f' ORDER BY 1;"
             )
             log.debug(sql)
             cur.execute(sql)
             if cur.rowcount > 0:
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append('    TABLE "%s" CONSTRAINT "%s" %s\n' % tuple(row))
+                status.append(
+                    f"""    TABLE "{row[0]}" CONSTRAINT "{row[1]}" {row[2]}\n"""
+                )
 
         # /* print rules */
         if tableinfo.hasrules and tableinfo.relkind != "m":
@@ -1539,7 +1498,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "SELECT r.rulename, trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true)), "
                 "ev_enabled\n"
                 "FROM pg_catalog.pg_rewrite r\n"
-                "WHERE r.ev_class = '%s' ORDER BY 1;" % oid
+                f"WHERE r.ev_class = '{oid}' ORDER BY 1;"
             )
             log.debug(sql)
             cur.execute(sql)
@@ -1572,7 +1531,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
                         # /* Everything after "CREATE RULE" is echoed verbatim */
                         ruledef = row[1]
-                        status.append("    %s" % ruledef)
+                        status.append(f"    {ruledef}")
 
         # /* print partition info */
         if tableinfo.relispartition:
@@ -1590,21 +1549,21 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "on cc.oid = i.inhrelid\n"
                 "inner join pg_namespace nc\n"
                 "on nc.oid = cc.relnamespace\n"
-                "where cc.oid = %s" % oid
+                f"where cc.oid = {oid}"
             )
             log.debug(sql)
             cur.execute(sql)
             for row in cur:
-                status.append("Partition of: %s\n" % row[0])
-                status.append("Partition constraint: %s\n" % row[1])
+                status.append(f"Partition of: {row[0]}\n")
+                status.append(f"Partition constraint: {row[1]}\n")
 
         if tableinfo.relkind == "p":
             # /* print partition key */
-            sql = "select pg_get_partkeydef(%s)" % oid
+            sql = f"select pg_get_partkeydef({oid})"
             log.debug(sql)
             cur.execute(sql)
             for row in cur:
-                status.append("Partition key: %s\n" % row[0])
+                status.append(f"Partition key: {row[0]}\n")
             # /* print list of partitions */
             sql = (
                 "select quote_ident(n.nspname) || '.' ||\n"
@@ -1615,7 +1574,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "on c.oid = i.inhrelid\n"
                 "inner join pg_namespace n\n"
                 "on n.oid = c.relnamespace\n"
-                "where i.inhparent = %s order by 1" % oid
+                f"where i.inhparent = {oid} order by 1"
             )
             log.debug(sql)
             cur.execute(sql)
@@ -1624,10 +1583,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     first = True
                     for row in cur:
                         if first:
-                            status.append("Partitions: %s\n" % row[0])
+                            status.append(f"Partitions: {row[0]}\n")
                             first = False
                         else:
-                            status.append("            %s\n" % row[0])
+                            status.append(f"            {row[0]}\n")
                 else:
                     status.append(
                         "Number of partitions %i: (Use \\d+ to list them.)\n"
@@ -1637,14 +1596,14 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if view_def:
         # /* Footer information about a view */
         status.append("View definition:\n")
-        status.append("%s \n" % view_def)
+        status.append(f"{view_def} \n")
 
         # /* print rules */
         if tableinfo.hasrules:
             sql = (
                 "SELECT r.rulename, trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true))\n"
                 "FROM pg_catalog.pg_rewrite r\n"
-                "WHERE r.ev_class = '%s' AND r.rulename != '_RETURN' ORDER BY 1;" % oid
+                f"WHERE r.ev_class = '{oid}' AND r.rulename != '_RETURN' ORDER BY 1;"
             )
 
             log.debug(sql)
@@ -1654,35 +1613,29 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 for row in cur:
                     # /* Everything after "CREATE RULE" is echoed verbatim */
                     ruledef = row[1]
-                    status.append(" %s\n" % ruledef)
+                    status.append(f" {ruledef}\n")
 
     # /*
     # * Print triggers next, if any (but only user-defined triggers).  This
     # * could apply to either a table or a view.
     # */
     if tableinfo.hastriggers:
-        if cur.connection.server_version > 90000:
-            sql = (
-                """SELECT t.tgname,
+        if cur.connection.info.server_version > 90000:
+            sql = f"""SELECT t.tgname,
                         pg_catalog.pg_get_triggerdef(t.oid, true),
                         t.tgenabled
                    FROM pg_catalog.pg_trigger t
-                   WHERE t.tgrelid = '%s' AND NOT t.tgisinternal
+                   WHERE t.tgrelid = '{oid}' AND NOT t.tgisinternal
                    ORDER BY 1
                 """
-                % oid
-            )
         else:
-            sql = (
-                """SELECT t.tgname,
+            sql = f"""SELECT t.tgname,
                         pg_catalog.pg_get_triggerdef(t.oid),
                         t.tgenabled
                    FROM pg_catalog.pg_trigger t
-                   WHERE t.tgrelid = '%s'
+                   WHERE t.tgrelid = '{oid}'
                    ORDER BY 1
                 """
-                % oid
-            )
 
         log.debug(sql)
         cur.execute(sql)
@@ -1734,7 +1687,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     if triggerpos >= 0:
                         tgdef = triggerpos + 9
 
-                    status.append("    %s\n" % row[1][tgdef:])
+                    status.append(f"    {row[1][tgdef:]}\n")
 
     # /*
     # * Finish printing the footer information about a table.
@@ -1743,27 +1696,24 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # /* print foreign server name */
         if tableinfo.relkind == "f":
             # /* Footer information about foreign table */
-            sql = (
-                """SELECT s.srvname,\n
+            sql = f"""SELECT s.srvname,\n
                           array_to_string(ARRAY(SELECT
                           quote_ident(option_name) ||  ' ' ||
                           quote_literal(option_value)  FROM
                           pg_options_to_table(ftoptions)),  ', ')
                    FROM pg_catalog.pg_foreign_table f,\n
                         pg_catalog.pg_foreign_server s\n
-                   WHERE f.ftrelid = %s AND s.oid = f.ftserver;"""
-                % oid
-            )
+                   WHERE f.ftrelid = {oid} AND s.oid = f.ftserver;"""
             log.debug(sql)
             cur.execute(sql)
             row = cur.fetchone()
 
             # /* Print server name */
-            status.append("Server: %s\n" % row[0])
+            status.append(f"Server: {row[0]}\n")
 
             # /* Print per-table FDW options, if any */
             if row[1]:
-                status.append("FDW Options: (%s)\n" % row[1])
+                status.append(f"FDW Options: ({row[1]})\n")
 
         # /* print inherited tables */
         if not tableinfo.relispartition:
@@ -1771,8 +1721,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 "SELECT c.oid::pg_catalog.regclass\n"
                 "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
                 "WHERE c.oid = i.inhparent\n"
-                "  AND i.inhrelid = '%s'\n"
-                "ORDER BY inhseqno" % oid
+                f"  AND i.inhrelid = '{oid}'\n"
+                "ORDER BY inhseqno"
             )
             log.debug(sql)
             cur.execute(sql)
@@ -1786,31 +1736,25 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         spacer = " " * (len("Inherits") + 1)
                     if idx == cur.rowcount:
                         trailer = "\n"
-                    status.append("%s %s%s" % (spacer, row[0], trailer))
+                    status.append(f"{spacer} {row[0]}{trailer}")
 
         # /* print child tables */
-        if cur.connection.server_version > 90000:
-            sql = (
-                """SELECT c.oid::pg_catalog.regclass
+        if cur.connection.info.server_version > 90000:
+            sql = f"""SELECT c.oid::pg_catalog.regclass
                         FROM pg_catalog.pg_class c,
                             pg_catalog.pg_inherits i
                         WHERE c.oid = i.inhrelid
-                            AND i.inhparent = '%s'
+                            AND i.inhparent = '{oid}'
                         ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text;
                     """
-                % oid
-            )
         else:
-            sql = (
-                """SELECT c.oid::pg_catalog.regclass
+            sql = f"""SELECT c.oid::pg_catalog.regclass
                         FROM pg_catalog.pg_class c,
                             pg_catalog.pg_inherits i
                         WHERE c.oid = i.inhrelid
-                            AND i.inhparent = '%s'
+                            AND i.inhparent = '{oid}'
                         ORDER BY c.oid;
                     """
-                % oid
-            )
 
         log.debug(sql)
         cur.execute(sql)
@@ -1834,15 +1778,15 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         spacer = " " * (len("Child tables") + 1)
                     if idx == cur.rowcount:
                         trailer = "\n"
-                    status.append("%s %s%s" % (spacer, row[0], trailer))
+                    status.append(f"{spacer} {row[0]}{trailer}")
 
         # /* Table type */
         if tableinfo.reloftype:
-            status.append("Typed table of type: %s\n" % tableinfo.reloftype)
+            status.append(f"Typed table of type: {tableinfo.reloftype}\n")
 
         # /* OIDs, if verbose and not a materialized view */
         if verbose and tableinfo.relkind != "m":
-            status.append("Has OIDs: %s\n" % ("yes" if tableinfo.hasoids else "no"))
+            status.append(f"Has OIDs: {'yes' if tableinfo.hasoids else 'no'}\n")
 
         # /* Tablespace info */
         # add_tablespace_footer(&cont, tableinfo.relkind, tableinfo.tablespace,
@@ -1850,7 +1794,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     # /* reloptions, if verbose */
     if verbose and tableinfo.reloptions:
-        status.append("Options: %s\n" % tableinfo.reloptions)
+        status.append(f"Options: {tableinfo.reloptions}\n")
 
     return (None, cells, headers, "".join(status))
 
@@ -1915,21 +1859,21 @@ class _FakeCursor(list):
 
 @special_command("\\sf", "\\sf[+] FUNCNAME", "Show a function's definition.")
 def show_function_definition(cur, pattern, verbose):
+    params = {"pattern": pattern}
     if "(" in pattern:
-        sql = cur.mogrify(
-            "SELECT %s::pg_catalog.regprocedure::pg_catalog.oid", [pattern]
-        )
+        sql = "SELECT %(pattern)s::pg_catalog.regprocedure::pg_catalog.oid"
     else:
-        sql = cur.mogrify("SELECT %s::pg_catalog.regproc::pg_catalog.oid", [pattern])
-    log.debug(sql)
-    cur.execute(sql)
+        sql = "SELECT %(pattern)s::pg_catalog.regproc::pg_catalog.oid"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     (foid,) = cur.fetchone()
 
-    sql = cur.mogrify("SELECT pg_catalog.pg_get_functiondef(%s) as source", [foid])
-    log.debug(sql)
-    cur.execute(sql)
+    params = {"foid": foid}
+    sql = "SELECT pg_catalog.pg_get_functiondef(%(foid)s) as source"
+    log.debug("%s, %s", sql, params)
+    cur.execute(sql, params)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         if verbose:
             (source,) = cur.fetchone()
             rows = _FakeCursor()
@@ -1940,7 +1884,8 @@ def show_function_definition(cur, pattern, verbose):
                         rown = 1
                 else:
                     rown += 1
-                rows.append("%-7s %s" % ("" if rown is None else rown, row))
+                rown_v = "" if rown is None else rown
+                rows.append(f"{rown_v:<7} {row}")
             cur = [("\n".join(rows) + "\n",)]
     else:
         headers = None
@@ -1966,16 +1911,16 @@ def list_foreign_tables(cur, pattern, verbose):
 
     if pattern:
         _, tbl_name = sql_name_pattern(pattern)
-        filter = " AND c.relname OPERATOR(pg_catalog.~) '^(%s)$' " % tbl_name
+        filter = f" AND c.relname OPERATOR(pg_catalog.~) '^({tbl_name})$' "
     else:
         filter = ""
 
-    query = """
+    query = f"""
         SELECT n.nspname as "Schema",
         c.relname as "Name",
         CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
         pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
-        %s
+        {verbose_cols}
         FROM pg_catalog.pg_class c
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind IN ('f','')
@@ -1983,16 +1928,13 @@ def list_foreign_tables(cur, pattern, verbose):
             AND n.nspname <> 'information_schema'
             AND n.nspname !~ '^pg_toast'
         AND pg_catalog.pg_table_is_visible(c.oid)
-        %s
+        {filter}
         ORDER BY 1,2;
-        """ % (
-        verbose_cols,
-        filter,
-    )
+        """
 
     cur.execute(query)
     if cur.description:
-        headers = [x[0] for x in cur.description]
+        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
