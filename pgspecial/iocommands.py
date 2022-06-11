@@ -96,7 +96,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
         "{sql}\n\n{marker}".format(sql=sql, marker=MARKER),
         filename=filename,
         extension=".sql",
-        editor=editor
+        editor=editor,
     )
 
     if filename:
