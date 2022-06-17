@@ -1,6 +1,11 @@
 Upcoming:
 =========
 
+* [YOUR CHANGES HERE].
+
+2.0.1 (2022-06-17):
+===================
+
 Internal:
 ---------
 * Added argument to open_external_editor to specifiy desired editor.
