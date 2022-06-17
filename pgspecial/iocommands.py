@@ -77,7 +77,7 @@ def get_editor_query(sql):
 
 
 @export
-def open_external_editor(filename=None, sql=None):
+def open_external_editor(filename=None, sql=None, editor=None):
     """
     Open external editor, wait for the user to type in his query,
     return the query.
@@ -96,6 +96,7 @@ def open_external_editor(filename=None, sql=None):
         "{sql}\n\n{marker}".format(sql=sql, marker=MARKER),
         filename=filename,
         extension=".sql",
+        editor=editor,
     )
 
     if filename:
