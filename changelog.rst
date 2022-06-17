@@ -1,7 +1,9 @@
 Upcoming:
 =========
 
-* TODO
+Internal:
+---------
+* Added argument to open_external_editor to specifiy desired editor.
 
 2.0.0 (2022-06-03):
 ===================
