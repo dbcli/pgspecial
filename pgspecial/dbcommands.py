@@ -1126,7 +1126,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         log.debug(sql)
         cur.execute(sql)
         if cur.rowcount > 0:
-            view_def = cur.fetchone()
+            (view_def,) = cur.fetchone()
 
     # Prepare the cells of the table to print.
     cells = []

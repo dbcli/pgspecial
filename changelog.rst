@@ -1,7 +1,7 @@
 Upcoming:
 =========
 
-* [YOUR CHANGES HERE].
+* Fixed displaying verbose view definitions when running `\d+`.
 
 2.0.1 (2022-06-17):
 ===================

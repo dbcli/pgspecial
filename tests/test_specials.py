@@ -167,6 +167,22 @@ def test_slash_d_table_verbose_2(executor):
 
 
 @dbtest
+def test_slash_d_view_verbose(executor):
+    title = None
+    headers = ["Column", "Type", "Modifiers", "Storage", "Description"]
+
+    results = executor(r"\d+ vw1")
+    rows = [
+        ["id1", "integer", "", "plain", None],
+        ["txt1", "text", "", "extended", None],
+    ]
+    status = "View definition:\n SELECT tbl1.id1,\n    tbl1.txt1\n   FROM tbl1; \n"
+
+    expected = [title, rows, headers, status]
+    assert results == expected
+
+
+@dbtest
 def test_slash_d_table_with_exclusion(executor):
     results = executor(r"\d tbl3")
     title = None
