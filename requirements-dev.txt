@@ -7,4 +7,4 @@ pre-commit>=1.16.0
 black>=20.8b1
 configobj>=5.0.6
 twine==1.11.0
-wheel==0.33.6
+wheel==0.38.1
