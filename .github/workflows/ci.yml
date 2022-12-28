@@ -42,7 +42,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run unit tests
-        run: coverage run --source pgspecial -m py.test
+        run: coverage run --source pgspecial -m pytest
 
       - name: Run Black
         run: black --check .
