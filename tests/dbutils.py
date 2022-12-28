@@ -132,13 +132,11 @@ def teardown_db(conn):
 
 
 def setup_foreign(conn):
-
     foreign_conn = db_connection(FOREIGN_TEST_DB_NAME)
     with foreign_conn.cursor() as foreign_cur:
         foreign_cur.execute("create table if not exists foreign_foo (a int, b text)")
 
     with conn.cursor() as cur:
-
         # foreign database wrapper
         cur.execute("create extension if not exists postgres_fdw")
         cur.execute(

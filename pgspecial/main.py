@@ -35,7 +35,6 @@ class CommandNotFound(Exception):
 
 @export
 class PGSpecial(object):
-
     # Default static commands that don't rely on PGSpecial state are registered
     # via the special_command decorator and stored in default_commands
     default_commands = {}
@@ -290,7 +289,6 @@ def register_special_command(
     aliases=(),
     command_dict=None,
 ):
-
     cmd = command.lower() if not case_sensitive else command
     command_dict[cmd] = SpecialCommand(
         handler, syntax, description, arg_type, hidden, case_sensitive
