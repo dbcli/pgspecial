@@ -479,7 +479,6 @@ def list_indexes(cur, pattern, verbose):
 
 @special_command("\\df", "\\df[+] [pattern]", "List functions.")
 def list_functions(cur, pattern, verbose):
-
     if verbose:
         verbose_columns = """
             ,CASE
@@ -1394,7 +1393,6 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Indexes:\n")
             for row in cur:
-
                 # /* untranslated index name */
                 status.append(f'''    "{row[0]}"''')
 
@@ -1901,7 +1899,6 @@ def shell_command(cur, pattern, verbose):
 
 @special_command("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
 def list_foreign_tables(cur, pattern, verbose):
-
     if verbose:
         verbose_cols = """
             , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",

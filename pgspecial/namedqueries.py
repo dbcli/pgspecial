@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 class NamedQueries(object):
-
     section_name = "named queries"
 
     usage = """Named Queries are a way to save frequently used queries
