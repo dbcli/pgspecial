@@ -971,7 +971,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # If it's a seq, fetch it's value and store it for later.
     if tableinfo.relkind == "S":
         # Do stuff here.
-        sql = f"""SELECT * FROM "{schema_name}"."{relation_name}"""
+        sql = f'''SELECT * FROM "{schema_name}"."{relation_name}"'''
         log.debug(sql)
         cur.execute(sql)
         if not (cur.rowcount > 0):
