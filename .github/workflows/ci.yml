@@ -22,6 +22,8 @@ jobs:
             postgres-version: '13'
           - python-version: '3.11'
             postgres-version: '14'
+          - python-version: '3.11'
+            postgres-version: '15'
 
     services:
       postgres:
