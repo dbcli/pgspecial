@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test
+from dbutils import dbtest, POSTGRES_USER, SERVER_VERSION, foreign_db_environ, fdw_test
 import itertools
 
 objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Description"]
@@ -216,12 +216,21 @@ def test_slash_dn(executor):
     """List all schemas."""
     results = executor(r"\dn")
     title = None
-    rows = [
-        ("public", POSTGRES_USER),
-        ("schema1", POSTGRES_USER),
-        ("schema2", POSTGRES_USER),
-        ("schema3", POSTGRES_USER),
-    ]
+    if SERVER_VERSION >= 150001:
+        rows = [
+            ("public", "pg_database_owner"),
+            ("schema1", POSTGRES_USER),
+            ("schema2", POSTGRES_USER),
+            ("schema3", POSTGRES_USER),
+        ]
+    else:
+        rows = [
+            ("public", POSTGRES_USER),
+            ("schema1", POSTGRES_USER),
+            ("schema2", POSTGRES_USER),
+            ("schema3", POSTGRES_USER),
+        ]
+
     headers = ["Name", "Owner"]
     status = "SELECT %s" % len(rows)
     expected = [title, rows, headers, status]
