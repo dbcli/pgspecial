@@ -143,7 +143,7 @@ def list_privileges(cur, pattern, verbose):
                E' (RESTRICTIVE)'
                ELSE '' END
             || CASE WHEN polcmd != '*' THEN
-                   E' (' || polcmd || E'):'
+                   E' (' || polcmd::pg_catalog.text || E'):'
                ELSE E':'
                END
             || CASE WHEN polqual IS NOT NULL THEN
