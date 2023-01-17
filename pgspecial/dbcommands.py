@@ -4,6 +4,8 @@ import shlex
 import subprocess
 from collections import namedtuple
 
+from psycopg.sql import SQL, Literal
+
 from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple(
@@ -28,36 +30,36 @@ log = logging.getLogger(__name__)
 
 @special_command("\\l", "\\l[+] [pattern]", "List databases.", aliases=("\\list",))
 def list_databases(cur, pattern, verbose):
-    query = '''SELECT d.datname as "Name",
+    query = SQL('''SELECT d.datname as "Name",
         pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
         pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
         d.datcollate as "Collate",
         d.datctype as "Ctype",
-        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"'''
+        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"''')
     if verbose:
-        query += ''',
+        query += SQL(''',
             CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
                     THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
                     ELSE 'No Access'
             END as "Size",
             t.spcname as "Tablespace",
-            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
-    query += """
+            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"''')
+    query += SQL("""
     FROM pg_catalog.pg_database d
-    """
+    """)
     if verbose:
-        query += """
+        query += SQL("""
         JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
-        """
+        """)
     params = {}
     if pattern:
-        query += """
+        query += SQL("""
         WHERE d.datname ~ %(schema_pattern)s
-        """
+        """)
         _, schema = sql_name_pattern(pattern)
-        params["schema_pattern"] = schema
-    query = query + " ORDER BY 1"
-    cur.execute(query, params)
+        params["schema_pattern"] = Literal(schema)
+    query = query + SQL(" ORDER BY 1")
+    cur.execute(query.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -72,7 +74,7 @@ def list_roles(cur, pattern, verbose):
     """
 
     if cur.connection.info.server_version > 90000:
-        sql = """
+        sql = SQL("""
             SELECT r.rolname,
                 r.rolsuper,
                 r.rolinherit,
@@ -82,17 +84,17 @@ def list_roles(cur, pattern, verbose):
                 r.rolconnlimit,
                 r.rolvaliduntil,
                 ARRAY(SELECT b.rolname FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid) WHERE m.member = r.oid) as memberof,
-            """
+            """)
         if verbose:
-            sql += """
+            sql += SQL("""
                 pg_catalog.shobj_description(r.oid, 'pg_authid') AS description,
-            """
-        sql += """
+            """)
+        sql += SQL("""
             r.rolreplication
         FROM pg_catalog.pg_roles r
-        """
+        """)
     else:
-        sql = """
+        sql = SQL("""
             SELECT u.usename AS rolname,
                 u.usesuper AS rolsuper,
                 true AS rolinherit,
@@ -103,17 +105,17 @@ def list_roles(cur, pattern, verbose):
                 u.valuntil as rolvaliduntil,
                 ARRAY(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = ANY(g.grolist)) as memberof
             FROM pg_catalog.pg_user u
-            """
+            """)
 
     params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE r.rolname ~ %(rolname)s"
-        params["rolname"] = schema
-    sql += " ORDER BY 1"
+        sql += SQL("WHERE r.rolname ~ %(rolname)s")
+        params["rolname"] = Literal(schema)
+    sql += SQL(" ORDER BY 1")
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
