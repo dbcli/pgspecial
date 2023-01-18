@@ -11,7 +11,7 @@ objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Descripti
 @dbtest
 def test_slash_l(executor):
     results = executor(r"\l")
-    row = ("_test_db", "postgres", "UTF8", "C", "C", None)
+    row = ("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row in results[1]
     assert headers == results[2]
@@ -20,10 +20,11 @@ def test_slash_l(executor):
 @dbtest
 def test_slash_l_pattern(executor):
     results = executor(r"\l _test*")
-    row = [("_test_db", "postgres", "UTF8", "C", "C", None)]
+    row = [("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)]
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row == results[1]
     assert headers == results[2]
+
 
 @dbtest
 def test_slash_l_verbose(executor):
