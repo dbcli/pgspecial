@@ -54,7 +54,9 @@ def list_databases(cur, pattern, verbose):
             t.spcname as "Tablespace",
             pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
         )
-        params["verbose_tables"] = SQL("""JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid""")
+        params["verbose_tables"] = SQL(
+            """JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid"""
+        )
     else:
         params["verbose_fields"] = SQL("")
         params["verbose_tables"] = SQL("")
@@ -199,7 +201,10 @@ def list_privileges(cur, pattern, verbose):
             pattern = " AND c.relname OPERATOR(pg_catalog.~) %(table_pattern)s COLLATE pg_catalog.default "
             params["table_pattern"] = table
         if schema:
-            pattern = pattern + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
+            pattern = (
+                pattern
+                + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
+            )
             params["schema_pattern"] = schema
     else:
         pattern = " AND pg_catalog.pg_table_is_visible(c.oid) "
@@ -254,13 +259,19 @@ def list_tablespaces(cur, pattern, **_):
     Returns (title, rows, headers, status)
     """
 
-    cur.execute("SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')")
+    cur.execute(
+        "SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')"
+    )
     (is_location,) = cur.fetchone()
 
     sql = """SELECT n.spcname AS "Name",
     pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner","""
 
-    sql += " pg_catalog.pg_tablespace_location(n.oid)" if is_location else " 'Not supported'"
+    sql += (
+        " pg_catalog.pg_tablespace_location(n.oid)"
+        if is_location
+        else " 'Not supported'"
+    )
     sql += """ AS "Location"
     FROM pg_catalog.pg_tablespace n"""
 
@@ -814,7 +825,9 @@ def list_text_search_configurations(cur, pattern, verbose):
                 cur, headers, status = _fetch_oid_details(cur, oid)
                 yield title, cur, headers, status
         else:
-            yield None, None, None, 'Did not find any results for pattern "{}".'.format(pattern)
+            yield None, None, None, 'Did not find any results for pattern "{}".'.format(
+                pattern
+            )
         return
 
     sql = """
@@ -839,8 +852,12 @@ def list_text_search_configurations(cur, pattern, verbose):
         yield None, cur, headers, cur.statusmessage
 
 
-@special_command("describe", "DESCRIBE [pattern]", "", hidden=True, case_sensitive=False)
-@special_command("\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences.")
+@special_command(
+    "describe", "DESCRIBE [pattern]", "", hidden=True, case_sensitive=False
+)
+@special_command(
+    "\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences."
+)
 def describe_table_details(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
@@ -1052,7 +1069,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             or tableinfo.relkind == "f"
             or tableinfo.relkind == "p"
         ):
-            sql += ",\n  CASE WHEN a.attstattarget=-1 THEN " "NULL ELSE a.attstattarget END AS attstattarget"
+            sql += (
+                ",\n  CASE WHEN a.attstattarget=-1 THEN "
+                "NULL ELSE a.attstattarget END AS attstattarget"
+            )
             att_cols["attstattarget"] = cols
             cols += 1
         if (
@@ -1100,7 +1120,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     if verbose:
         headers.append("Storage")
-        if tableinfo.relkind == "r" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
+        if (
+            tableinfo.relkind == "r"
+            or tableinfo.relkind == "m"
+            or tableinfo.relkind == "f"
+        ):
             headers.append("Stats target")
         #  Column comments, if the relkind supports this feature. */
         if (
@@ -1170,7 +1194,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             else:
                 cell.append("???")
 
-            if tableinfo.relkind == "r" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
+            if (
+                tableinfo.relkind == "r"
+                or tableinfo.relkind == "m"
+                or tableinfo.relkind == "f"
+            ):
                 cell.append(row[att_cols["attstattarget"]])
 
             #  /* Column comments, if the relkind supports this feature. */
@@ -1316,7 +1344,12 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # * don't print anything.
         # */
 
-    elif tableinfo.relkind == "r" or tableinfo.relkind == "p" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
+    elif (
+        tableinfo.relkind == "r"
+        or tableinfo.relkind == "p"
+        or tableinfo.relkind == "m"
+        or tableinfo.relkind == "f"
+    ):
         # /* Footer information about a table */
 
         if tableinfo.hasindex:
@@ -1471,7 +1504,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append(f"""    TABLE "{row[0]}" CONSTRAINT "{row[1]}" {row[2]}\n""")
+                status.append(
+                    f"""    TABLE "{row[0]}" CONSTRAINT "{row[1]}" {row[2]}\n"""
+                )
 
         # /* print rules */
         if tableinfo.hasrules and tableinfo.relkind != "m":
@@ -1569,7 +1604,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         else:
                             status.append(f"            {row[0]}\n")
                 else:
-                    status.append("Number of partitions %i: (Use \\d+ to list them.)\n" % cur.rowcount)
+                    status.append(
+                        "Number of partitions %i: (Use \\d+ to list them.)\n"
+                        % cur.rowcount
+                    )
 
     if view_def:
         # /* Footer information about a view */
@@ -1740,7 +1778,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         if not verbose:
             # /* print the number of child tables, if any */
             if cur.rowcount > 0:
-                status.append("Number of child tables: %d (Use \\d+ to list" " them.)\n" % cur.rowcount)
+                status.append(
+                    "Number of child tables: %d (Use \\d+ to list"
+                    " them.)\n" % cur.rowcount
+                )
         else:
             if cur.rowcount > 0:
                 status.append("Child tables")
