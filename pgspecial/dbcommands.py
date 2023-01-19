@@ -140,7 +140,8 @@ def list_roles(cur, pattern, verbose):
 @special_command("\\dp", "\\dp [pattern]", "List roles.", aliases=("\\z",))
 def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = SQL("""
+    sql = SQL(
+        """
         SELECT n.nspname as "Schema",
           c.relname as "Name",
           CASE c.relkind WHEN 'r' THEN 'table'
@@ -186,22 +187,29 @@ def list_privileges(cur, pattern, verbose):
             AS "Policies"
         FROM pg_catalog.pg_class c
              LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    """)
+    """
+    )
 
     if pattern:
         schema, table = sql_name_pattern(pattern)
         if table:
-            pattern = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(table)
+            pattern = SQL(
+                " AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
+            ).format(table)
         if schema:
-            pattern += SQL(" AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(schema)
+            pattern += SQL(
+                " AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
+            ).format(schema)
     else:
         pattern = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
 
-    where_clause = SQL("""
+    where_clause = SQL(
+        """
         WHERE c.relkind IN ('r','v','m','S','f','p')
           {pattern}
           AND n.nspname !~ '^pg_'
-    """).format(pattern=pattern)
+    """
+    ).format(pattern=pattern)
 
     sql += where_clause + SQL(" ORDER BY 1, 2 ")
 
@@ -328,11 +336,13 @@ def list_schemas(cur, pattern, verbose):
 @special_command("\\dx", "\\dx[+] [pattern]", "List extensions.")
 def list_extensions(cur, pattern, verbose):
     def _find_extensions(cur, pattern):
-        sql = SQL("""
+        sql = SQL(
+            """
             SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
             {pattern}
             ORDER BY 1, 2;
-        """)
+        """
+        )
 
         params = {}
         if pattern:
@@ -346,14 +356,16 @@ def list_extensions(cur, pattern, verbose):
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
-        sql = SQL("""
+        sql = SQL(
+            """
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                     AS "Object Description"
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
                     AND refobjid = {}
                     AND deptype = 'e'
-            ORDER BY 1""").format(oid)
+            ORDER BY 1"""
+        ).format(oid)
         log.debug(sql.as_string(cur))
         cur.execute(sql)
 
@@ -378,7 +390,8 @@ def list_extensions(cur, pattern, verbose):
             yield None, None, None, f"""Did not find any extension named "{pattern}"."""
         return
 
-    sql = SQL("""
+    sql = SQL(
+        """
       SELECT e.extname AS "Name",
              e.extversion AS "Version",
              n.nspname AS "Schema",
@@ -391,7 +404,8 @@ def list_extensions(cur, pattern, verbose):
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
         {where_clause}
        ORDER BY 1, 2
-      """)
+      """
+    )
 
     params = {}
     if pattern:
