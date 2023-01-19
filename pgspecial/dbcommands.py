@@ -423,14 +423,17 @@ def list_objects(cur, pattern, verbose, relkinds):
     """
     schema_pattern, table_pattern = sql_name_pattern(pattern)
 
+    params = {"relkind": relkinds}
     if verbose:
-        verbose_columns = """
+        params["verbose_columns"] = SQL(
+            """
             ,pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
             pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+        )
     else:
-        verbose_columns = ""
+        params["verbose_columns"] = SQL("")
 
-    sql = (
+    sql = SQL(
         """SELECT n.nspname as "Schema",
                     c.relname as "Name",
                     CASE c.relkind
@@ -441,35 +444,35 @@ def list_objects(cur, pattern, verbose, relkinds):
                       WHEN 'f' THEN 'foreign table' END
                     as "Type",
                     pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
-          """
-        + verbose_columns
-        + """
+                    {verbose_columns}
             FROM    pg_catalog.pg_class c
                     LEFT JOIN pg_catalog.pg_namespace n
                       ON n.oid = c.relnamespace
-            WHERE   c.relkind = ANY(%(relkind)s) """
+            WHERE   c.relkind = ANY({relkind})
+                {schema_pattern}
+                {table_pattern}
+            ORDER BY 1, 2
+        """
     )
 
-    params = {"relkind": relkinds}
-
     if schema_pattern:
-        sql += " AND n.nspname ~ %(nspname)s"
-        params["nspname"] = schema_pattern
+        params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
     else:
-        sql += """
+        params["schema_pattern"] = SQL(
+            """
             AND n.nspname <> 'pg_catalog'
             AND n.nspname <> 'information_schema'
             AND n.nspname !~ '^pg_toast'
             AND pg_catalog.pg_table_is_visible(c.oid) """
+        )
 
     if table_pattern:
-        sql += " AND c.relname ~ %(relname)s"
-        params["relname"] = table_pattern
+        params["table_pattern"] = SQL(" AND c.relname ~ {}").format(table_pattern)
+    else:
+        params["table_pattern"] = SQL("")
 
-    sql += " ORDER BY 1, 2"
-
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
 
     if cur.description:
         headers = [x.name for x in cur.description]
