@@ -155,7 +155,10 @@ def test_slash_d_table_1(executor):
         ["txt1", "text", " not null"],
     ]
     headers = ["Column", "Type", "Modifiers"]
-    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n' "Number of child tables: 2 (Use \\d+ to list them.)\n"
+    status = (
+        'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+        "Number of child tables: 2 (Use \\d+ to list them.)\n"
+    )
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -198,7 +201,12 @@ def test_slash_d_table_verbose_1(executor):
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
     ]
-    status = 'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n' 'Child tables: "Inh1",\n' "              inh2\n" "Has OIDs: no\n"
+    status = (
+        'Indexes:\n    "id_text" PRIMARY KEY, btree (id1, txt1)\n'
+        'Child tables: "Inh1",\n'
+        "              inh2\n"
+        "Has OIDs: no\n"
+    )
     expected = [title, rows, headers, status]
     assert results == expected
 
@@ -964,7 +972,9 @@ def test_slash_h_alias(executor):
 @dbtest
 def test_slash_copy_to_tsv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
-    executor(r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath))
+    executor(
+        r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
+    )
     infile = filepath.open(encoding="utf-8")
     contents = infile.read()
     assert len(contents.splitlines()) == 1
@@ -975,7 +985,10 @@ def test_slash_copy_to_tsv(executor, tmpdir):
 def test_slash_copy_throws_error_without_TO_or_FROM(executor):
     with pytest.raises(Exception) as exc_info:
         executor("\copy (SELECT 'Montréal', 'Portland', 'Cleveland') INTO stdout ")
-    assert str(exc_info.value) == "Missing keyword in \\copy command. Either TO or FROM is required."
+    assert (
+        str(exc_info.value)
+        == "Missing keyword in \\copy command. Either TO or FROM is required."
+    )
 
 
 @dbtest
@@ -988,7 +1001,11 @@ def test_slash_copy_to_stdout(executor, capsys):
 @dbtest
 def test_slash_copy_to_csv(executor, tmpdir):
     filepath = tmpdir.join("pycons.tsv")
-    executor(r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(filepath))
+    executor(
+        r"\copy (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' WITH csv".format(
+            filepath
+        )
+    )
     infile = filepath.open(encoding="utf-8")
     contents = infile.read()
     assert len(contents.splitlines()) == 1
@@ -1012,7 +1029,12 @@ def test_slash_sf(executor):
     results = executor(r"\sf func1")
     title = None
     rows = [
-        ("CREATE OR REPLACE FUNCTION public.func1()\n" " RETURNS integer\n" " LANGUAGE sql\n" "AS $function$select 1$function$\n",),
+        (
+            "CREATE OR REPLACE FUNCTION public.func1()\n"
+            " RETURNS integer\n"
+            " LANGUAGE sql\n"
+            "AS $function$select 1$function$\n",
+        ),
     ]
     headers = ["source"]
     status = None
@@ -1035,7 +1057,12 @@ def test_slash_sf_parens(executor):
     results = executor(r"\sf func1()")
     title = None
     rows = [
-        ("CREATE OR REPLACE FUNCTION public.func1()\n" " RETURNS integer\n" " LANGUAGE sql\n" "AS $function$select 1$function$\n",),
+        (
+            "CREATE OR REPLACE FUNCTION public.func1()\n"
+            " RETURNS integer\n"
+            " LANGUAGE sql\n"
+            "AS $function$select 1$function$\n",
+        ),
     ]
     headers = ["source"]
     status = None
