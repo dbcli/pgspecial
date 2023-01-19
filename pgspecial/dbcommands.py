@@ -328,33 +328,34 @@ def list_schemas(cur, pattern, verbose):
 @special_command("\\dx", "\\dx[+] [pattern]", "List extensions.")
 def list_extensions(cur, pattern, verbose):
     def _find_extensions(cur, pattern):
-        sql = """
+        sql = SQL("""
             SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
-        """
+            {pattern}
+            ORDER BY 1, 2;
+        """)
 
         params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "WHERE e.extname ~ %(extname)s"
-            params["extname"] = schema
+            params["pattern"] += SQL("WHERE e.extname ~ {}").format(schema)
+        else:
+            params["pattern"] = SQL("")
 
-        sql += " ORDER BY 1, 2;"
-        log.debug("%s, %s", sql, params)
-        cur.execute(sql, params)
+        log.debug(sql.format(**params).as_string(cur))
+        cur.execute(sql.format(**params))
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
-        params = {"object_id": oid}
-        sql = """
+        sql = SQL("""
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                     AS "Object Description"
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-                    AND refobjid = %(object_id)s
+                    AND refobjid = {}
                     AND deptype = 'e'
-            ORDER BY 1"""
-        log.debug("%s, %s", sql, params)
-        cur.execute(sql, params)
+            ORDER BY 1""").format(oid)
+        log.debug(sql.as_string(cur))
+        cur.execute(sql)
 
         headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
@@ -377,7 +378,7 @@ def list_extensions(cur, pattern, verbose):
             yield None, None, None, f"""Did not find any extension named "{pattern}"."""
         return
 
-    sql = """
+    sql = SQL("""
       SELECT e.extname AS "Name",
              e.extversion AS "Version",
              n.nspname AS "Schema",
@@ -388,17 +389,19 @@ def list_extensions(cur, pattern, verbose):
            LEFT JOIN pg_catalog.pg_description c
              ON c.objoid = e.oid
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-      """
+        {where_clause}
+       ORDER BY 1, 2
+      """)
 
     params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE e.extname ~ %(extname)s"
-        params["extname"] = schema
+        params["where_clause"] = SQL("WHERE e.extname ~ {}").format(schema)
+    else:
+        params["where_clause"] = SQL("")
 
-    sql += " ORDER BY 1, 2"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
