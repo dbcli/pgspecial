@@ -1926,20 +1926,9 @@ def shell_command(cur, pattern, verbose):
 
 @special_command("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
 def list_foreign_tables(cur, pattern, verbose):
-    if verbose:
-        verbose_cols = """
-            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
-    else:
-        verbose_cols = ""
-
-    if pattern:
-        _, tbl_name = sql_name_pattern(pattern)
-        filter = f" AND c.relname OPERATOR(pg_catalog.~) '^({tbl_name})$' "
-    else:
-        filter = ""
-
-    query = f"""
+    params = {}
+    query = SQL(
+        """
         SELECT n.nspname as "Schema",
         c.relname as "Name",
         CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
@@ -1955,8 +1944,27 @@ def list_foreign_tables(cur, pattern, verbose):
         {filter}
         ORDER BY 1,2;
         """
+    )
 
-    cur.execute(query)
+    if verbose:
+        params["verbose_cols"] = SQL(
+            """
+            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
+            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+        )
+    else:
+        params["verbose_cols"] = SQL("")
+
+    if pattern:
+        _, tbl_name = sql_name_pattern(pattern)
+        params["filter"] = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} ").format(
+            f"^({tbl_name})$"
+        )
+    else:
+        params["filter"] = SQL("")
+
+    log.debug(query.format(**params).as_string(cur))
+    cur.execute(query.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
