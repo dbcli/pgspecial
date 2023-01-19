@@ -302,15 +302,19 @@ def list_schemas(cur, pattern, verbose):
     """
 
     params = {}
-    sql = SQL("""SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+    sql = SQL(
+        """SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
                 {verbose}
               FROM pg_catalog.pg_namespace n WHERE n.nspname
                 {pattern}
               ORDER BY 1
-              """)
+              """
+    )
 
     if verbose:
-        params["verbose"] = SQL(''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"''')
+        params["verbose"] = SQL(
+            ''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
+        )
     else:
         params["verbose"] = SQL("")
 
