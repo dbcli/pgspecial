@@ -46,7 +46,7 @@ def test_slash_l_verbose(executor):
 @dbtest
 def test_slash_du(executor):
     results = executor(r"\du")
-    row = ("postgres", True, True, True, True, True, -1, None, [], False)
+    row = ("postgres", True, True, True, True, True, -1, None, [], True)
     headers = [
         "rolname",
         "rolsuper",
@@ -66,7 +66,7 @@ def test_slash_du(executor):
 @dbtest
 def test_slash_du_pattern(executor):
     results = executor(r"\du post*")
-    row = [("postgres", True, True, True, True, True, -1, None, [], False)]
+    row = [("postgres", True, True, True, True, True, -1, None, [], True)]
     headers = [
         "rolname",
         "rolsuper",
@@ -86,7 +86,7 @@ def test_slash_du_pattern(executor):
 @dbtest
 def test_slash_du_verbose(executor):
     results = executor(r"\du+")
-    row = ("postgres", True, True, True, True, True, -1, None, [], None, False)
+    row = ("postgres", True, True, True, True, True, -1, None, [], None, True)
     headers = [
         "rolname",
         "rolsuper",
