@@ -4,7 +4,7 @@ import shlex
 import subprocess
 from collections import namedtuple
 
-from psycopg.sql import SQL, Literal
+from psycopg.sql import SQL
 
 from .main import special_command, RAW_QUERY
 
@@ -222,7 +222,8 @@ def list_privileges(cur, pattern, verbose):
 @special_command("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
 def list_default_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = """
+    sql = SQL(
+        """
     SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
     n.nspname AS "Schema",
     CASE d.defaclobjtype WHEN 'r' THEN 'table'
@@ -233,21 +234,24 @@ def list_default_privileges(cur, pattern, verbose):
     pg_catalog.array_to_string(d.defaclacl, E'\n') AS "Access privileges"
     FROM pg_catalog.pg_default_acl d
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
+        {where_clause}
+    ORDER BY 1, 2, 3
     """
+    )
 
-    where_clause = """
-        WHERE (n.nspname OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default
-        OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default)
-    """
-
+    params = {}
     if pattern:
-        _, schema = sql_name_pattern(pattern)
-        where_clause = where_clause.format(pattern=pattern)
-        sql += where_clause
+        params["where_clause"] = SQL(
+            """
+            WHERE (n.nspname OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default
+            OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default)
+        """
+        ).format(pattern=f"^({pattern})$")
+    else:
+        params["where_clause"] = SQL("")
 
-    sql += " ORDER BY 1, 2, 3"
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -259,31 +263,33 @@ def list_tablespaces(cur, pattern, **_):
     Returns (title, rows, headers, status)
     """
 
+    params = {}
     cur.execute(
         "SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')"
     )
     (is_location,) = cur.fetchone()
 
-    sql = """SELECT n.spcname AS "Name",
-    pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner","""
-
-    sql += (
-        " pg_catalog.pg_tablespace_location(n.oid)"
-        if is_location
-        else " 'Not supported'"
+    sql = SQL(
+        """SELECT n.spcname AS "Name", pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
+                {location} AS "Location" FROM pg_catalog.pg_tablespace n
+                {pattern}
+                ORDER BY 1
+              """
     )
-    sql += """ AS "Location"
-    FROM pg_catalog.pg_tablespace n"""
 
-    params = {}
+    if is_location:
+        params["location"] = SQL(" pg_catalog.pg_tablespace_location(n.oid)")
+    else:
+        params["location"] = SQL(" 'Not supported'")
+
     if pattern:
         _, tbsp = sql_name_pattern(pattern)
-        sql += " WHERE n.spcname ~ %(spcname)s"
-        params["spcname"] = tbsp
+        params["pattern"] = SQL(" WHERE n.spcname ~ {}").format(tbsp)
+    else:
+        params["pattern"] = SQL("")
 
-    sql += " ORDER BY 1"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
 
     headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
