@@ -301,31 +301,27 @@ def list_schemas(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
-    sql = (
-        '''SELECT n.nspname AS "Name",
-    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"'''
-        + (
-            ''',
-    pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges",
-    pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
-            if verbose
-            else ""
-        )
-        + """
-    FROM pg_catalog.pg_namespace n WHERE n.nspname """
-    )
-
     params = {}
+    sql = SQL("""SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+                {verbose}
+              FROM pg_catalog.pg_namespace n WHERE n.nspname
+                {pattern}
+              ORDER BY 1
+              """)
+
+    if verbose:
+        params["verbose"] = SQL(''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"''')
+    else:
+        params["verbose"] = SQL("")
+
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "~ %(schema_name)s"
-        params["schema_name"] = schema
+        params["pattern"] = SQL("~ {}").format(schema)
     else:
-        sql += "!~ '^pg_' AND n.nspname <> 'information_schema'"
-    sql += " ORDER BY 1"
+        params["pattern"] = SQL("!~ '^pg_' AND n.nspname <> 'information_schema'")
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
