@@ -140,7 +140,7 @@ def list_roles(cur, pattern, verbose):
 @special_command("\\dp", "\\dp [pattern]", "List roles.", aliases=("\\z",))
 def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = """
+    sql = SQL("""
         SELECT n.nspname as "Schema",
           c.relname as "Name",
           CASE c.relkind WHEN 'r' THEN 'table'
@@ -186,34 +186,27 @@ def list_privileges(cur, pattern, verbose):
             AS "Policies"
         FROM pg_catalog.pg_class c
              LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    """
+    """)
 
-    where_clause = """
-        WHERE c.relkind IN ('r','v','m','S','f','p')
-          {pattern}
-          AND n.nspname !~ '^pg_'
-    """
-
-    params = {}
     if pattern:
         schema, table = sql_name_pattern(pattern)
         if table:
-            pattern = " AND c.relname OPERATOR(pg_catalog.~) %(table_pattern)s COLLATE pg_catalog.default "
-            params["table_pattern"] = table
+            pattern = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(table)
         if schema:
-            pattern = (
-                pattern
-                + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
-            )
-            params["schema_pattern"] = schema
+            pattern += SQL(" AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(schema)
     else:
-        pattern = " AND pg_catalog.pg_table_is_visible(c.oid) "
+        pattern = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
 
-    where_clause = where_clause.format(pattern=pattern)
-    sql += where_clause + " ORDER BY 1, 2"
+    where_clause = SQL("""
+        WHERE c.relkind IN ('r','v','m','S','f','p')
+          {pattern}
+          AND n.nspname !~ '^pg_'
+    """).format(pattern=pattern)
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    sql += where_clause + SQL(" ORDER BY 1, 2 ")
+
+    log.debug(sql.as_string(cur))
+    cur.execute(sql)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
