@@ -66,8 +66,9 @@ def list_databases(cur, pattern, verbose):
         params["pattern_where"] = SQL("""WHERE d.datname ~ {}""").format(schema)
     else:
         params["pattern_where"] = SQL("")
-    log.debug(query.format(**params).as_string(cur))
-    cur.execute(query.format(**params))
+    formatted_query = query.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -130,8 +131,9 @@ def list_roles(cur, pattern, verbose):
     else:
         params["pattern"] = SQL("")
 
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -289,8 +291,9 @@ def list_tablespaces(cur, pattern, **_):
     else:
         params["pattern"] = SQL("")
 
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
 
     headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
@@ -325,8 +328,9 @@ def list_schemas(cur, pattern, verbose):
     else:
         params["pattern"] = SQL("!~ '^pg_' AND n.nspname <> 'information_schema'")
 
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -351,8 +355,9 @@ def list_extensions(cur, pattern, verbose):
         else:
             params["pattern"] = SQL("")
 
-        log.debug(sql.format(**params).as_string(cur))
-        cur.execute(sql.format(**params))
+        formatted_query = sql.format(**params)
+        log.debug(formatted_query.as_string(cur))
+        cur.execute(formatted_query)
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
@@ -414,8 +419,9 @@ def list_extensions(cur, pattern, verbose):
     else:
         params["where_clause"] = SQL("")
 
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
@@ -481,8 +487,9 @@ def list_objects(cur, pattern, verbose, relkinds):
     else:
         params["table_pattern"] = SQL("")
 
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
 
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -1973,8 +1980,9 @@ def list_foreign_tables(cur, pattern, verbose):
     else:
         params["filter"] = SQL("")
 
-    log.debug(query.format(**params).as_string(cur))
-    cur.execute(query.format(**params))
+    formatted_query = query.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
