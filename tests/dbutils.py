@@ -46,7 +46,10 @@ dbtest = pytest.mark.skipif(
 def create_db(dbname=TEST_DB_NAME):
     with db_connection(dbname=None).cursor() as cur:
         try:
-            cur.execute("""CREATE DATABASE %s""" % dbname)
+            cur.execute(
+                """CREATE DATABASE %s encoding UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8' template template0"""
+                % dbname
+            )
         except:
             pass
 

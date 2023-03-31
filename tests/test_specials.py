@@ -9,6 +9,102 @@ objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Descripti
 
 
 @dbtest
+def test_slash_l(executor):
+    results = executor(r"\l")
+    row = ("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)
+    headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
+    assert row in results[1]
+    assert headers == results[2]
+
+
+@dbtest
+def test_slash_l_pattern(executor):
+    results = executor(r"\l _test*")
+    row = [("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)]
+    headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
+    assert row == results[1]
+    assert headers == results[2]
+
+
+@dbtest
+def test_slash_l_verbose(executor):
+    results = executor(r"\l+")
+    headers = [
+        "Name",
+        "Owner",
+        "Encoding",
+        "Collate",
+        "Ctype",
+        "Access privileges",
+        "Size",
+        "Tablespace",
+        "Description",
+    ]
+    assert headers == results[2]
+
+
+@dbtest
+def test_slash_du(executor):
+    results = executor(r"\du")
+    row = ("postgres", True, True, True, True, True, -1, None, [], True)
+    headers = [
+        "rolname",
+        "rolsuper",
+        "rolinherit",
+        "rolcreaterole",
+        "rolcreatedb",
+        "rolcanlogin",
+        "rolconnlimit",
+        "rolvaliduntil",
+        "memberof",
+        "rolreplication",
+    ]
+    assert headers == results[2]
+    assert row in results[1]
+
+
+@dbtest
+def test_slash_du_pattern(executor):
+    results = executor(r"\du post*")
+    row = [("postgres", True, True, True, True, True, -1, None, [], True)]
+    headers = [
+        "rolname",
+        "rolsuper",
+        "rolinherit",
+        "rolcreaterole",
+        "rolcreatedb",
+        "rolcanlogin",
+        "rolconnlimit",
+        "rolvaliduntil",
+        "memberof",
+        "rolreplication",
+    ]
+    assert headers == results[2]
+    assert row == results[1]
+
+
+@dbtest
+def test_slash_du_verbose(executor):
+    results = executor(r"\du+")
+    row = ("postgres", True, True, True, True, True, -1, None, [], None, True)
+    headers = [
+        "rolname",
+        "rolsuper",
+        "rolinherit",
+        "rolcreaterole",
+        "rolcreatedb",
+        "rolcanlogin",
+        "rolconnlimit",
+        "rolvaliduntil",
+        "memberof",
+        "description",
+        "rolreplication",
+    ]
+    assert headers == results[2]
+    assert row in results[1]
+
+
+@dbtest
 def test_slash_d(executor):
     results = executor(r"\d")
     title = None

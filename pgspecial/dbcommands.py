@@ -4,6 +4,8 @@ import shlex
 import subprocess
 from collections import namedtuple
 
+from psycopg.sql import SQL
+
 from .main import special_command, RAW_QUERY
 
 TableInfo = namedtuple(
@@ -28,36 +30,45 @@ log = logging.getLogger(__name__)
 
 @special_command("\\l", "\\l[+] [pattern]", "List databases.", aliases=("\\list",))
 def list_databases(cur, pattern, verbose):
-    query = '''SELECT d.datname as "Name",
+    params = {}
+    query = SQL(
+        """SELECT d.datname as "Name",
         pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
         pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
         d.datcollate as "Collate",
         d.datctype as "Ctype",
-        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"'''
+        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"
+        {verbose_fields}
+        FROM pg_catalog.pg_database d
+        {verbose_tables}
+        {pattern_where}
+        ORDER BY 1"""
+    )
     if verbose:
-        query += ''',
+        params["verbose_fields"] = SQL(
+            ''',
             CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
                     THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
                     ELSE 'No Access'
             END as "Size",
             t.spcname as "Tablespace",
             pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
-    query += """
-    FROM pg_catalog.pg_database d
-    """
-    if verbose:
-        query += """
-        JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid
-        """
-    params = {}
+        )
+        params["verbose_tables"] = SQL(
+            """JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid"""
+        )
+    else:
+        params["verbose_fields"] = SQL("")
+        params["verbose_tables"] = SQL("")
+
     if pattern:
-        query += """
-        WHERE d.datname ~ %(schema_pattern)s
-        """
         _, schema = sql_name_pattern(pattern)
-        params["schema_pattern"] = schema
-    query = query + " ORDER BY 1"
-    cur.execute(query, params)
+        params["pattern_where"] = SQL("""WHERE d.datname ~ {}""").format(schema)
+    else:
+        params["pattern_where"] = SQL("")
+    formatted_query = query.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -71,8 +82,11 @@ def list_roles(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
+    params = {}
+
     if cur.connection.info.server_version > 90000:
-        sql = """
+        sql = SQL(
+            """
             SELECT r.rolname,
                 r.rolsuper,
                 r.rolinherit,
@@ -82,17 +96,22 @@ def list_roles(cur, pattern, verbose):
                 r.rolconnlimit,
                 r.rolvaliduntil,
                 ARRAY(SELECT b.rolname FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid) WHERE m.member = r.oid) as memberof,
+                {verbose}
+                r.rolreplication
+            FROM pg_catalog.pg_roles r
+                {pattern}
+            ORDER BY 1
             """
+        )
         if verbose:
-            sql += """
-                pg_catalog.shobj_description(r.oid, 'pg_authid') AS description,
-            """
-        sql += """
-            r.rolreplication
-        FROM pg_catalog.pg_roles r
-        """
+            params["verbose"] = SQL(
+                """pg_catalog.shobj_description(r.oid, 'pg_authid') AS description, """
+            )
+        else:
+            params["verbose"] = SQL("")
     else:
-        sql = """
+        sql = SQL(
+            """
             SELECT u.usename AS rolname,
                 u.usesuper AS rolsuper,
                 true AS rolinherit,
@@ -104,16 +123,17 @@ def list_roles(cur, pattern, verbose):
                 ARRAY(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = ANY(g.grolist)) as memberof
             FROM pg_catalog.pg_user u
             """
+        )
 
-    params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE r.rolname ~ %(rolname)s"
-        params["rolname"] = schema
-    sql += " ORDER BY 1"
+        params["pattern"] = SQL("WHERE r.rolname ~ {}").format(schema)
+    else:
+        params["pattern"] = SQL("")
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -122,7 +142,8 @@ def list_roles(cur, pattern, verbose):
 @special_command("\\dp", "\\dp [pattern]", "List roles.", aliases=("\\z",))
 def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = """
+    sql = SQL(
+        """
         SELECT n.nspname as "Schema",
           c.relname as "Name",
           CASE c.relkind WHEN 'r' THEN 'table'
@@ -169,33 +190,33 @@ def list_privileges(cur, pattern, verbose):
         FROM pg_catalog.pg_class c
              LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
     """
+    )
 
-    where_clause = """
+    if pattern:
+        schema, table = sql_name_pattern(pattern)
+        if table:
+            pattern = SQL(
+                " AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
+            ).format(table)
+        if schema:
+            pattern += SQL(
+                " AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
+            ).format(schema)
+    else:
+        pattern = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
+
+    where_clause = SQL(
+        """
         WHERE c.relkind IN ('r','v','m','S','f','p')
           {pattern}
           AND n.nspname !~ '^pg_'
     """
+    ).format(pattern=pattern)
 
-    params = {}
-    if pattern:
-        schema, table = sql_name_pattern(pattern)
-        if table:
-            pattern = " AND c.relname OPERATOR(pg_catalog.~) %(table_pattern)s COLLATE pg_catalog.default "
-            params["table_pattern"] = table
-        if schema:
-            pattern = (
-                pattern
-                + " AND n.nspname OPERATOR(pg_catalog.~) %(schema_pattern)s COLLATE pg_catalog.default "
-            )
-            params["schema_pattern"] = schema
-    else:
-        pattern = " AND pg_catalog.pg_table_is_visible(c.oid) "
+    sql += where_clause + SQL(" ORDER BY 1, 2 ")
 
-    where_clause = where_clause.format(pattern=pattern)
-    sql += where_clause + " ORDER BY 1, 2"
-
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    log.debug(sql.as_string(cur))
+    cur.execute(sql)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -204,7 +225,8 @@ def list_privileges(cur, pattern, verbose):
 @special_command("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
 def list_default_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = """
+    sql = SQL(
+        """
     SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
     n.nspname AS "Schema",
     CASE d.defaclobjtype WHEN 'r' THEN 'table'
@@ -215,21 +237,24 @@ def list_default_privileges(cur, pattern, verbose):
     pg_catalog.array_to_string(d.defaclacl, E'\n') AS "Access privileges"
     FROM pg_catalog.pg_default_acl d
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
+        {where_clause}
+    ORDER BY 1, 2, 3
     """
+    )
 
-    where_clause = """
-        WHERE (n.nspname OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default
-        OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) '^({pattern})$' COLLATE pg_catalog.default)
-    """
-
+    params = {}
     if pattern:
-        _, schema = sql_name_pattern(pattern)
-        where_clause = where_clause.format(pattern=pattern)
-        sql += where_clause
+        params["where_clause"] = SQL(
+            """
+            WHERE (n.nspname OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default
+            OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default)
+        """
+        ).format(pattern=f"^({pattern})$")
+    else:
+        params["where_clause"] = SQL("")
 
-    sql += " ORDER BY 1, 2, 3"
-    log.debug(sql)
-    cur.execute(sql)
+    log.debug(sql.format(**params).as_string(cur))
+    cur.execute(sql.format(**params))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -241,31 +266,34 @@ def list_tablespaces(cur, pattern, **_):
     Returns (title, rows, headers, status)
     """
 
+    params = {}
     cur.execute(
         "SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')"
     )
     (is_location,) = cur.fetchone()
 
-    sql = """SELECT n.spcname AS "Name",
-    pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner","""
-
-    sql += (
-        " pg_catalog.pg_tablespace_location(n.oid)"
-        if is_location
-        else " 'Not supported'"
+    sql = SQL(
+        """SELECT n.spcname AS "Name", pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
+                {location} AS "Location" FROM pg_catalog.pg_tablespace n
+                {pattern}
+                ORDER BY 1
+              """
     )
-    sql += """ AS "Location"
-    FROM pg_catalog.pg_tablespace n"""
 
-    params = {}
+    if is_location:
+        params["location"] = SQL(" pg_catalog.pg_tablespace_location(n.oid)")
+    else:
+        params["location"] = SQL(" 'Not supported'")
+
     if pattern:
         _, tbsp = sql_name_pattern(pattern)
-        sql += " WHERE n.spcname ~ %(spcname)s"
-        params["spcname"] = tbsp
+        params["pattern"] = SQL(" WHERE n.spcname ~ {}").format(tbsp)
+    else:
+        params["pattern"] = SQL("")
 
-    sql += " ORDER BY 1"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
 
     headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
@@ -277,31 +305,32 @@ def list_schemas(cur, pattern, verbose):
     Returns (title, rows, headers, status)
     """
 
-    sql = (
-        '''SELECT n.nspname AS "Name",
-    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"'''
-        + (
-            ''',
-    pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges",
-    pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
-            if verbose
-            else ""
-        )
-        + """
-    FROM pg_catalog.pg_namespace n WHERE n.nspname """
+    params = {}
+    sql = SQL(
+        """SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+                {verbose}
+              FROM pg_catalog.pg_namespace n WHERE n.nspname
+                {pattern}
+              ORDER BY 1
+              """
     )
 
-    params = {}
+    if verbose:
+        params["verbose"] = SQL(
+            ''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
+        )
+    else:
+        params["verbose"] = SQL("")
+
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "~ %(schema_name)s"
-        params["schema_name"] = schema
+        params["pattern"] = SQL("~ {}").format(schema)
     else:
-        sql += "!~ '^pg_' AND n.nspname <> 'information_schema'"
-    sql += " ORDER BY 1"
+        params["pattern"] = SQL("!~ '^pg_' AND n.nspname <> 'information_schema'")
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -311,33 +340,39 @@ def list_schemas(cur, pattern, verbose):
 @special_command("\\dx", "\\dx[+] [pattern]", "List extensions.")
 def list_extensions(cur, pattern, verbose):
     def _find_extensions(cur, pattern):
-        sql = """
+        sql = SQL(
+            """
             SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
+            {pattern}
+            ORDER BY 1, 2;
         """
+        )
 
         params = {}
         if pattern:
             _, schema = sql_name_pattern(pattern)
-            sql += "WHERE e.extname ~ %(extname)s"
-            params["extname"] = schema
+            params["pattern"] += SQL("WHERE e.extname ~ {}").format(schema)
+        else:
+            params["pattern"] = SQL("")
 
-        sql += " ORDER BY 1, 2;"
-        log.debug("%s, %s", sql, params)
-        cur.execute(sql, params)
+        formatted_query = sql.format(**params)
+        log.debug(formatted_query.as_string(cur))
+        cur.execute(formatted_query)
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
-        params = {"object_id": oid}
-        sql = """
+        sql = SQL(
+            """
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
                     AS "Object Description"
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-                    AND refobjid = %(object_id)s
+                    AND refobjid = {}
                     AND deptype = 'e'
             ORDER BY 1"""
-        log.debug("%s, %s", sql, params)
-        cur.execute(sql, params)
+        ).format(oid)
+        log.debug(sql.as_string(cur))
+        cur.execute(sql)
 
         headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
@@ -360,7 +395,8 @@ def list_extensions(cur, pattern, verbose):
             yield None, None, None, f"""Did not find any extension named "{pattern}"."""
         return
 
-    sql = """
+    sql = SQL(
+        """
       SELECT e.extname AS "Name",
              e.extversion AS "Version",
              n.nspname AS "Schema",
@@ -371,17 +407,21 @@ def list_extensions(cur, pattern, verbose):
            LEFT JOIN pg_catalog.pg_description c
              ON c.objoid = e.oid
                 AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+        {where_clause}
+       ORDER BY 1, 2
       """
+    )
 
     params = {}
     if pattern:
         _, schema = sql_name_pattern(pattern)
-        sql += "WHERE e.extname ~ %(extname)s"
-        params["extname"] = schema
+        params["where_clause"] = SQL("WHERE e.extname ~ {}").format(schema)
+    else:
+        params["where_clause"] = SQL("")
 
-    sql += " ORDER BY 1, 2"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
@@ -399,14 +439,17 @@ def list_objects(cur, pattern, verbose, relkinds):
     """
     schema_pattern, table_pattern = sql_name_pattern(pattern)
 
+    params = {"relkind": relkinds}
     if verbose:
-        verbose_columns = """
+        params["verbose_columns"] = SQL(
+            """
             ,pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
             pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+        )
     else:
-        verbose_columns = ""
+        params["verbose_columns"] = SQL("")
 
-    sql = (
+    sql = SQL(
         """SELECT n.nspname as "Schema",
                     c.relname as "Name",
                     CASE c.relkind
@@ -417,35 +460,36 @@ def list_objects(cur, pattern, verbose, relkinds):
                       WHEN 'f' THEN 'foreign table' END
                     as "Type",
                     pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
-          """
-        + verbose_columns
-        + """
+                    {verbose_columns}
             FROM    pg_catalog.pg_class c
                     LEFT JOIN pg_catalog.pg_namespace n
                       ON n.oid = c.relnamespace
-            WHERE   c.relkind = ANY(%(relkind)s) """
+            WHERE   c.relkind = ANY({relkind})
+                {schema_pattern}
+                {table_pattern}
+            ORDER BY 1, 2
+        """
     )
 
-    params = {"relkind": relkinds}
-
     if schema_pattern:
-        sql += " AND n.nspname ~ %(nspname)s"
-        params["nspname"] = schema_pattern
+        params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
     else:
-        sql += """
+        params["schema_pattern"] = SQL(
+            """
             AND n.nspname <> 'pg_catalog'
             AND n.nspname <> 'information_schema'
             AND n.nspname !~ '^pg_toast'
             AND pg_catalog.pg_table_is_visible(c.oid) """
+        )
 
     if table_pattern:
-        sql += " AND c.relname ~ %(relname)s"
-        params["relname"] = table_pattern
+        params["table_pattern"] = SQL(" AND c.relname ~ {}").format(table_pattern)
+    else:
+        params["table_pattern"] = SQL("")
 
-    sql += " ORDER BY 1, 2"
-
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    formatted_query = sql.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
 
     if cur.description:
         headers = [x.name for x in cur.description]
@@ -1899,20 +1943,9 @@ def shell_command(cur, pattern, verbose):
 
 @special_command("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
 def list_foreign_tables(cur, pattern, verbose):
-    if verbose:
-        verbose_cols = """
-            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
-    else:
-        verbose_cols = ""
-
-    if pattern:
-        _, tbl_name = sql_name_pattern(pattern)
-        filter = f" AND c.relname OPERATOR(pg_catalog.~) '^({tbl_name})$' "
-    else:
-        filter = ""
-
-    query = f"""
+    params = {}
+    query = SQL(
+        """
         SELECT n.nspname as "Schema",
         c.relname as "Name",
         CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
@@ -1928,8 +1961,28 @@ def list_foreign_tables(cur, pattern, verbose):
         {filter}
         ORDER BY 1,2;
         """
+    )
 
-    cur.execute(query)
+    if verbose:
+        params["verbose_cols"] = SQL(
+            """
+            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
+            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+        )
+    else:
+        params["verbose_cols"] = SQL("")
+
+    if pattern:
+        _, tbl_name = sql_name_pattern(pattern)
+        params["filter"] = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} ").format(
+            f"^({tbl_name})$"
+        )
+    else:
+        params["filter"] = SQL("")
+
+    formatted_query = query.format(**params)
+    log.debug(formatted_query.as_string(cur))
+    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
