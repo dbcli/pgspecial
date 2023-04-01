@@ -1,3 +1,8 @@
+Upcoming
+========
+
+* Added `build-system` section to `pyproject.toml` to use the modern setuptools backend.
+
 2.1.0 (2023-03-31)
 =========
 
