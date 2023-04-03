@@ -1,5 +1,5 @@
 exclude *
-include changelog.rst DEVELOP.rst License.txt README.rst requirements-dev.txt setup.py
+include changelog.rst DEVELOP.rst License.txt pyproject.toml README.rst requirements-dev.txt setup.py
 include scripts/docparser.py scripts/README.rst tox.ini
 recursive-include pgspecial *.py
 recursive-include tests *.py
