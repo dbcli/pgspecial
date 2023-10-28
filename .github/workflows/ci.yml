@@ -54,6 +54,8 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run unit tests
+        env:
+          LANG: en_US.UTF-8
         run: coverage run --source pgspecial -m pytest
 
       - name: Run Black

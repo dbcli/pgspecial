@@ -1,6 +1,10 @@
 import pytest
 from dbutils import create_db, db_connection, setup_db, teardown_db, TEST_DB_NAME
+import locale
 from pgspecial.main import PGSpecial
+
+
+locale.setlocale(locale.LC_ALL, "")
 
 
 @pytest.fixture(scope="module")

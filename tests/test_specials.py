@@ -4,14 +4,24 @@
 import pytest
 from dbutils import dbtest, POSTGRES_USER, SERVER_VERSION, foreign_db_environ, fdw_test
 import itertools
+import locale
 
 objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Description"]
+
+# note: technically, this is the database encoding, not the client
+# locale but for the purpose of testing we can assume the server
+# and the client are using the same locale
+# note 2: locale.getlocale() does not return the raw values,
+# in particular it transforms C into en_US, so we use .setlocale()
+# instead as that matches the C library function
+LC_COLLATE = locale.setlocale(locale.LC_COLLATE, None)
+LC_CTYPE = locale.setlocale(locale.LC_CTYPE, None)
 
 
 @dbtest
 def test_slash_l(executor):
     results = executor(r"\l")
-    row = ("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)
+    row = ("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row in results[1]
     assert headers == results[2]
@@ -20,7 +30,7 @@ def test_slash_l(executor):
 @dbtest
 def test_slash_l_pattern(executor):
     results = executor(r"\l _test*")
-    row = [("_test_db", "postgres", "UTF8", "en_US.UTF-8", "en_US.UTF-8", None)]
+    row = [("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)]
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row == results[1]
     assert headers == results[2]
