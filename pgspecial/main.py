@@ -234,7 +234,7 @@ def parse_special_command(sql):
 
 
 def show_extra_help_command(command, syntax, description):
-    """
+    r"""
     A decorator used internally for registering help for a command that is not
     automatically executed via PGSpecial.execute, but invoked manually by the
     caller (e.g. \watch).
