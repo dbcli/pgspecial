@@ -1,4 +1,4 @@
-2.1.1 (2023-10-28)
+2.1.1 (2023-10-29)
 ==================
 
 * Added `build-system` section to `pyproject.toml` to use the modern setuptools backend.
