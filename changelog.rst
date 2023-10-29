@@ -1,8 +1,10 @@
-Upcoming
-========
+2.1.1 (2023-10-28)
+==================
 
 * Added `build-system` section to `pyproject.toml` to use the modern setuptools backend.
-* Fixed test failures when locale other than `en_US` is used.
+* Fix SyntaxWarning with Python 3.12.
+* Fix test_slash_l* to support non-en_US locales (https://github.com/dbcli/pgspecial/issues/140).
+* Release script uses `build` module.
 
 2.1.0 (2023-03-31)
 =========
