@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from dbutils import dbtest, POSTGRES_USER, SERVER_VERSION, foreign_db_environ, fdw_test
+from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test
 import itertools
 import locale
 
@@ -346,8 +346,8 @@ def test_slash_dn(executor):
 def test_slash_dp(executor):
     """List all schemas."""
     results = executor(r"\dp")
-    title = None
-    rows = [
+    expected_title = None
+    expected_rows = [
         ("public", "Inh1", "table", None, "", ""),
         ("public", "inh2", "table", None, "", ""),
         ("public", "mvw1", "materialized view", None, "", ""),
@@ -358,7 +358,7 @@ def test_slash_dp(executor):
         ("public", "vw1", "view", None, "", ""),
     ]
 
-    headers = [
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -366,9 +366,11 @@ def test_slash_dp(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest
@@ -394,12 +396,12 @@ def test_slash_dp_pattern_table(executor):
 def test_slash_dp_pattern_schema(executor):
     """List all schemas."""
     results = executor(r"\dp schema2.*")
-    title = None
-    rows = [
+    expected_title = None
+    expected_rows = [
         ("schema2", "tbl2", "table", None, "", ""),
         ("schema2", "tbl2_id2_seq", "sequence", None, "", ""),
     ]
-    headers = [
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -407,18 +409,20 @@ def test_slash_dp_pattern_schema(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest
 def test_slash_dp_pattern_alias(executor):
     """List all schemas."""
     results = executor(r"\z i*2")
-    title = None
-    rows = [("public", "inh2", "table", None, "", "")]
-    headers = [
+    expected_title = None
+    expected_rows = [("public", "inh2", "table", None, "", "")]
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -426,9 +430,11 @@ def test_slash_dp_pattern_alias(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest

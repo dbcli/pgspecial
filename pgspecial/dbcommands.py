@@ -9,7 +9,7 @@ import aiosql
 
 queries = aiosql.from_path("dbcommands.sql", "psycopg2")
 
-from .main import special_command, RAW_QUERY
+from .main import special_command
 
 TableInfo = namedtuple(
     "TableInfo",
@@ -51,59 +51,15 @@ def list_roles(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
     """
-
-    params = {}
-
+    pattern = pattern or ".*"
     if cur.connection.info.server_version > 90000:
-        sql = SQL(
-            """
-            SELECT r.rolname,
-                r.rolsuper,
-                r.rolinherit,
-                r.rolcreaterole,
-                r.rolcreatedb,
-                r.rolcanlogin,
-                r.rolconnlimit,
-                r.rolvaliduntil,
-                ARRAY(SELECT b.rolname FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid) WHERE m.member = r.oid) as memberof,
-                {verbose}
-                r.rolreplication
-            FROM pg_catalog.pg_roles r
-                {pattern}
-            ORDER BY 1
-            """
-        )
         if verbose:
-            params["verbose"] = SQL(
-                """pg_catalog.shobj_description(r.oid, 'pg_authid') AS description, """
-            )
+            cur.execute(queries.list_roles_9_verbose.sql, (pattern,))
         else:
-            params["verbose"] = SQL("")
+            cur.execute(queries.list_roles_9.sql, (pattern,))
     else:
-        sql = SQL(
-            """
-            SELECT u.usename AS rolname,
-                u.usesuper AS rolsuper,
-                true AS rolinherit,
-                false AS rolcreaterole,
-                u.usecreatedb AS rolcreatedb,
-                true AS rolcanlogin,
-                -1 AS rolconnlimit,
-                u.valuntil as rolvaliduntil,
-                ARRAY(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = ANY(g.grolist)) as memberof
-            FROM pg_catalog.pg_user u
-            """
-        )
+        cur.execute(queries.list_roles.sql)
 
-    if pattern:
-        _, schema = sql_name_pattern(pattern)
-        params["pattern"] = SQL("WHERE r.rolname ~ {}").format(schema)
-    else:
-        params["pattern"] = SQL("")
-
-    formatted_query = sql.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -112,81 +68,16 @@ def list_roles(cur, pattern, verbose):
 @special_command("\\dp", "\\dp [pattern]", "List privileges.", aliases=("\\z",))
 def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = SQL(
-        """
-        SELECT n.nspname as "Schema",
-          c.relname as "Name",
-          CASE c.relkind WHEN 'r' THEN 'table'
-                         WHEN 'v' THEN 'view'
-                         WHEN 'm' THEN 'materialized view'
-                         WHEN 'S' THEN 'sequence'
-                         WHEN 'f' THEN 'foreign table'
-                         WHEN 'p' THEN 'partitioned table' END as "Type",
-          pg_catalog.array_to_string(c.relacl, E'\n') AS "Access privileges",
-          pg_catalog.array_to_string(ARRAY(
-            SELECT attname || E':\n  ' || pg_catalog.array_to_string(attacl, E'\n  ')
-            FROM pg_catalog.pg_attribute a
-            WHERE attrelid = c.oid AND NOT attisdropped AND attacl IS NOT NULL
-          ), E'\n') AS "Column privileges",
-          pg_catalog.array_to_string(ARRAY(
-            SELECT polname
-            || CASE WHEN NOT polpermissive THEN
-               E' (RESTRICTIVE)'
-               ELSE '' END
-            || CASE WHEN polcmd != '*' THEN
-                   E' (' || polcmd::pg_catalog.text || E'):'
-               ELSE E':'
-               END
-            || CASE WHEN polqual IS NOT NULL THEN
-                   E'\n  (u): ' || pg_catalog.pg_get_expr(polqual, polrelid)
-               ELSE E''
-               END
-            || CASE WHEN polwithcheck IS NOT NULL THEN
-                   E'\n  (c): ' || pg_catalog.pg_get_expr(polwithcheck, polrelid)
-               ELSE E''
-               END    || CASE WHEN polroles <> '{0}' THEN
-                   E'\n  to: ' || pg_catalog.array_to_string(
-                       ARRAY(
-                           SELECT rolname
-                           FROM pg_catalog.pg_roles
-                           WHERE oid = ANY (polroles)
-                           ORDER BY 1
-                       ), E', ')
-               ELSE E''
-               END
-            FROM pg_catalog.pg_policy pol
-            WHERE polrelid = c.oid), E'\n')
-            AS "Policies"
-        FROM pg_catalog.pg_class c
-             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-    """
+    param = bool(pattern)
+    schema, table = sql_name_pattern(pattern)
+    print((schema, table, pattern, param))
+    print("+")
+    schema = schema or ".*"
+    table = table or ".*"
+    cur.execute(
+        queries.list_privileges.sql,
+        (param, table, schema),
     )
-
-    if pattern:
-        schema, table = sql_name_pattern(pattern)
-        if table:
-            pattern = SQL(
-                " AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
-            ).format(table)
-        if schema:
-            pattern += SQL(
-                " AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
-            ).format(schema)
-    else:
-        pattern = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
-
-    where_clause = SQL(
-        """
-        WHERE c.relkind IN ('r','v','m','S','f','p')
-          {pattern}
-          AND n.nspname !~ '^pg_'
-    """
-    ).format(pattern=pattern)
-
-    sql += where_clause + SQL(" ORDER BY 1, 2 ")
-
-    log.debug(sql.as_string(cur))
-    cur.execute(sql)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -195,36 +86,9 @@ def list_privileges(cur, pattern, verbose):
 @special_command("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
 def list_default_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
-    sql = SQL(
-        """
-    SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
-    n.nspname AS "Schema",
-    CASE d.defaclobjtype WHEN 'r' THEN 'table'
-                         WHEN 'S' THEN 'sequence'
-                         WHEN 'f' THEN 'function'
-                         WHEN 'T' THEN 'type'
-                         WHEN 'n' THEN 'schema' END AS "Type",
-    pg_catalog.array_to_string(d.defaclacl, E'\n') AS "Access privileges"
-    FROM pg_catalog.pg_default_acl d
-        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
-        {where_clause}
-    ORDER BY 1, 2, 3
-    """
-    )
 
-    params = {}
-    if pattern:
-        params["where_clause"] = SQL(
-            """
-            WHERE (n.nspname OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default
-            OR pg_catalog.pg_get_userbyid(d.defaclrole) OPERATOR(pg_catalog.~) {pattern} COLLATE pg_catalog.default)
-        """
-        ).format(pattern=f"^({pattern})$")
-    else:
-        params["where_clause"] = SQL("")
-
-    log.debug(sql.format(**params).as_string(cur))
-    cur.execute(sql.format(**params))
+    pattern = f"^({pattern})$" if pattern else ".*"
+    cur.execute(queries.list_default_privileges.sql, (pattern, pattern))
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
@@ -821,8 +685,11 @@ def list_text_search_configurations(cur, pattern, verbose):
                 cur, headers, status = _fetch_oid_details(cur, oid)
                 yield title, cur, headers, status
         else:
-            yield None, None, None, 'Did not find any results for pattern "{}".'.format(
-                pattern
+            yield (
+                None,
+                None,
+                None,
+                'Did not find any results for pattern "{}".'.format(pattern),
             )
         return
 
