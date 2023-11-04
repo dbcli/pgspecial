@@ -5,6 +5,9 @@ import subprocess
 from collections import namedtuple
 
 from psycopg.sql import SQL
+import aiosql
+
+queries = aiosql.from_path("dbcommands.sql", "psycopg2")
 
 from .main import special_command, RAW_QUERY
 
@@ -30,45 +33,12 @@ log = logging.getLogger(__name__)
 
 @special_command("\\l", "\\l[+] [pattern]", "List databases.", aliases=("\\list",))
 def list_databases(cur, pattern, verbose):
-    params = {}
-    query = SQL(
-        """SELECT d.datname as "Name",
-        pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
-        pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
-        d.datcollate as "Collate",
-        d.datctype as "Ctype",
-        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"
-        {verbose_fields}
-        FROM pg_catalog.pg_database d
-        {verbose_tables}
-        {pattern_where}
-        ORDER BY 1"""
-    )
+    pattern = pattern or ".*"
     if verbose:
-        params["verbose_fields"] = SQL(
-            ''',
-            CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
-                    THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
-                    ELSE 'No Access'
-            END as "Size",
-            t.spcname as "Tablespace",
-            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
-        )
-        params["verbose_tables"] = SQL(
-            """JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid"""
-        )
+        cur.execute(queries.list_databases_verbose.sql, (pattern,))
     else:
-        params["verbose_fields"] = SQL("")
-        params["verbose_tables"] = SQL("")
+        cur.execute(queries.list_databases.sql, (pattern,))
 
-    if pattern:
-        _, schema = sql_name_pattern(pattern)
-        params["pattern_where"] = SQL("""WHERE d.datname ~ {}""").format(schema)
-    else:
-        params["pattern_where"] = SQL("")
-    formatted_query = query.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]

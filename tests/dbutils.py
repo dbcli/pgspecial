@@ -11,7 +11,7 @@ POSTGRES_HOST = getenv("PGHOST", "localhost")
 POSTGRES_PORT = getenv("PGPORT", 5432)
 POSTGRES_PASSWORD = getenv("PGPASSWORD", "postgres")
 
-TEST_DB_NAME = "_test_db"
+TEST_DB_NAME = "_local_test_db"
 FOREIGN_TEST_DB_NAME = "_foreign_test_db"
 
 

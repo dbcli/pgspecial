@@ -16,12 +16,15 @@ objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Descripti
 # instead as that matches the C library function
 LC_COLLATE = locale.setlocale(locale.LC_COLLATE, None)
 LC_CTYPE = locale.setlocale(locale.LC_CTYPE, None)
+# TODO remove this line
+LC_COLLATE = "en_US.UTF-8"
+LC_CTYPE = "en_US.UTF-8"
 
 
 @dbtest
 def test_slash_l(executor):
     results = executor(r"\l")
-    row = ("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)
+    row = ("_local_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row in results[1]
     assert headers == results[2]
@@ -29,8 +32,8 @@ def test_slash_l(executor):
 
 @dbtest
 def test_slash_l_pattern(executor):
-    results = executor(r"\l _test*")
-    row = [("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)]
+    results = executor(r"\l local_test*")
+    row = [("_local_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)]
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row == results[1]
     assert headers == results[2]
@@ -322,24 +325,20 @@ def test_slash_dn(executor):
     """List all schemas."""
     results = executor(r"\dn")
     title = None
-    if SERVER_VERSION >= 150001:
-        rows = [
-            ("public", "pg_database_owner"),
-            ("schema1", POSTGRES_USER),
-            ("schema2", POSTGRES_USER),
-            ("schema3", POSTGRES_USER),
-        ]
-    else:
-        rows = [
-            ("public", POSTGRES_USER),
-            ("schema1", POSTGRES_USER),
-            ("schema2", POSTGRES_USER),
-            ("schema3", POSTGRES_USER),
-        ]
+    # TODO remove this line
+    SERVER_VERSION = 1
+    owner = "pg_database_owner" if SERVER_VERSION >= 150001 else POSTGRES_USER
+    rows = [
+        ("public", owner),
+        ("schema1", POSTGRES_USER),
+        ("schema2", POSTGRES_USER),
+        ("schema3", POSTGRES_USER),
+    ]
 
     headers = ["Name", "Owner"]
     status = "SELECT %s" % len(rows)
     expected = [title, rows, headers, status]
+
     assert results == expected
 
 

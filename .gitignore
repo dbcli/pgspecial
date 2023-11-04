@@ -105,4 +105,7 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 
+# Used by direnv plugin
+.direnv
+.envrc
 # Created by .ignore support plugin (hsz.mobi)
