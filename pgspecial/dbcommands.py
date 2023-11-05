@@ -6,10 +6,9 @@ from collections import namedtuple
 
 from psycopg.sql import SQL
 import aiosql
+from .main import special_command
 
 queries = aiosql.from_path("dbcommands.sql", "psycopg2")
-
-from .main import special_command
 
 TableInfo = namedtuple(
     "TableInfo",
@@ -39,18 +38,14 @@ def list_databases(cur, pattern, verbose):
     else:
         cur.execute(queries.list_databases.sql, (pattern,))
 
-    if cur.description:
-        headers = [x.name for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
-    else:
-        return [(None, None, None, cur.statusmessage)]
+    headers = [x.name for x in cur.description] if cur.description else None
+    return [(None, cur, headers, cur.statusmessage)]
 
 
 @special_command("\\du", "\\du[+] [pattern]", "List roles.")
 def list_roles(cur, pattern, verbose):
-    """
-    Returns (title, rows, headers, status)
-    """
+    """Returns (title, rows, headers, status)"""
+
     pattern = pattern or ".*"
     if cur.connection.info.server_version > 90000:
         if verbose:
@@ -96,38 +91,10 @@ def list_default_privileges(cur, pattern, verbose):
 
 @special_command("\\db", "\\db[+] [pattern]", "List tablespaces.")
 def list_tablespaces(cur, pattern, **_):
-    """
-    Returns (title, rows, headers, status)
-    """
+    """Returns (title, rows, headers, status)"""
 
-    params = {}
-    cur.execute(
-        "SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')"
-    )
-    (is_location,) = cur.fetchone()
-
-    sql = SQL(
-        """SELECT n.spcname AS "Name", pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
-                {location} AS "Location" FROM pg_catalog.pg_tablespace n
-                {pattern}
-                ORDER BY 1
-              """
-    )
-
-    if is_location:
-        params["location"] = SQL(" pg_catalog.pg_tablespace_location(n.oid)")
-    else:
-        params["location"] = SQL(" 'Not supported'")
-
-    if pattern:
-        _, tbsp = sql_name_pattern(pattern)
-        params["pattern"] = SQL(" WHERE n.spcname ~ {}").format(tbsp)
-    else:
-        params["pattern"] = SQL("")
-
-    formatted_query = sql.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
+    pattern = pattern or ".*"
+    cur.execute(queries.list_tablespaces.sql, {"pattern": pattern})
 
     headers = [x.name for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
@@ -135,36 +102,13 @@ def list_tablespaces(cur, pattern, **_):
 
 @special_command("\\dn", "\\dn[+] [pattern]", "List schemas.")
 def list_schemas(cur, pattern, verbose):
-    """
-    Returns (title, rows, headers, status)
-    """
-
-    params = {}
-    sql = SQL(
-        """SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
-                {verbose}
-              FROM pg_catalog.pg_namespace n WHERE n.nspname
-                {pattern}
-              ORDER BY 1
-              """
-    )
-
+    """Returns (title, rows, headers, status)"""
+    pattern = pattern or ".*"
     if verbose:
-        params["verbose"] = SQL(
-            ''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
-        )
+        cur.execute(queries.list_schemas_verbose.sql, {"pattern": pattern})
     else:
-        params["verbose"] = SQL("")
+        cur.execute(queries.list_schemas.sql, {"pattern": pattern})
 
-    if pattern:
-        _, schema = sql_name_pattern(pattern)
-        params["pattern"] = SQL("~ {}").format(schema)
-    else:
-        params["pattern"] = SQL("!~ '^pg_' AND n.nspname <> 'information_schema'")
-
-    formatted_query = sql.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
     if cur.description:
         headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]

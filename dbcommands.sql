@@ -68,19 +68,6 @@ SELECT u.usename AS rolname,
        u.valuntil AS rolvaliduntil,
        array(SELECT g.groname FROM pg_catalog.pg_group g WHERE u.usesysid = any(g.grolist)) AS memberof
 FROM pg_catalog.pg_user u
--- name:  list_schemas
--- docs: ("\\dn", "\\dn[+] [pattern]", "List schemas.")
-SELECT
-    n.nspname AS "name",
-    pg_catalog.pg_get_userbyid(n.nspowner) AS "owner",
-    pg_catalog.array_to_string(n.nspacl, E'\\n') AS "access_privileges",
-    pg_catalog.obj_description(n.oid, 'pg_namespace') AS "description"
-FROM
-    pg_catalog.pg_namespace n
-WHERE
-    n.nspname ~ :pattern
-ORDER BY 1
-
 -- name:  list_privileges
 -- docs: ("\\dp", "\\dp [pattern]", "List roles.", aliases=("\\z",))
 SELECT n.nspname AS "Schema",
@@ -162,25 +149,53 @@ ORDER BY 1, 2, 3
 -- name:  list_tablespaces
 -- docs: ("\\db", "\\db[+] [pattern]", "List tablespaces.")
 SELECT
-    n.spcname AS "name",
-    pg_catalog.pg_get_userbyid(n.spcowner) AS "owner",
+    n.spcname AS "Name",
+    pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
     CASE
         WHEN (EXISTS ( SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location'))
         THEN pg_catalog.pg_tablespace_location(n.oid)
         ELSE 'Not supported'
-    END AS "location"
+    END AS "Location"
 FROM
     pg_catalog.pg_tablespace n
 WHERE
     n.spcname ~ :pattern
 ORDER BY 1
+-- name:  list_schemas_verbose
+-- docs: ("\\dn", "\\dn[+] [pattern]", "List schemas.")
+SELECT
+    n.nspname AS "Name",
+    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner",
+    pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges",
+    pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"
+FROM
+    pg_catalog.pg_namespace n
+WHERE
+CASE :pattern
+    WHEN '.*' THEN n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+    ELSE n.nspname ~ :pattern
+END
+ORDER BY 1
+-- name:  list_schemas
+-- docs: ("\\dn", "\\dn[+] [pattern]", "List schemas.")
+SELECT
+    n.nspname AS "Name",
+    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+FROM
+    pg_catalog.pg_namespace n
+WHERE
+CASE :pattern
+    WHEN '.*' THEN n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+    ELSE n.nspname ~ :pattern
+END
+ORDER BY 1
 
 -- name:  list_extensions
 SELECT
-    e.extname AS "name",
-    e.extversion AS "version",
-    n.nspname AS "schema",
-    c.description AS "description"
+    e.extname AS "Name",
+    e.extversion AS "Version",
+    n.nspname AS "Schema",
+    c.description AS "Description"
 FROM
     pg_catalog.pg_extension e
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
