@@ -198,59 +198,23 @@ def list_objects(cur, pattern, verbose, relkinds):
     relkinds is a list of strings to filter pg_class.relkind
 
     """
-    schema_pattern, table_pattern = sql_name_pattern(pattern)
-
-    params = {"relkind": relkinds}
+    if pattern:
+        schema_pattern, table_pattern = sql_name_pattern(pattern)
+    else:
+        schema_pattern, table_pattern = ".*", ".*"
+    params = {
+        "schema_pattern": schema_pattern,
+        "table_pattern": table_pattern,
+        "relkinds": relkinds,
+    }
     if verbose:
-        params["verbose_columns"] = SQL(
-            """
-            ,pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
-        )
+        cur.execute(queries.list_objects_verbose.sql, params)
     else:
-        params["verbose_columns"] = SQL("")
+        cur.execute(queries.list_objects.sql, params)
 
-    sql = SQL(
-        """SELECT n.nspname as "Schema",
-                    c.relname as "Name",
-                    CASE c.relkind
-                      WHEN 'r' THEN 'table' WHEN 'v' THEN 'view'
-                      WHEN 'p' THEN 'partitioned table'
-                      WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index'
-                      WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special'
-                      WHEN 'f' THEN 'foreign table' END
-                    as "Type",
-                    pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
-                    {verbose_columns}
-            FROM    pg_catalog.pg_class c
-                    LEFT JOIN pg_catalog.pg_namespace n
-                      ON n.oid = c.relnamespace
-            WHERE   c.relkind = ANY({relkind})
-                {schema_pattern}
-                {table_pattern}
-            ORDER BY 1, 2
-        """
-    )
-
-    if schema_pattern:
-        params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
-    else:
-        params["schema_pattern"] = SQL(
-            """
-            AND n.nspname <> 'pg_catalog'
-            AND n.nspname <> 'information_schema'
-            AND n.nspname !~ '^pg_toast'
-            AND pg_catalog.pg_table_is_visible(c.oid) """
-        )
-
-    if table_pattern:
-        params["table_pattern"] = SQL(" AND c.relname ~ {}").format(table_pattern)
-    else:
-        params["table_pattern"] = SQL("")
-
-    formatted_query = sql.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
+    if cur.description:
+        headers = [x.name for x in cur.description]
+        yield None, cur, headers, cur.statusmessage
 
     if cur.description:
         headers = [x.name for x in cur.description]
