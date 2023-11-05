@@ -162,6 +162,9 @@ def list_extensions(cur, pattern, verbose):
         return
 
     if verbose:
+        # TODO - use the join query instead of looping.
+        # May need refactoring some more code.
+        # cur.execute(queries.list_extensions_verbose.sql, {"pattern": pattern})
         extensions = _find_extensions(cur, pattern)
 
         if extensions:
@@ -173,33 +176,13 @@ def list_extensions(cur, pattern, verbose):
             yield None, None, None, f"""Did not find any extension named "{pattern}"."""
         return
 
-    sql = SQL(
-        """
-      SELECT e.extname AS "Name",
-             e.extversion AS "Version",
-             n.nspname AS "Schema",
-             c.description AS "Description"
-      FROM pg_catalog.pg_extension e
-           LEFT JOIN pg_catalog.pg_namespace n
-             ON n.oid = e.extnamespace
-           LEFT JOIN pg_catalog.pg_description c
-             ON c.objoid = e.oid
-                AND c.classoid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-        {where_clause}
-       ORDER BY 1, 2
-      """
-    )
-
-    params = {}
     if pattern:
-        _, schema = sql_name_pattern(pattern)
-        params["where_clause"] = SQL("WHERE e.extname ~ {}").format(schema)
+        _, pattern = sql_name_pattern(pattern)
     else:
-        params["where_clause"] = SQL("")
+        pattern = ".*"
 
-    formatted_query = sql.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
+    cur.execute(queries.list_extensions.sql, {"pattern": pattern})
+
     if cur.description:
         headers = [x.name for x in cur.description]
         yield None, cur, headers, cur.statusmessage
