@@ -628,13 +628,13 @@ ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text
 -- name:  show_function_definition
 -- docs: ("\\sf", "\\sf[+] FUNCNAME", "Show a function's definition.")
 SELECT
-    pg_catalog.pg_get_functiondef(
-        SELECT
-            coalesce(
-                get_coordinates::pg_catalog.regprocedure::pg_catalog.oid,
-                get_coordinates::pg_catalog.regproc::pg_catalog.oid)
-        ) AS source
-
+pg_catalog.pg_get_functiondef(
+    CASE
+    WHEN :pattern LIKE :bracket_wildcard
+    THEN :pattern::pg_catalog.regprocedure::pg_catalog.oid
+    ELSE :pattern::pg_catalog.regproc::pg_catalog.oid
+    END
+) AS source
 
 -- name:  list_foreign_tables
 -- docs: ("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())

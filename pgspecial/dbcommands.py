@@ -1607,19 +1607,10 @@ class _FakeCursor(list):
 
 @special_command("\\sf", "\\sf[+] FUNCNAME", "Show a function's definition.")
 def show_function_definition(cur, pattern, verbose):
-    params = {"pattern": pattern}
-    if "(" in pattern:
-        sql = "SELECT %(pattern)s::pg_catalog.regprocedure::pg_catalog.oid"
-    else:
-        sql = "SELECT %(pattern)s::pg_catalog.regproc::pg_catalog.oid"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
-    (foid,) = cur.fetchone()
-
-    params = {"foid": foid}
-    sql = "SELECT pg_catalog.pg_get_functiondef(%(foid)s) as source"
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    cur.execute(
+        queries.show_function_definition.sql,
+        {"pattern": pattern, "bracket_wildcard": "%(%"},
+    )
     if cur.description:
         headers = [x.name for x in cur.description]
         if verbose:
