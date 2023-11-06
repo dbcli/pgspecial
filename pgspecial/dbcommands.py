@@ -214,10 +214,6 @@ def list_objects(cur, pattern, verbose, relkinds):
 
     if cur.description:
         headers = [x.name for x in cur.description]
-        yield None, cur, headers, cur.statusmessage
-
-    if cur.description:
-        headers = [x.name for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -623,32 +619,14 @@ def describe_table_details(cur, pattern, verbose):
 
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
-    where = []
-    params = {}
+    schema = ".*" if not schema else schema
+    relname = ".*" if not relname else relname
 
-    if schema:
-        where.append("n.nspname ~ %(nspname)s")
-        params["nspname"] = schema
-    else:
-        where.append("pg_catalog.pg_table_is_visible(c.oid)")
-
-    if relname:
-        where.append("c.relname OPERATOR(pg_catalog.~) %(relname)s")
-        params["relname"] = relname
-
-    sql = (
-        """SELECT c.oid, n.nspname, c.relname
-             FROM pg_catalog.pg_class c
-             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-             """
-        + ("WHERE " + " AND ".join(where) if where else "")
-        + """
-             ORDER BY 2,3"""
-    )
     # Execute the sql, get the results and call describe_one_table_details on each table.
 
-    log.debug("%s, %s", sql, params)
-    cur.execute(sql, params)
+    cur.execute(
+        queries.describe_table_details.sql, {"nspname": schema, "relname": relname}
+    )
     if not (cur.rowcount > 0):
         return [(None, None, None, f"Did not find any relation named {pattern}.")]
 

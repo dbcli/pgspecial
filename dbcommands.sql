@@ -377,18 +377,16 @@ WHERE
 ORDER BY 1, 2
 -- name:  describe_table_details
 -- docs: ( "\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences.")
-SELECT
-    c.oid,
-    n.nspname,
-    c.relname
-FROM
-    pg_catalog.pg_class c
-    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+SELECT c.oid, n.nspname, c.relname
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE
-    n.nspname ~ :schema_pattern
---    AND pg_catalog.pg_table_is_visible(c.oid)
-    AND c.relname OPERATOR (pg_catalog. ~) :pattern
-ORDER BY 2, 3
+    CASE WHEN :nspname != '.*'
+    THEN n.nspname ~ :nspname
+    ELSE pg_catalog.pg_table_is_visible(c.oid)
+    END
+    AND c.relname OPERATOR(pg_catalog.~) :relname
+ORDER BY 2,3
 
 -- name:  describe_one_table_details
 SELECT
