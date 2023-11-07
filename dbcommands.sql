@@ -1166,3 +1166,121 @@ SELECT c.relchecks,
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
 WHERE c.oid = :oid
+
+-- name: get_sequence_column_name
+SELECT pg_catalog.quote_ident(nspname) || '.' || pg_catalog.quote_ident(relname) || '.' || pg_catalog.quote_ident(attname)
+FROM pg_catalog.pg_class c
+INNER JOIN pg_catalog.pg_depend d ON c.oid=d.refobjid
+INNER JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+INNER JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid
+                                         AND a.attnum=d.refobjsubid)
+WHERE d.classid='pg_catalog.pg_class'::pg_catalog.regclass
+  AND d.refclassid='pg_catalog.pg_class'::pg_catalog.regclass
+  AND d.objid=:oid \n
+  AND d.deptype='a'
+-- name: footer_index_information_9
+SELECT i.indisunique,
+       i.indisprimary,
+       i.indisclustered,
+       i.indisvalid, (NOT i.indimmediate)
+AND EXISTS
+  (SELECT 1
+   FROM pg_catalog.pg_constraint
+   WHERE conrelid = i.indrelid
+     AND conindid = i.indexrelid
+     AND contype IN ('p',
+                     'u',
+                     'x')
+     AND condeferrable ) AS condeferrable, (NOT i.indimmediate)
+AND EXISTS
+  (SELECT 1
+   FROM pg_catalog.pg_constraint
+   WHERE conrelid = i.indrelid
+     AND conindid = i.indexrelid
+     AND contype IN ('p',
+                     'u',
+                     'x')
+     AND condeferred ) AS condeferred,
+           a.amname,
+           c2.relname,
+           pg_catalog.pg_get_expr(i.indpred, i.indrelid, TRUE)
+FROM pg_catalog.pg_index i,
+     pg_catalog.pg_class c,
+     pg_catalog.pg_class c2,
+     pg_catalog.pg_am a
+WHERE i.indexrelid = c.oid
+  AND c.oid = :oid
+  AND c.relam = a.oid
+  AND i.indrelid = c2.oid;
+-- name: footer_index_information
+SELECT i.indisunique,
+       i.indisprimary,
+       i.indisclustered,
+       't' AS indisvalid,
+       'f' AS condeferrable,
+       'f' AS condeferred,
+       a.amname,
+       c2.relname,
+       pg_catalog.pg_get_expr(i.indpred, i.indrelid, TRUE)
+FROM pg_catalog.pg_index i,
+     pg_catalog.pg_class c,
+     pg_catalog.pg_class c2,
+     pg_catalog.pg_am a
+WHERE i.indexrelid = c.oid
+  AND c.oid = :oid
+  AND c.relam = a.oid
+  AND i.indrelid = c2.oid;
+-- name: get_footer_table_index_information_9
+SELECT c2.relname,
+       i.indisprimary,
+       i.indisunique,
+       i.indisclustered,
+       i.indisvalid,
+       pg_catalog.pg_get_indexdef(i.indexrelid, 0, TRUE),
+       pg_catalog.pg_get_constraintdef(con.oid, TRUE),
+       contype,
+       condeferrable,
+       condeferred,
+       c2.reltablespace
+FROM pg_catalog.pg_class c,
+     pg_catalog.pg_class c2,
+     pg_catalog.pg_index i
+LEFT JOIN pg_catalog.pg_constraint con ON conrelid = i.indrelid
+AND conindid = i.indexrelid
+AND contype IN ('p',
+                'u',
+                'x')
+WHERE c.oid = :oid
+  AND c.oid = i.indrelid
+  AND i.indexrelid = c2.oid
+ORDER BY i.indisprimary DESC,
+         i.indisunique DESC,
+         c2.relname;
+-- name: get_footer_table_index_information
+SELECT c2.relname,
+       i.indisprimary,
+       i.indisunique,
+       i.indisclustered,
+       't' AS indisvalid,
+       pg_catalog.pg_get_indexdef(i.indexrelid, 0, TRUE),
+       pg_catalog.pg_get_constraintdef(con.oid, TRUE),
+       contype,
+       condeferrable,
+       condeferred,
+       c2.reltablespace
+FROM pg_catalog.pg_class c,
+     pg_catalog.pg_class c2,
+     pg_catalog.pg_index i
+LEFT JOIN pg_catalog.pg_constraint con ON conrelid = i.indrelid
+AND contype IN ('p',
+                'u',
+                'x')
+WHERE c.oid = :oid
+  AND c.oid = i.indrelid
+  AND i.indexrelid = c2.oid
+ORDER BY i.indisprimary DESC,
+         i.indisunique DESC,
+         c2.relname;
+-- name: get_view_definition
+SELECT pg_catalog.pg_get_viewdef(:oid::pg_catalog.oid, TRUE)
+

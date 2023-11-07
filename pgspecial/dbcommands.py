@@ -587,60 +587,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # /* Footer information about an index */
 
         if cur.connection.info.server_version > 90000:
-            sql = f"""SELECT i.indisunique,
-                        i.indisprimary,
-                        i.indisclustered,
-                        i.indisvalid,
-                        (NOT i.indimmediate) AND EXISTS (
-                            SELECT 1
-                            FROM pg_catalog.pg_constraint
-                            WHERE conrelid = i.indrelid
-                                AND conindid = i.indexrelid
-                                AND contype IN ('p','u','x')
-                                AND condeferrable
-                        ) AS condeferrable,
-                        (NOT i.indimmediate) AND EXISTS (
-                            SELECT 1
-                            FROM pg_catalog.pg_constraint
-                            WHERE conrelid = i.indrelid
-                                AND conindid = i.indexrelid
-                                AND contype IN ('p','u','x')
-                                AND condeferred
-                        ) AS condeferred,
-                        a.amname,
-                        c2.relname,
-                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
-                        FROM pg_catalog.pg_index i,
-                            pg_catalog.pg_class c,
-                            pg_catalog.pg_class c2,
-                            pg_catalog.pg_am a
-                        WHERE i.indexrelid = c.oid
-                            AND c.oid = '{oid}'
-                            AND c.relam = a.oid
-                            AND i.indrelid = c2.oid;
-                """
+            cur.execute(queries.footer_index_information_9.sql, params)
         else:
-            sql = f"""SELECT i.indisunique,
-                        i.indisprimary,
-                        i.indisclustered,
-                        't' AS indisvalid,
-                        'f' AS condeferrable,
-                        'f' AS condeferred,
-                        a.amname,
-                        c2.relname,
-                        pg_catalog.pg_get_expr(i.indpred, i.indrelid, true)
-                        FROM pg_catalog.pg_index i,
-                            pg_catalog.pg_class c,
-                            pg_catalog.pg_class c2,
-                            pg_catalog.pg_am a
-                        WHERE i.indexrelid = c.oid
-                            AND c.oid = '{oid}'
-                            AND c.relam = a.oid
-                            AND i.indrelid = c2.oid;
-                """
-
-        log.debug(sql)
-        cur.execute(sql)
+            cur.execute(queries.footer_index_information.sql, params)
 
         (
             indisunique,
@@ -685,23 +634,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     elif tableinfo.relkind == "S":
         # /* Footer information about a sequence */
         # /* Get the column that owns this sequence */
-        sql = (
-            "SELECT pg_catalog.quote_ident(nspname) || '.' ||"
-            "\n   pg_catalog.quote_ident(relname) || '.' ||"
-            "\n   pg_catalog.quote_ident(attname)"
-            "\nFROM pg_catalog.pg_class c"
-            "\nINNER JOIN pg_catalog.pg_depend d ON c.oid=d.refobjid"
-            "\nINNER JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace"
-            "\nINNER JOIN pg_catalog.pg_attribute a ON ("
-            "\n a.attrelid=c.oid AND"
-            "\n a.attnum=d.refobjsubid)"
-            "\nWHERE d.classid='pg_catalog.pg_class'::pg_catalog.regclass"
-            "\n AND d.refclassid='pg_catalog.pg_class'::pg_catalog.regclass"
-            f"\n AND d.objid={oid} \n AND d.deptype='a'"
-        )
-
-        log.debug(sql)
-        cur.execute(sql)
+        cur.execute(queries.get_sequence_column_name.sql, params)
         result = cur.fetchone()
         if result:
             status.append(f"Owned by: {result[0]}")
@@ -722,59 +655,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         if tableinfo.hasindex:
             if cur.connection.info.server_version > 90000:
-                sql = f"""SELECT c2.relname,
-                                i.indisprimary,
-                                i.indisunique,
-                                i.indisclustered,
-                                i.indisvalid,
-                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
-                                pg_catalog.pg_get_constraintdef(con.oid, true),
-                                contype,
-                                condeferrable,
-                                condeferred,
-                                c2.reltablespace
-                        FROM pg_catalog.pg_class c,
-                            pg_catalog.pg_class c2,
-                            pg_catalog.pg_index i
-                        LEFT JOIN pg_catalog.pg_constraint con
-                        ON conrelid = i.indrelid
-                            AND conindid = i.indexrelid
-                            AND contype IN ('p','u','x')
-                        WHERE c.oid = '{oid}'
-                            AND c.oid = i.indrelid
-                            AND i.indexrelid = c2.oid
-                        ORDER BY i.indisprimary DESC,
-                            i.indisunique DESC,
-                            c2.relname;
-                    """
+                cur.execute(queries.get_footer_table_index_information_9.sql, params)
             else:
-                sql = f"""SELECT c2.relname,
-                                i.indisprimary,
-                                i.indisunique,
-                                i.indisclustered,
-                                't' AS indisvalid,
-                                pg_catalog.pg_get_indexdef(i.indexrelid, 0, true),
-                                pg_catalog.pg_get_constraintdef(con.oid, true),
-                                contype,
-                                condeferrable,
-                                condeferred,
-                                c2.reltablespace
-                        FROM pg_catalog.pg_class c,
-                            pg_catalog.pg_class c2,
-                            pg_catalog.pg_index i
-                        LEFT JOIN pg_catalog.pg_constraint con
-                        ON conrelid = i.indrelid
-                            AND contype IN ('p','u','x')
-                        WHERE c.oid = '{oid}'
-                            AND c.oid = i.indrelid
-                            AND i.indexrelid = c2.oid
-                        ORDER BY i.indisprimary DESC,
-                            i.indisunique DESC,
-                            c2.relname;
-                    """
-
-            log.debug(sql)
-            result = cur.execute(sql)
+                cur.execute(queries.get_footer_table_index_information.sql, params)
 
             if cur.rowcount > 0:
                 status.append("Indexes:\n")
