@@ -367,15 +367,12 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         cur.execute(queries.describe_one_table_details_12.sql, params)
     elif cur.connection.info.server_version >= 100000:
         cur.execute(queries.describe_one_table_details_10.sql, params)
-
     elif cur.connection.info.server_version > 90000:
         cur.execute(queries.describe_one_table_details_9.sql, params)
-
     elif cur.connection.info.server_version >= 80400:
         cur.execute(queries.describe_one_table_details_804.sql, params)
     elif cur.connection.info.server_version >= 80200:
         cur.execute(queries.describe_one_table_details_802.sql, params)
-
     else:
         cur.execute(queries.describe_one_table_details.sql, params)
 
@@ -396,57 +393,36 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         seq_values = cur.fetchone()
 
-    # Get column info
-    cols = 0
-    att_cols = {}
     sql = """SELECT a.attname,
-    pg_catalog.format_type(a.atttypid, a.atttypmod)
+    pg_catalog.format_type(a.atttypid, a.atttypmod) as atttype
     , (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) for 128)
                      FROM pg_catalog.pg_attrdef d
-                     WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef)
-                    , a.attnotnull"""
-    att_cols["attname"] = cols
-    cols += 1
-    att_cols["atttype"] = cols
-    cols += 1
-    att_cols["attrdef"] = cols
-    cols += 1
-    att_cols["attnotnull"] = cols
-    cols += 1
+                     WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) as attrdef,
+                    a.attnotnull"""
     if cur.connection.info.server_version >= 90100:
         sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
                     WHERE c.oid = a.attcollation
                     AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
     else:
         sql += ",\n  NULL AS attcollation"
-    att_cols["attcollation"] = cols
-    cols += 1
     if cur.connection.info.server_version >= 100000:
         sql += ",\n  a.attidentity"
     else:
         sql += ",\n  ''::pg_catalog.char AS attidentity"
-    att_cols["attidentity"] = cols
-    cols += 1
     if cur.connection.info.server_version >= 120000:
         sql += ",\n  a.attgenerated"
     else:
         sql += ",\n  ''::pg_catalog.char AS attgenerated"
-    att_cols["attgenerated"] = cols
-    cols += 1
     # index, or partitioned index
     if tableinfo.relkind == "i" or tableinfo.relkind == "I":
         if cur.connection.info.server_version >= 110000:
             sql += (
-                f",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
-                "WHERE i.indexrelid = '{oid}') THEN 'yes' ELSE 'no' END AS is_key"
+                ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
+                "WHERE i.indexrelid = '{oid}') THEN 'yes' ELSE 'no' END AS indexkey"
             )
-            att_cols["indexkey"] = cols
-            cols += 1
         sql += ",\n pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef"
     else:
         sql += """,\n NULL AS indexdef"""
-    att_cols["indexdef"] = cols
-    cols += 1
     if tableinfo.relkind == "f" and cur.connection.info.server_version >= 90200:
         sql += """, CASE WHEN attfdwoptions IS NULL THEN '' ELSE '(' ||
                 array_to_string(ARRAY(SELECT quote_ident(option_name) ||  ' '
@@ -454,12 +430,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 pg_options_to_table(attfdwoptions)), ', ') || ')' END AS attfdwoptions"""
     else:
         sql += """, NULL AS attfdwoptions"""
-    att_cols["attfdwoptions"] = cols
-    cols += 1
     if verbose:
         sql += """, a.attstorage"""
-        att_cols["attstorage"] = cols
-        cols += 1
         if (
             tableinfo.relkind == "r"
             or tableinfo.relkind == "i"
@@ -472,8 +444,6 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                 ",\n  CASE WHEN a.attstattarget=-1 THEN "
                 "NULL ELSE a.attstattarget END AS attstattarget"
             )
-            att_cols["attstattarget"] = cols
-            cols += 1
         if (
             tableinfo.relkind == "r"
             or tableinfo.relkind == "v"
@@ -482,9 +452,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             or tableinfo.relkind == "p"
             or tableinfo.relkind == "c"
         ):
-            sql += ",\n  pg_catalog.col_description(a.attrelid, a.attnum)"
-            att_cols["attdescr"] = cols
-            cols += 1
+            sql += ",\n  pg_catalog.col_description(a.attrelid, a.attnum) as attdescr"
 
     sql += f""" FROM pg_catalog.pg_attribute a WHERE a.attrelid = '{oid}' AND
     a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum; """
@@ -492,6 +460,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     log.debug(sql)
     cur.execute(sql)
     res = cur.fetchall()
+    att_cols = {x.name: i for i, x in enumerate(cur.description)}
 
     # Set the column names.
     headers = ["Column", "Type"]
