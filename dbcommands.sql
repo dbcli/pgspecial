@@ -788,25 +788,6 @@ WHERE
     AND c.relname OPERATOR(pg_catalog.~) :relname
 ORDER BY 2,3
 
--- name:  describe_one_table_details
-SELECT
-    c.relchecks,
-    c.relhasindex,
-    c.relhasrules,
-    c.relhastriggers,
-    pg_catalog.array_to_string(c.reloptions || ARRAY (
-            SELECT 'toast.' || x FROM pg_catalog.unnest(tc.reloptions) x), ', ') as reloptions,
-    c.reltablespace,
-    :reloftype as reloftype,
-    :relkind as relkind,
-    :relpersistence as relpersistence,
-    c.relispartition
-FROM
-    pg_catalog.pg_class c
-    LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-WHERE
-    c.oid = :oid
-
 -- name: get_column_info
 SELECT
     a.attname AS "name",
@@ -1074,67 +1055,114 @@ WHERE
     AND pg_catalog.pg_table_is_visible(c.oid)
     AND c.relname OPERATOR (pg_catalog. ~) :pattern
 ORDER BY 1, 2
+-- name: describe_one_table_details_12
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.relhastriggers,
+       FALSE AS relhasoids,
+                pg_catalog.array_to_string(c.reloptions || array
+                                             (SELECT 'toast.' || x
+                                              FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                c.reltablespace,
+                CASE
+                    WHEN c.reloftype = 0 THEN ''
+                    ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+                END,
+                c.relpersistence,
+                c.relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = :oid
+-- name: describe_one_table_details_10
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.relhastriggers,
+       c.relhasoids,
+       pg_catalog.array_to_string(c.reloptions || array
+                                    (SELECT 'toast.' || x
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+       c.reltablespace,
+       CASE
+           WHEN c.reloftype = 0 THEN ''
+           ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+       END,
+       c.relpersistence,
+       c.relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = oid
 
--- name: relkind
-CASE c.relkind
-WHEN 'r' THEN 'table'
-WHEN 'v' THEN 'view'
-WHEN 'p' THEN 'partitioned table'
-WHEN 'm' THEN 'materialized view'
-WHEN 'i' THEN 'index'
-WHEN 'I' THEN 'partitioned index'
-WHEN 'S' THEN 'sequence'
-WHEN 's' THEN 'special'
-WHEN 'f' THEN 'foreign table'
-WHEN 't' THEN 'toast table'
-WHEN 'c' THEN 'composite type'
-END
+-- name: describe_one_table_details_10
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.relhastriggers,
+       c.relhasoids,
+       pg_catalog.array_to_string(c.reloptions || array
+                                    (SELECT 'toast.' || x
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+       c.reltablespace,
+       CASE
+           WHEN c.reloftype = 0 THEN ''
+           ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
+       END,
+       c.relpersistence,
+       FALSE AS relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = :oid
+-- name: describe_one_table_details_804
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.relhastriggers,
+       c.relhasoids,
+       pg_catalog.array_to_string(c.reloptions || array
+                                    (SELECT 'toast.' || x
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+       c.reltablespace,
+       0 AS reloftype,
+       'p' AS relpersistence,
+       FALSE AS relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = :oid
+-- name: describe_one_table_details_802
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.reltriggers > 0 AS relhastriggers,
+       c.relhasoids,
+       pg_catalog.array_to_string(c.reloptions || array
+                                    (SELECT 'toast.' || x
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+       c.reltablespace,
+       0 AS reloftype,
+       'p' AS relpersistence,
+       FALSE AS relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = :oid
 
--- name: relpersistence
-CASE c.relpersistence
-WHEN 'p' THEN 'permanent'
-WHEN 'u' THEN 'unlogged'
-WHEN 't' THEN 'temporary'
-END
-
--- name: reloftype
-CASE
-WHEN c.reloftype = 0
-THEN ''
-ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
-END
-
--- name: defaclobjtype
-CASE d.defaclobjtype
-WHEN 'r' THEN 'table'
-WHEN 'S' THEN 'sequence'
-WHEN 'f' THEN 'function'
-WHEN 'T' THEN 'type'
-WHEN 'n' THEN 'schema'
-END
-
--- name: provolatile
-CASE p.provolatile
-WHEN 'i' THEN 'immutable'
-WHEN 's' THEN 'stable'
-WHEN 'v' THEN 'volatile'
-WHEN 'c' THEN 'volatile'
-END
-
--- name: contype
-CASE con.contype
-WHEN 'c' THEN 'check constraint'
-WHEN 'f' THEN 'foreign key constraint'
-WHEN 'p' THEN 'primary key constraint'
-WHEN 'u' THEN 'unique constraint'
-WHEN 't' THEN 'constraint trigger'
-WHEN 'x' THEN 'exclusion constraint'
-END
-
--- name: ev_enabled
-CASE ev_enabled
-WHEN 'A' THEN 'always'
-WHEN 'O' THEN 'origin'
-WHEN 'R' THEN 'replica'
-WHEN 'D' THEN 'disabled'
-END
+-- name: describe_one_table_details
+-- docs: no suffix here
+SELECT c.relchecks,
+       c.relkind,
+       c.relhasindex,
+       c.relhasrules,
+       c.reltriggers > 0 AS relhastriggers,
+       c.relhasoids,
+       c.reltablespace,
+       0 AS reloftype,
+       'p' AS relpersistence,
+       FALSE AS relispartition
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
+WHERE c.oid = :oid

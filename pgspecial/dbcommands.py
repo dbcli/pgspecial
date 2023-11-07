@@ -362,82 +362,25 @@ def describe_table_details(cur, pattern, verbose):
 
 
 def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
-    if verbose and cur.connection.info.server_version >= 80200:
-        suffix = """pg_catalog.array_to_string(c.reloptions || array(select
-        'toast.' || x from pg_catalog.unnest(tc.reloptions) x), ', ')"""
-    else:
-        suffix = "''"
-
+    params = {"oid": oid}
     if cur.connection.info.server_version >= 120000:
-        relhasoids = "false as relhasoids"
-    else:
-        relhasoids = "c.relhasoids"
-
-    if cur.connection.info.server_version >= 100000:
-        sql = f"""SELECT c.relchecks, c.relkind, c.relhasindex,
-                    c.relhasrules, c.relhastriggers, {relhasoids},
-                    {suffix},
-                    c.reltablespace,
-                    CASE WHEN c.reloftype = 0 THEN ''
-                        ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
-                    END,
-                    c.relpersistence,
-                    c.relispartition
-                 FROM pg_catalog.pg_class c
-                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '{oid}'"""
+        cur.execute(queries.describe_one_table_details_12.sql, params)
+    elif cur.connection.info.server_version >= 100000:
+        cur.execute(queries.describe_one_table_details_10.sql, params)
 
     elif cur.connection.info.server_version > 90000:
-        sql = f"""SELECT c.relchecks, c.relkind, c.relhasindex,
-                    c.relhasrules, c.relhastriggers, c.relhasoids,
-                    {suffix},
-                    c.reltablespace,
-                    CASE WHEN c.reloftype = 0 THEN ''
-                        ELSE c.reloftype::pg_catalog.regtype::pg_catalog.text
-                    END,
-                    c.relpersistence,
-                    false as relispartition
-                 FROM pg_catalog.pg_class c
-                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '{oid}'"""
+        cur.execute(queries.describe_one_table_details_9.sql, params)
 
     elif cur.connection.info.server_version >= 80400:
-        sql = f"""SELECT c.relchecks,
-                    c.relkind,
-                    c.relhasindex,
-                    c.relhasrules,
-                    c.relhastriggers,
-                    c.relhasoids,
-                    {suffix},
-                    c.reltablespace,
-                    0 AS reloftype,
-                    'p' AS relpersistence,
-                    false as relispartition
-                 FROM pg_catalog.pg_class c
-                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '{oid}'"""
+        cur.execute(queries.describe_one_table_details_804.sql, params)
+    elif cur.connection.info.server_version >= 80200:
+        cur.execute(queries.describe_one_table_details_802.sql, params)
 
     else:
-        sql = f"""SELECT c.relchecks,
-                    c.relkind,
-                    c.relhasindex,
-                    c.relhasrules,
-                    c.reltriggers > 0 AS relhastriggers,
-                    c.relhasoids,
-                    {suffix},
-                    c.reltablespace,
-                    0 AS reloftype,
-                    'p' AS relpersistence,
-                    false as relispartition
-                 FROM pg_catalog.pg_class c
-                 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
-                 WHERE c.oid = '{oid}'"""
+        cur.execute(queries.describe_one_table_details.sql, params)
 
-    # Create a namedtuple called tableinfo and match what's in describe.c
-
-    log.debug(sql)
-    cur.execute(sql)
     if cur.rowcount > 0:
+        # TODO if not verbose - drop suffix
         tableinfo = TableInfo._make(cur.fetchone())
     else:
         return None, None, None, f"Did not find any relation with OID {oid}."
