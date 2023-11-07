@@ -190,6 +190,20 @@ CASE :pattern
 END
 ORDER BY 1
 
+-- name: find_extensions
+SELECT e.extname,
+       e.oid
+FROM pg_catalog.pg_extension e
+WHERE e.extname ~ :schema
+ORDER BY 1,
+         2;
+-- name: describe_extension
+SELECT pg_catalog.pg_describe_object(classid, objid, 0) AS "Object Description"
+FROM pg_catalog.pg_depend
+WHERE refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
+  AND refobjid = :oid
+  AND deptype = 'e'
+ORDER BY 1
 -- name:  list_extensions
 SELECT
     e.extname AS "Name",
@@ -204,19 +218,6 @@ FROM
 WHERE
     e.extname ~ :pattern
 ORDER BY 1, 2
-
--- name:  list_extensions_verbose
-SELECT
-    e.extname AS "name",
-    pg_catalog.pg_describe_object(classid, objid, 0) AS "object_description"
-FROM
-    pg_catalog.pg_depend d
-    LEFT OUTER JOIN pg_catalog.pg_extension e ON e.oid = refobjid
-WHERE
-    refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-    AND deptype = 'e'
-    AND e.extname ~ :pattern
-ORDER BY 1
 
 -- name:  list_objects_verbose
 -- docs: This method is used by list_tables, list_views, list_materialized views and list_indexes

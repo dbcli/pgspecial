@@ -116,39 +116,13 @@ def list_schemas(cur, pattern, verbose):
 @special_command("\\dx", "\\dx[+] [pattern]", "List extensions.")
 def list_extensions(cur, pattern, verbose):
     def _find_extensions(cur, pattern):
-        sql = SQL(
-            """
-            SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
-            {pattern}
-            ORDER BY 1, 2;
-        """
-        )
+        _, schema = sql_name_pattern(pattern)
 
-        params = {}
-        if pattern:
-            _, schema = sql_name_pattern(pattern)
-            params["pattern"] += SQL("WHERE e.extname ~ {}").format(schema)
-        else:
-            params["pattern"] = SQL("")
-
-        formatted_query = sql.format(**params)
-        log.debug(formatted_query.as_string(cur))
-        cur.execute(formatted_query)
+        cur.execute(queries.find_extensions.sql, {"schema": schema or ".*"})
         return cur.fetchall()
 
     def _describe_extension(cur, oid):
-        sql = SQL(
-            """
-            SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
-                    AS "Object Description"
-            FROM    pg_catalog.pg_depend
-            WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
-                    AND refobjid = {}
-                    AND deptype = 'e'
-            ORDER BY 1"""
-        ).format(oid)
-        log.debug(sql.as_string(cur))
-        cur.execute(sql)
+        cur.execute(queries.describe_extension.sql, {"oid": oid})
 
         headers = [x.name for x in cur.description]
         return cur, headers, cur.statusmessage
