@@ -285,47 +285,243 @@ ORDER BY 1, 2
 
 -- name:  list_functions
 -- docs: ("\\df", "\\df[+] [pattern]", "List functions.")
-SELECT
-    n.nspname AS "schema",
-    p.proname AS "name",
-    pg_catalog.pg_get_function_result(p.oid) AS "result_data_type",
-    pg_catalog.pg_get_function_arguments(p.oid) AS "argument_data_types",
-    CASE
-    WHEN p.prokind = 'a' THEN 'agg'
-    WHEN p.prokind = 'w' THEN 'window'
-    WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
-    ELSE 'normal'
-    END AS "type",
-    :provolatile AS "volatility",
-    pg_catalog.pg_get_userbyid(p.proowner) AS "owner",
-    l.lanname AS "language",
-    p.prosrc AS "source_code",
-    pg_catalog.obj_description(p.oid, 'pg_proc') AS "description"
-FROM
-    pg_catalog.pg_proc p
-    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-    LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
-WHERE
-    n.nspname ~ :schema_pattern
-    AND p.proname ~ :pattern
-ORDER BY 1, 2, 4
+SELECT n.nspname AS "schema",
+       p.proname AS "name",
+       pg_catalog.pg_get_function_result(p.oid) AS "result_data_type",
+       pg_catalog.pg_get_function_arguments(p.oid) AS "argument_data_types",
+       CASE
+           WHEN p.prokind = 'a' THEN 'agg'
+           WHEN p.prokind = 'w' THEN 'window'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "type",
+       :provolatile AS "volatility",
+       pg_catalog.pg_get_userbyid(p.proowner) AS "owner",
+       l.lanname AS "language",
+       p.prosrc AS "source_code",
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS "description"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+WHERE n.nspname ~ :schema_pattern
+  AND p.proname ~ :pattern
+ORDER BY 1,
+         2,
+         4 -- name: list_functions__verbose_11
 
--- name:  list_datatypes
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
+       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+       CASE
+           WHEN p.prokind = 'a' THEN 'agg'
+           WHEN p.prokind = 'w' THEN 'window'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type",
+       CASE
+           WHEN p.provolatile = 'i' THEN 'immutable'
+           WHEN p.provolatile = 's' THEN 'stable'
+           WHEN p.provolatile = 'v' THEN 'volatile'
+       END AS "Volatility",
+       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
+       l.lanname AS "Language",
+       p.prosrc AS "Source code",
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+-- name: list_functions_verbose_9
+
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
+       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+       CASE
+           WHEN p.proisagg THEN 'agg'
+           WHEN p.proiswindow THEN 'window'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type",
+       CASE
+           WHEN p.provolatile = 'i' THEN 'immutable'
+           WHEN p.provolatile = 's' THEN 'stable'
+           WHEN p.provolatile = 'v' THEN 'volatile'
+       END AS "Volatility",
+       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
+       l.lanname AS "Language",
+       p.prosrc AS "Source code",
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+-- name: list_functions__verbose_9
+
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.format_type(p.prorettype, NULL) AS "Result data type",
+       pg_catalog.oidvectortypes(p.proargtypes) AS "Argument data types",
+       CASE
+           WHEN p.proisagg THEN 'agg'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type" CASE
+                         WHEN p.provolatile = 'i' THEN 'immutable'
+                         WHEN p.provolatile = 's' THEN 'stable'
+                         WHEN p.provolatile = 'v' THEN 'volatile'
+                     END AS "Volatility",
+       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
+       l.lanname AS "Language",
+       p.prosrc AS "Source code",
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+-- name: list_functions_11
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
+       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+       CASE
+           WHEN p.prokind = 'a' THEN 'agg'
+           WHEN p.prokind = 'w' THEN 'window'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+-- name: list_functions_9
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
+       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+       CASE
+           WHEN p.proisagg THEN 'agg'
+           WHEN p.proiswindow THEN 'window'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+-- name: list_functions_9
+SELECT n.nspname AS "Schema",
+       p.proname AS "Name",
+       pg_catalog.format_type(p.prorettype, NULL) AS "Result data type",
+       pg_catalog.oidvectortypes(p.proargtypes) AS "Argument data types",
+       CASE
+           WHEN p.proisagg THEN 'agg'
+           WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
+           ELSE 'normal'
+       END AS "Type"
+FROM pg_catalog.pg_proc p
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+WHERE p.proname ~ :function_pattern
+  AND CASE
+          WHEN :schema_pattern != '.*' THEN n.nspname ~ :schema_pattern
+          ELSE pg_catalog.pg_function_is_visible(p.oid)
+      END
+  AND CASE
+          WHEN :schema_pattern = '.*'
+               AND :function_pattern = '.*' THEN n.nspname <> 'pg_catalog'
+               AND n.nspname <> 'information_schema'
+          ELSE TRUE
+      END
+ORDER BY 1,
+         2,
+         4
+
+
+-- name:  list_datatype_verbose_9
 -- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
 SELECT
-    n.nspname AS "schema",
-    pg_catalog.format_type(t.oid, NULL) AS "name",
-    t.typname AS "internal_name",
+    n.nspname AS "Schema",
+    pg_catalog.format_type(t.oid, NULL) AS "Name",
+    t.typname AS "Internal name",
     CASE
     WHEN t.typrelid != 0 THEN CAST('tuple' AS pg_catalog.text)
     WHEN t.typlen < 0 THEN CAST('var' AS pg_catalog.text)
     ELSE CAST(t.typlen AS pg_catalog.text)
-    END AS "size",
+    END AS "Size",
     pg_catalog.array_to_string(ARRAY (
             SELECT e.enumlabel FROM pg_catalog.pg_enum e WHERE
-                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS "elements",
-    pg_catalog.array_to_string(t.typacl, E'\n') AS "access_privileges",
-    pg_catalog.obj_description(t.oid, 'pg_type') AS "description"
+                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS "Elements",
+    pg_catalog.array_to_string(t.typacl, E'\n') AS "Access_privileges",
+    pg_catalog.obj_description(t.oid, 'pg_type') AS "Description"
 FROM
     pg_catalog.pg_type t
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -337,16 +533,136 @@ WHERE (t.typrelid = 0
             pg_catalog.pg_class c
         WHERE
             c.oid = t.typrelid))
-    AND n.nspname ~ :schema_pattern
-    AND (t.typname ~ :pattern OR pg_catalog.format_type(t.oid, NULL) ~ :pattern)
+    AND NOT EXISTS(
+        SELECT 1
+        FROM pg_catalog.pg_type el
+        WHERE el.oid = t.typelem
+        AND el.typarray = t.oid)
+    AND (t.typname ~ :type_pattern OR pg_catalog.format_type(t.oid, NULL) ~ :type_pattern)
+    AND CASE WHEN :schema_pattern != '.*'
+    THEN n.nspname ~ :schema_pattern
+    ELSE pg_catalog.pg_type_is_visible(t.oid)
+    END
+    AND CASE WHEN :schema_pattern = '.*' AND :type_pattern = '.*'
+    THEN n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema'
+    ELSE true
+    END
 ORDER BY 1, 2
 
--- name:  list_domains
+-- name:  list_datatypes_9
+-- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
+SELECT
+    n.nspname AS "Schema",
+    pg_catalog.format_type(t.oid, NULL) AS "Name",
+    pg_catalog.obj_description(t.oid, 'pg_type') as "Description"
+FROM pg_catalog.pg_type t
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE (t.typrelid = 0
+    OR (
+        SELECT
+            c.relkind = 'c'
+        FROM
+            pg_catalog.pg_class c
+        WHERE
+            c.oid = t.typrelid))
+    AND NOT EXISTS(
+        SELECT 1
+        FROM pg_catalog.pg_type el
+        WHERE el.oid = t.typelem
+        AND el.typarray = t.oid)
+    AND (t.typname ~ :type_pattern OR pg_catalog.format_type(t.oid, NULL) ~ :type_pattern)
+    AND CASE WHEN :schema_pattern != '.*'
+    THEN n.nspname ~ :schema_pattern
+    ELSE pg_catalog.pg_type_is_visible(t.oid)
+    END
+    AND CASE WHEN :schema_pattern = '.*' and :type_pattern = '.*'
+    THEN n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema'
+    ELSE true
+    END
+ORDER BY 1, 2
+-- name:  list_datatype_verbose
+-- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
+SELECT
+    n.nspname AS "Schema",
+    pg_catalog.format_type(t.oid, NULL) AS "Name",
+    t.typname AS "Internal name",
+    CASE
+    WHEN t.typrelid != 0 THEN CAST('tuple' AS pg_catalog.text)
+    WHEN t.typlen < 0 THEN CAST('var' AS pg_catalog.text)
+    ELSE CAST(t.typlen AS pg_catalog.text)
+    END AS "Size",
+    pg_catalog.array_to_string(ARRAY (
+            SELECT e.enumlabel FROM pg_catalog.pg_enum e WHERE
+                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS "Elements",
+    pg_catalog.array_to_string(t.typacl, E'\n') AS "Access_privileges",
+    pg_catalog.obj_description(t.oid, 'pg_type') AS "Description"
+FROM
+    pg_catalog.pg_type t
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE (t.typrelid = 0
+    OR (
+        SELECT
+            c.relkind = 'c'
+        FROM
+            pg_catalog.pg_class c
+        WHERE
+            c.oid = t.typrelid))
+    -- this is the only difference in the query
+    -- AND NOT EXISTS(
+    --     SELECT 1
+    --     FROM pg_catalog.pg_type el
+    --     WHERE el.oid = t.typelem
+    --     AND el.typarray = t.oid)
+    AND (t.typname ~ :type_pattern OR pg_catalog.format_type(t.oid, NULL) ~ :type_pattern)
+    AND CASE WHEN :schema_pattern != '.*'
+    THEN n.nspname ~ :schema_pattern
+    ELSE pg_catalog.pg_type_is_visible(t.oid)
+    END
+    AND CASE WHEN :schema_pattern = '.*' and :type_pattern = '.*'
+    THEN n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema'
+    ELSE true
+    END
+ORDER BY 1, 2
+
+-- name:  list_datatypes
+-- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
+SELECT
+    n.nspname AS "Schema",
+    pg_catalog.format_type(t.oid, NULL) AS "Name",
+    pg_catalog.obj_description(t.oid, 'pg_type') as "Description"
+FROM pg_catalog.pg_type t
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+WHERE (t.typrelid = 0
+    OR (
+        SELECT
+            c.relkind = 'c'
+        FROM
+            pg_catalog.pg_class c
+        WHERE
+            c.oid = t.typrelid))
+    -- this is the only difference in the query
+    -- AND NOT EXISTS(
+    --     SELECT 1
+    --     FROM pg_catalog.pg_type el
+    --     WHERE el.oid = t.typelem
+    --     AND el.typarray = t.oid)
+    AND (t.typname ~ :type_pattern OR pg_catalog.format_type(t.oid, NULL) ~ :type_pattern)
+    AND CASE WHEN :schema_pattern != '.*'
+    THEN n.nspname ~ :schema_pattern
+    ELSE pg_catalog.pg_type_is_visible(t.oid)
+    END
+    AND CASE WHEN :schema_pattern = '.*' and :type_pattern = '.*'
+    THEN n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema'
+    ELSE true
+    END
+ORDER BY 1, 2
+
+-- name:  list_domains_verbose
 -- docs: ("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
 SELECT
-    n.nspname AS "schema",
-    t.typname AS "name",
-    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "type",
+    n.nspname AS "Schema",
+    t.typname AS "Name",
+    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
     pg_catalog.ltrim((COALESCE((
             SELECT
                 (' collate ' || c.collname)
@@ -356,14 +672,14 @@ SELECT
                 AND bt.oid = t.typbasetype
                 AND t.typcollation <> bt.typcollation), '') ||
         CASE WHEN t.typnotnull THEN ' not null' ELSE '' END) ||
-    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS "modifier",
+    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS "Modifier",
     pg_catalog.array_to_string(ARRAY (
             SELECT
                 pg_catalog.pg_get_constraintdef(r.oid, TRUE)
             FROM pg_catalog.pg_constraint AS r
-            WHERE t.oid = r.contypid), ' ') AS "check",
-        pg_catalog.array_to_string(t.typacl, E'\n') AS "access_privileges",
-    d.description AS "description"
+            WHERE t.oid = r.contypid), ' ') AS "Check",
+        pg_catalog.array_to_string(t.typacl, E'\n') AS "Access privileges",
+    d.description AS "Description"
 FROM
     pg_catalog.pg_type AS t
     LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
@@ -374,6 +690,47 @@ WHERE
     t.typtype = 'd'
     AND n.nspname ~ :schema_pattern
     AND t.typname ~ :pattern
+    AND CASE WHEN :schema_pattern = '.*' AND :pattern = '.*'
+    THEN n.nspname <> 'pg_catalog'
+    AND n.nspname <> 'information_schema'
+    AND pg_catalog.pg_type_is_visible(t.oid)
+    ELSE true
+    END
+ORDER BY 1, 2
+-- name:  list_domains
+-- docs: ("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
+SELECT
+    n.nspname AS "Schema",
+    t.typname AS "Name",
+    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+    pg_catalog.ltrim((COALESCE((
+            SELECT
+                (' collate ' || c.collname)
+            FROM pg_catalog.pg_collation AS c, pg_catalog.pg_type AS bt
+            WHERE
+                c.oid = t.typcollation
+                AND bt.oid = t.typbasetype
+                AND t.typcollation <> bt.typcollation), '') ||
+        CASE WHEN t.typnotnull THEN ' not null' ELSE '' END) ||
+    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS "Modifier",
+    pg_catalog.array_to_string(ARRAY (
+            SELECT
+                pg_catalog.pg_get_constraintdef(r.oid, TRUE)
+            FROM pg_catalog.pg_constraint AS r
+            WHERE t.oid = r.contypid), ' ') AS "Check"
+FROM
+    pg_catalog.pg_type AS t
+    LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
+WHERE
+    t.typtype = 'd'
+    AND n.nspname ~ :schema_pattern
+    AND t.typname ~ :pattern
+    AND CASE WHEN :schema_pattern = '.*' AND :pattern = '.*'
+    THEN n.nspname <> 'pg_catalog'
+    AND n.nspname <> 'information_schema'
+    AND pg_catalog.pg_type_is_visible(t.oid)
+    ELSE true
+    END
 ORDER BY 1, 2
 -- name:  describe_table_details
 -- docs: ( "\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences.")
@@ -630,7 +987,7 @@ ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text
 SELECT
 pg_catalog.pg_get_functiondef(
     CASE
-    WHEN :pattern LIKE :bracket_wildcard
+    WHEN :pattern ~ '\('
     THEN :pattern::pg_catalog.regprocedure::pg_catalog.oid
     ELSE :pattern::pg_catalog.regproc::pg_catalog.oid
     END
@@ -641,7 +998,7 @@ pg_catalog.pg_get_functiondef(
 SELECT
     n.nspname AS "Schema",
     c.relname AS "Name",
-    CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
+    'foreign table' AS "Type",
     pg_catalog.pg_get_userbyid(c.relowner) AS "Owner",
     pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) AS "Size",
     pg_catalog.obj_description(c.oid, 'pg_class') AS "Description"
@@ -661,7 +1018,7 @@ ORDER BY 1, 2
 SELECT
     n.nspname AS "Schema",
     c.relname AS "Name",
-    CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
+    'foreign table' AS "Type",
     pg_catalog.pg_get_userbyid(c.relowner) AS "Owner"
 FROM
     pg_catalog.pg_class c
