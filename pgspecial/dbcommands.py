@@ -507,9 +507,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     view_def = ""
     # /* Check if table is a view or materialized view */
     if (tableinfo.relkind == "v" or tableinfo.relkind == "m") and verbose:
-        sql = f"""SELECT pg_catalog.pg_get_viewdef('{oid}'::pg_catalog.oid, true)"""
-        log.debug(sql)
-        cur.execute(sql)
+        cur.execute(queries.get_view_definition.sql, params)
         if cur.rowcount > 0:
             (view_def,) = cur.fetchone()
 
@@ -701,24 +699,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     status.append(" INVALID")
 
                 status.append("\n")
-                # printTableAddFooter(&cont, buf.data);
-
-                # /* Print tablespace of the index on the same line */
-                # add_tablespace_footer(&cont, 'i',
-                # atooid(PQgetvalue(result, i, 10)),
-                # false);
 
         # /* print table (and column) check constraints */
         if tableinfo.checks:
-            sql = (
-                "SELECT r.conname, "
-                "pg_catalog.pg_get_constraintdef(r.oid, true)\n"
-                "FROM pg_catalog.pg_constraint r\n"
-                f"WHERE r.conrelid = '{oid}' AND r.contype = 'c'\n"
-                "ORDER BY 1;"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_check_constraints.sql, params)
             if cur.rowcount > 0:
                 status.append("Check constraints:\n")
             for row in cur:
@@ -728,14 +712,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print foreign-key constraints (there are none if no triggers) */
         if tableinfo.hastriggers:
-            sql = (
-                "SELECT conname,\n"
-                " pg_catalog.pg_get_constraintdef(r.oid, true) as condef\n"
-                "FROM pg_catalog.pg_constraint r\n"
-                f"WHERE r.conrelid = '{oid}' AND r.contype = 'f' ORDER BY 1;"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_foreign_key_constraints.sql, params)
             if cur.rowcount > 0:
                 status.append("Foreign-key constraints:\n")
             for row in cur:
@@ -744,14 +721,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print incoming foreign-key references (none if no triggers) */
         if tableinfo.hastriggers:
-            sql = (
-                "SELECT conrelid::pg_catalog.regclass, conname,\n"
-                "  pg_catalog.pg_get_constraintdef(c.oid, true) as condef\n"
-                "FROM pg_catalog.pg_constraint c\n"
-                f"WHERE c.confrelid = '{oid}' AND c.contype = 'f' ORDER BY 1;"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_foreign_key_references.sql, params)
             if cur.rowcount > 0:
                 status.append("Referenced by:\n")
             for row in cur:
@@ -761,14 +731,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print rules */
         if tableinfo.hasrules and tableinfo.relkind != "m":
-            sql = (
-                "SELECT r.rulename, trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true)), "
-                "ev_enabled\n"
-                "FROM pg_catalog.pg_rewrite r\n"
-                f"WHERE r.ev_class = '{oid}' ORDER BY 1;"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_foreign_key_references.sql, params)
             if cur.rowcount > 0:
                 for category in range(4):
                     have_heading = False
@@ -802,49 +765,18 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print partition info */
         if tableinfo.relispartition:
-            sql = (
-                "select quote_ident(np.nspname) || '.' ||\n"
-                "       quote_ident(cp.relname) || ' ' ||\n"
-                "       pg_get_expr(cc.relpartbound, cc.oid, true) as partition_of,\n"
-                "       pg_get_partition_constraintdef(cc.oid) as partition_constraint\n"
-                "from pg_inherits i\n"
-                "inner join pg_class cp\n"
-                "on cp.oid = i.inhparent\n"
-                "inner join pg_namespace np\n"
-                "on np.oid = cp.relnamespace\n"
-                "inner join pg_class cc\n"
-                "on cc.oid = i.inhrelid\n"
-                "inner join pg_namespace nc\n"
-                "on nc.oid = cc.relnamespace\n"
-                f"where cc.oid = {oid}"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_partintion_info.sql, params)
             for row in cur:
                 status.append(f"Partition of: {row[0]}\n")
                 status.append(f"Partition constraint: {row[1]}\n")
 
         if tableinfo.relkind == "p":
             # /* print partition key */
-            sql = f"select pg_get_partkeydef({oid})"
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_partintion_key.sql, params)
             for row in cur:
                 status.append(f"Partition key: {row[0]}\n")
             # /* print list of partitions */
-            sql = (
-                "select quote_ident(n.nspname) || '.' ||\n"
-                "       quote_ident(c.relname) || ' ' ||\n"
-                "       pg_get_expr(c.relpartbound, c.oid, true)\n"
-                "from pg_inherits i\n"
-                "inner join pg_class c\n"
-                "on c.oid = i.inhrelid\n"
-                "inner join pg_namespace n\n"
-                "on n.oid = c.relnamespace\n"
-                f"where i.inhparent = {oid} order by 1"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_partintions_list.sql, params)
             if cur.rowcount > 0:
                 if verbose:
                     first = True
@@ -867,14 +799,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print rules */
         if tableinfo.hasrules:
-            sql = (
-                "SELECT r.rulename, trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true))\n"
-                "FROM pg_catalog.pg_rewrite r\n"
-                f"WHERE r.ev_class = '{oid}' AND r.rulename != '_RETURN' ORDER BY 1;"
-            )
-
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_view_rules.sql, params)
             if cur.rowcount > 0:
                 status.append("Rules:\n")
                 for row in cur:
@@ -888,24 +813,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     # */
     if tableinfo.hastriggers:
         if cur.connection.info.server_version > 90000:
-            sql = f"""SELECT t.tgname,
-                        pg_catalog.pg_get_triggerdef(t.oid, true),
-                        t.tgenabled
-                   FROM pg_catalog.pg_trigger t
-                   WHERE t.tgrelid = '{oid}' AND NOT t.tgisinternal
-                   ORDER BY 1
-                """
+            cur.execute(queries.get_triggers_info_9.sql, params)
         else:
-            sql = f"""SELECT t.tgname,
-                        pg_catalog.pg_get_triggerdef(t.oid),
-                        t.tgenabled
-                   FROM pg_catalog.pg_trigger t
-                   WHERE t.tgrelid = '{oid}'
-                   ORDER BY 1
-                """
-
-        log.debug(sql)
-        cur.execute(sql)
+            cur.execute(queries.get_triggers_info.sql, params)
         if cur.rowcount > 0:
             # /*
             # * split the output into 4 different categories. Enabled triggers,
@@ -963,16 +873,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # /* print foreign server name */
         if tableinfo.relkind == "f":
             # /* Footer information about foreign table */
-            sql = f"""SELECT s.srvname,\n
-                          array_to_string(ARRAY(SELECT
-                          quote_ident(option_name) ||  ' ' ||
-                          quote_literal(option_value)  FROM
-                          pg_options_to_table(ftoptions)),  ', ')
-                   FROM pg_catalog.pg_foreign_table f,\n
-                        pg_catalog.pg_foreign_server s\n
-                   WHERE f.ftrelid = {oid} AND s.oid = f.ftserver;"""
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_foreign_table_name.sql, params)
             row = cur.fetchone()
 
             # /* Print server name */
@@ -984,15 +885,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print inherited tables */
         if not tableinfo.relispartition:
-            sql = (
-                "SELECT c.oid::pg_catalog.regclass\n"
-                "FROM pg_catalog.pg_class c, pg_catalog.pg_inherits i\n"
-                "WHERE c.oid = i.inhparent\n"
-                f"  AND i.inhrelid = '{oid}'\n"
-                "ORDER BY inhseqno"
-            )
-            log.debug(sql)
-            cur.execute(sql)
+            cur.execute(queries.get_foreign_inherited_tables.sql, params)
             spacer = ""
             if cur.rowcount > 0:
                 status.append("Inherits")
@@ -1007,25 +900,9 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         # /* print child tables */
         if cur.connection.info.server_version > 90000:
-            sql = f"""SELECT c.oid::pg_catalog.regclass
-                        FROM pg_catalog.pg_class c,
-                            pg_catalog.pg_inherits i
-                        WHERE c.oid = i.inhrelid
-                            AND i.inhparent = '{oid}'
-                        ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text;
-                    """
+            cur.execute(queries.get_foreign_child_tables_9.sql, params)
         else:
-            sql = f"""SELECT c.oid::pg_catalog.regclass
-                        FROM pg_catalog.pg_class c,
-                            pg_catalog.pg_inherits i
-                        WHERE c.oid = i.inhrelid
-                            AND i.inhparent = '{oid}'
-                        ORDER BY c.oid;
-                    """
-
-        log.debug(sql)
-        cur.execute(sql)
-
+            cur.execute(queries.get_foreign_child_tables.sql, params)
         if not verbose:
             # /* print the number of child tables, if any */
             if cur.rowcount > 0:

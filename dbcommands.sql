@@ -1283,4 +1283,106 @@ ORDER BY i.indisprimary DESC,
          c2.relname;
 -- name: get_view_definition
 SELECT pg_catalog.pg_get_viewdef(:oid::pg_catalog.oid, TRUE)
+-- name: get_check_constraints
+SELECT r.conname,
+       pg_catalog.pg_get_constraintdef(r.oid,
+                                       TRUE)
+FROM pg_catalog.pg_constraint r
+WHERE r.conrelid = :oid
+  AND r.contype = 'c'
+ORDER BY 1;
+-- name: get_foreign_key_constratints
+SELECT conname,
+       pg_catalog.pg_get_constraintdef(r.oid, TRUE) AS condef
+FROM pg_catalog.pg_constraint r
+WHERE r.conrelid = :oid
+  AND r.contype = 'f'
+ORDER BY 1;
+-- name: get_foreign_key_references
+SELECT conrelid::pg_catalog.regclass,
+       conname,
+       pg_catalog.pg_get_constraintdef(c.oid, TRUE) AS condef
+FROM pg_catalog.pg_constraint c
+WHERE c.confrelid = :oid
+  AND c.contype = 'f'
+ORDER BY 1;
+-- name: get_rules
+SELECT r.rulename,
+       trim(TRAILING ';'
+            FROM pg_catalog.pg_get_ruledef(r.oid, TRUE)),
+       ev_enabled
+FROM pg_catalog.pg_rewrite r
+WHERE r.ev_class = :oid
+ORDER BY 1;
+-- name: get_partition_info
+SELECT quote_ident(np.nspname) || '.' || quote_ident(cp.relname) || ' ' || pg_get_expr(cc.relpartbound, cc.oid, TRUE) AS partition_of,
+       pg_get_partition_constraintdef(cc.oid) AS partition_constraint
+FROM pg_inherits i
+INNER JOIN pg_class cp ON cp.oid = i.inhparent
+INNER JOIN pg_namespace np ON np.oid = cp.relnamespace
+INNER JOIN pg_class cc ON cc.oid = i.inhrelid
+INNER JOIN pg_namespace nc ON nc.oid = cc.relnamespace
+WHERE cc.oid = :oid
+-- name: get_partition_key
+select pg_get_partkeydef(:oid)
+-- name: get_partitions_list
+SELECT quote_ident(n.nspname) || '.' || quote_ident(c.relname) || ' ' || pg_get_expr(c.relpartbound, c.oid, TRUE)
+FROM pg_inherits i
+INNER JOIN pg_class c ON c.oid = i.inhrelid
+INNER JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE i.inhparent = {oid}
+ORDER BY 1
+-- name: get_view_rules
+SELECT r.rulename,
+       trim(TRAILING ';'
+            FROM pg_catalog.pg_get_ruledef(r.oid, TRUE))
+FROM pg_catalog.pg_rewrite r
+WHERE r.ev_class = :oid
+  AND r.rulename != '_RETURN'
+ORDER BY 1;
+-- name: get_triggers_info_9
+SELECT t.tgname,
+       pg_catalog.pg_get_triggerdef(t.oid, TRUE),
+       t.tgenabled
+FROM pg_catalog.pg_trigger t
+WHERE t.tgrelid = :oid
+  AND NOT t.tgisinternal
+ORDER BY 1
+-- name: get_triggers_info
+SELECT t.tgname,
+       pg_catalog.pg_get_triggerdef(t.oid),
+       t.tgenabled
+FROM pg_catalog.pg_trigger t
+WHERE t.tgrelid = :oid
+ORDER BY 1
+-- name: get_foreign_table_name
+SELECT s.srvname,
+       array_to_string(array
+                         (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value)
+                          FROM pg_options_to_table(ftoptions)), ', ')
+FROM pg_catalog.pg_foreign_table f,
+     pg_catalog.pg_foreign_server s
+WHERE f.ftrelid = :oid
+  AND s.oid = f.ftserver;
+-- name: get_foreign_inherited_tables
+SELECT c.oid::pg_catalog.regclass
+FROM pg_catalog.pg_class c,
+     pg_catalog.pg_inherits i
+WHERE c.oid = i.inhparent
+  AND i.inhrelid = :oid
+ORDER BY inhseqno
+-- name: get_foreign_child_tables_9
+SELECT c.oid::pg_catalog.regclass
+FROM pg_catalog.pg_class c,
+     pg_catalog.pg_inherits i
+WHERE c.oid = i.inhrelid
+  AND i.inhparent = :oid
+ORDER BY c.oid::pg_catalog.regclass::pg_catalog.text;
+-- name: get_foreign_child_tables
+SELECT c.oid::pg_catalog.regclass
+FROM pg_catalog.pg_class c,
+     pg_catalog.pg_inherits i
+WHERE c.oid = i.inhrelid
+  AND i.inhparent = :oid
+ORDER BY c.oid;
 
