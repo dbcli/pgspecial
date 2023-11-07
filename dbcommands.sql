@@ -219,6 +219,48 @@ WHERE
     e.extname ~ :pattern
 ORDER BY 1, 2
 
+-- name: find_text_search_configs
+SELECT c.oid,
+       c.cfgname,
+       n.nspname,
+       p.prsname,
+       np.nspname AS pnspname
+FROM pg_catalog.pg_ts_config c
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace,
+                                       pg_catalog.pg_ts_parser p
+LEFT JOIN pg_catalog.pg_namespace np ON np.oid = p.prsnamespace
+WHERE p.oid = c.cfgparser
+  AND c.cfgname ~ :schema
+ORDER BY 1,
+         2
+-- name: fetch_oid_details
+SELECT
+  (SELECT t.alias
+   FROM pg_catalog.ts_token_type(c.cfgparser) AS t
+   WHERE t.tokid = m.maptokentype ) AS "Token",
+       pg_catalog.btrim(ARRAY
+                          (SELECT mm.mapdict::pg_catalog.regdictionary
+                           FROM pg_catalog.pg_ts_config_map AS mm
+                           WHERE mm.mapcfg = m.mapcfg
+                             AND mm.maptokentype = m.maptokentype
+                           ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
+FROM pg_catalog.pg_ts_config AS c,
+     pg_catalog.pg_ts_config_map AS m
+WHERE c.oid = :oid
+  AND m.mapcfg = c.oid
+GROUP BY m.mapcfg,
+         m.maptokentype,
+         c.cfgparser
+ORDER BY 1;
+-- name: list_text_search_configurations
+SELECT n.nspname AS "Schema",
+       c.cfgname AS "Name",
+       pg_catalog.obj_description(c.oid, 'pg_ts_config') AS "Description"
+FROM pg_catalog.pg_ts_config c
+LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
+WHERE c.cfgname ~ :schema
+ORDER BY 1,
+         2
 -- name:  list_objects_verbose
 -- docs: This method is used by list_tables, list_views, list_materialized views and list_indexes
 SELECT
