@@ -133,9 +133,6 @@ def list_extensions(cur, pattern, verbose):
         return
 
     if verbose:
-        # TODO - use the join query instead of looping.
-        # May need refactoring some more code.
-        # cur.execute(queries.list_extensions_verbose.sql, {"pattern": pattern})
         extensions = _find_extensions(cur, pattern)
 
         if extensions:
@@ -377,6 +374,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     if cur.rowcount > 0:
         # TODO if not verbose - drop suffix
+        # But it seems that the suffix is not included?
         tableinfo = TableInfo._make(cur.fetchone())
     else:
         return None, None, None, f"Did not find any relation with OID {oid}."

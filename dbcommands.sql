@@ -1064,7 +1064,7 @@ SELECT c.relchecks,
        FALSE AS relhasoids,
                 pg_catalog.array_to_string(c.reloptions || array
                                              (SELECT 'toast.' || x
-                                              FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                                              FROM pg_catalog.unnest(tc.reloptions) x), ', ') as suffix,
                 c.reltablespace,
                 CASE
                     WHEN c.reloftype = 0 THEN ''
@@ -1084,7 +1084,7 @@ SELECT c.relchecks,
        c.relhasoids,
        pg_catalog.array_to_string(c.reloptions || array
                                     (SELECT 'toast.' || x
-                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', ') as suffix,
        c.reltablespace,
        CASE
            WHEN c.reloftype = 0 THEN ''
@@ -1105,7 +1105,7 @@ SELECT c.relchecks,
        c.relhasoids,
        pg_catalog.array_to_string(c.reloptions || array
                                     (SELECT 'toast.' || x
-                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', ') as suffix,
        c.reltablespace,
        CASE
            WHEN c.reloftype = 0 THEN ''
@@ -1125,9 +1125,9 @@ SELECT c.relchecks,
        c.relhasoids,
        pg_catalog.array_to_string(c.reloptions || array
                                     (SELECT 'toast.' || x
-                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', ') as suffix,
        c.reltablespace,
-       0 AS reloftype,
+       '' AS reloftype,
        'p' AS relpersistence,
        FALSE AS relispartition
 FROM pg_catalog.pg_class c
@@ -1142,9 +1142,9 @@ SELECT c.relchecks,
        c.relhasoids,
        pg_catalog.array_to_string(c.reloptions || array
                                     (SELECT 'toast.' || x
-                                     FROM pg_catalog.unnest(tc.reloptions) x), ', '),
+                                     FROM pg_catalog.unnest(tc.reloptions) x), ', ') as suffix,
        c.reltablespace,
-       0 AS reloftype,
+       '' AS reloftype,
        'p' AS relpersistence,
        FALSE AS relispartition
 FROM pg_catalog.pg_class c
@@ -1152,15 +1152,15 @@ LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
 WHERE c.oid = :oid
 
 -- name: describe_one_table_details
--- docs: no suffix here
 SELECT c.relchecks,
        c.relkind,
        c.relhasindex,
        c.relhasrules,
        c.reltriggers > 0 AS relhastriggers,
        c.relhasoids,
+       '' as suffix,
        c.reltablespace,
-       0 AS reloftype,
+       '' AS reloftype,
        'p' AS relpersistence,
        FALSE AS relispartition
 FROM pg_catalog.pg_class c
