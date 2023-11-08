@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test
+from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test, SERVER_VERSION
 import itertools
 import locale
 
@@ -16,9 +16,6 @@ objects_listing_headers = ["Schema", "Name", "Type", "Owner", "Size", "Descripti
 # instead as that matches the C library function
 LC_COLLATE = locale.setlocale(locale.LC_COLLATE, None)
 LC_CTYPE = locale.setlocale(locale.LC_CTYPE, None)
-# TODO remove this line
-LC_COLLATE = "en_US.UTF-8"
-LC_CTYPE = "en_US.UTF-8"
 
 
 @dbtest
@@ -325,8 +322,6 @@ def test_slash_dn(executor):
     """List all schemas."""
     results = executor(r"\dn")
     title = None
-    # TODO remove this line
-    SERVER_VERSION = 1
     owner = "pg_database_owner" if SERVER_VERSION >= 150001 else POSTGRES_USER
     rows = [
         ("public", owner),

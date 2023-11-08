@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      LC_COLLATE: "en_US.UTF-8"
+      LC_CTYPE: "en_US.UTF-8"
+    ports:
+      - "5432:5432" # default port for postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
