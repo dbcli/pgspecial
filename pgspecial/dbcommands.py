@@ -4,7 +4,6 @@ import shlex
 import subprocess
 from collections import namedtuple
 
-from psycopg.sql import SQL
 import aiosql
 from .main import special_command
 
