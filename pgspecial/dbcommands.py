@@ -393,72 +393,19 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
         seq_values = cur.fetchone()
 
-    sql = """SELECT a.attname,
-    pg_catalog.format_type(a.atttypid, a.atttypmod) as atttype
-    , (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, true) for 128)
-                     FROM pg_catalog.pg_attrdef d
-                     WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef) as attrdef,
-                    a.attnotnull"""
-    if cur.connection.info.server_version >= 90100:
-        sql += """,\n(SELECT c.collname FROM pg_catalog.pg_collation c, pg_catalog.pg_type t
-                    WHERE c.oid = a.attcollation
-                    AND t.oid = a.atttypid AND a.attcollation <> t.typcollation) AS attcollation"""
-    else:
-        sql += ",\n  NULL AS attcollation"
-    if cur.connection.info.server_version >= 100000:
-        sql += ",\n  a.attidentity"
-    else:
-        sql += ",\n  ''::pg_catalog.char AS attidentity"
     if cur.connection.info.server_version >= 120000:
-        sql += ",\n  a.attgenerated"
+        cur.execute(queries.get_footer_info_12.sql, params)
+    elif cur.connection.info.server_version >= 110000:
+        cur.execute(queries.get_footer_info_11.sql, params)
+    elif cur.connection.info.server_version >= 100000:
+        cur.execute(queries.get_footer_info_10.sql, params)
+    elif cur.connection.info.server_version >= 90200:
+        cur.execute(queries.get_footer_info_902.sql, params)
+    elif cur.connection.info.server_version >= 90100:
+        cur.execute(queries.get_footer_info_901.sql, params)
     else:
-        sql += ",\n  ''::pg_catalog.char AS attgenerated"
-    # index, or partitioned index
-    if tableinfo.relkind == "i" or tableinfo.relkind == "I":
-        if cur.connection.info.server_version >= 110000:
-            sql += (
-                ",\n CASE WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i "
-                "WHERE i.indexrelid = '{oid}') THEN 'yes' ELSE 'no' END AS indexkey"
-            )
-        sql += ",\n pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef"
-    else:
-        sql += """,\n NULL AS indexdef"""
-    if tableinfo.relkind == "f" and cur.connection.info.server_version >= 90200:
-        sql += """, CASE WHEN attfdwoptions IS NULL THEN '' ELSE '(' ||
-                array_to_string(ARRAY(SELECT quote_ident(option_name) ||  ' '
-                || quote_literal(option_value)  FROM
-                pg_options_to_table(attfdwoptions)), ', ') || ')' END AS attfdwoptions"""
-    else:
-        sql += """, NULL AS attfdwoptions"""
-    if verbose:
-        sql += """, a.attstorage"""
-        if (
-            tableinfo.relkind == "r"
-            or tableinfo.relkind == "i"
-            or tableinfo.relkind == "I"
-            or tableinfo.relkind == "m"
-            or tableinfo.relkind == "f"
-            or tableinfo.relkind == "p"
-        ):
-            sql += (
-                ",\n  CASE WHEN a.attstattarget=-1 THEN "
-                "NULL ELSE a.attstattarget END AS attstattarget"
-            )
-        if (
-            tableinfo.relkind == "r"
-            or tableinfo.relkind == "v"
-            or tableinfo.relkind == "m"
-            or tableinfo.relkind == "f"
-            or tableinfo.relkind == "p"
-            or tableinfo.relkind == "c"
-        ):
-            sql += ",\n  pg_catalog.col_description(a.attrelid, a.attnum) as attdescr"
+        cur.execute(queries.get_footer_info.sql, params)
 
-    sql += f""" FROM pg_catalog.pg_attribute a WHERE a.attrelid = '{oid}' AND
-    a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum; """
-
-    log.debug(sql)
-    cur.execute(sql)
     res = cur.fetchall()
     att_cols = {x.name: i for i, x in enumerate(cur.description)}
 
@@ -466,14 +413,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     headers = ["Column", "Type"]
 
     show_modifiers = False
-    if (
-        tableinfo.relkind == "r"
-        or tableinfo.relkind == "p"
-        or tableinfo.relkind == "v"
-        or tableinfo.relkind == "m"
-        or tableinfo.relkind == "f"
-        or tableinfo.relkind == "c"
-    ):
+    if tableinfo.relkind in ["r", "p", "v", "m", "f", "c"]:
         headers.append("Modifiers")
         show_modifiers = True
 
@@ -488,20 +428,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     if verbose:
         headers.append("Storage")
-        if (
-            tableinfo.relkind == "r"
-            or tableinfo.relkind == "m"
-            or tableinfo.relkind == "f"
-        ):
+        if tableinfo.relkind in ["r", "m", "f"]:
             headers.append("Stats target")
         #  Column comments, if the relkind supports this feature. */
-        if (
-            tableinfo.relkind == "r"
-            or tableinfo.relkind == "v"
-            or tableinfo.relkind == "m"
-            or tableinfo.relkind == "c"
-            or tableinfo.relkind == "f"
-        ):
+        if tableinfo.relkind in ["r", "v", "m", "c", "f"]:
+            # do something
             headers.append("Description")
 
     view_def = ""
@@ -560,24 +491,15 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             else:
                 cell.append("???")
 
-            if (
-                tableinfo.relkind == "r"
-                or tableinfo.relkind == "m"
-                or tableinfo.relkind == "f"
-            ):
+            # the logic had additional types when adding to the query
+            # but it was only used with the ones here.
+            if tableinfo.relkind in ["r", "m", "f"]:  #  ["i", "I", "p"]
                 cell.append(row[att_cols["attstattarget"]])
 
             #  /* Column comments, if the relkind supports this feature. */
-            if (
-                tableinfo.relkind == "r"
-                or tableinfo.relkind == "v"
-                or tableinfo.relkind == "m"
-                or tableinfo.relkind == "c"
-                or tableinfo.relkind == "f"
-            ):
+            if tableinfo.relkind in ["r", "v", "m", "c", "f"]:  # ["p"]
                 cell.append(row[att_cols["attdescr"]])
         cells.append(cell)
-
     # Make Footers
 
     status = []
@@ -643,12 +565,8 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # * don't print anything.
         # */
 
-    elif (
-        tableinfo.relkind == "r"
-        or tableinfo.relkind == "p"
-        or tableinfo.relkind == "m"
-        or tableinfo.relkind == "f"
-    ):
+    elif tableinfo.relkind in ["r", "p", "m", "f"]:
+        # do something
         # /* Footer information about a table */
 
         if tableinfo.hasindex:
@@ -831,10 +749,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     # */
                     tgenabled = row[2]
                     if category == 0:
-                        if tgenabled == "O" or tgenabled == True:
+                        if tgenabled == "O" or tgenabled is True:
                             list_trigger = True
                     elif category == 1:
-                        if tgenabled == "D" or tgenabled == False:
+                        if tgenabled == "D" or tgenabled is False:
                             list_trigger = True
                     elif category == 2:
                         if tgenabled == "A":
@@ -842,7 +760,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     elif category == 3:
                         if tgenabled == "R":
                             list_trigger = True
-                    if list_trigger == False:
+                    if list_trigger is False:
                         continue
 
                     # /* Print the category heading once */

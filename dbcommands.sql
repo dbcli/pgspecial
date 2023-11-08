@@ -1385,4 +1385,219 @@ FROM pg_catalog.pg_class c,
 WHERE c.oid = i.inhrelid
   AND i.inhparent = :oid
 ORDER BY c.oid;
+-- name: get_footer_info_12
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+  (SELECT c.collname
+   FROM pg_catalog.pg_collation c,
+        pg_catalog.pg_type t
+   WHERE c.oid = a.attcollation
+     AND t.oid = a.atttypid
+     AND a.attcollation <> t.typcollation) AS attcollation,
+       a.attidentity,
+       a.attgenerated,
+       CASE
+           WHEN a.attnum <=
+                  (SELECT i.indnkeyatts
+                   FROM pg_catalog.pg_index i
+                   WHERE i.indexrelid = :oid) THEN 'yes'
+           ELSE 'no'
+       END AS indexkey,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       CASE
+           WHEN attfdwoptions IS NULL THEN ''
+           ELSE '(' || array_to_string(array
+                                         (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value)
+                                          FROM pg_options_to_table(attfdwoptions)), ', ') || ')'
+       END AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
+-- name: get_footer_info_11
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+  (SELECT c.collname
+   FROM pg_catalog.pg_collation c,
+        pg_catalog.pg_type t
+   WHERE c.oid = a.attcollation
+     AND t.oid = a.atttypid
+     AND a.attcollation <> t.typcollation) AS attcollation,
+       a.attidentity,
+       ''::pg_catalog.char AS attgenerated,
+       CASE
+           WHEN a.attnum <=
+                  (SELECT i.indnkeyatts
+                   FROM pg_catalog.pg_index i
+                   WHERE i.indexrelid = :oid) THEN 'yes'
+           ELSE 'no'
+       END AS indexkey,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       CASE
+           WHEN attfdwoptions IS NULL THEN ''
+           ELSE '(' || array_to_string(array
+                                         (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value)
+                                          FROM pg_options_to_table(attfdwoptions)), ', ') || ')'
+       END AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
+-- name: get_footer_info_10
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
 
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+  (SELECT c.collname
+   FROM pg_catalog.pg_collation c,
+        pg_catalog.pg_type t
+   WHERE c.oid = a.attcollation
+     AND t.oid = a.atttypid
+     AND a.attcollation <> t.typcollation) AS attcollation,
+       a.attidentity,
+       ''::pg_catalog.char AS attgenerated,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       CASE
+           WHEN attfdwoptions IS NULL THEN ''
+           ELSE '(' || array_to_string(array
+                                         (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value)
+                                          FROM pg_options_to_table(attfdwoptions)), ', ') || ')'
+       END AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
+-- name: get_footer_info_902
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+  (SELECT c.collname
+   FROM pg_catalog.pg_collation c,
+        pg_catalog.pg_type t
+   WHERE c.oid = a.attcollation
+     AND t.oid = a.atttypid
+     AND a.attcollation <> t.typcollation) AS attcollation,
+       ''::pg_catalog.char AS attidentity,
+       ''::pg_catalog.char AS attgenerated,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       CASE
+           WHEN attfdwoptions IS NULL THEN ''
+           ELSE '(' || array_to_string(array
+                                         (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value)
+                                          FROM pg_options_to_table(attfdwoptions)), ', ') || ')'
+       END AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
+-- name: get_footer_info_901
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+  (SELECT c.collname
+   FROM pg_catalog.pg_collation c,
+        pg_catalog.pg_type t
+   WHERE c.oid = a.attcollation
+     AND t.oid = a.atttypid
+     AND a.attcollation <> t.typcollation) AS attcollation,
+       ''::pg_catalog.char AS attidentity,
+       ''::pg_catalog.char AS attgenerated,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       NULL AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
+-- name: get_footer_info
+SELECT a.attname,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype,
+  (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
+                    FOR 128)
+   FROM pg_catalog.pg_attrdef d
+   WHERE d.adrelid = a.attrelid
+     AND d.adnum = a.attnum
+     AND a.atthasdef) AS attrdef,
+       a.attnotnull,
+       NULL AS attcollation,
+       ''::pg_catalog.char AS attidentity,
+       ''::pg_catalog.char AS attgenerated,
+       pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS indexdef,
+       NULL AS attfdwoptions,
+       a.attstorage,
+       CASE
+           WHEN a.attstattarget=-1 THEN NULL
+           ELSE a.attstattarget
+       END AS attstattarget,
+       pg_catalog.col_description(a.attrelid, a.attnum) AS attdescr
+FROM pg_catalog.pg_attribute a
+WHERE a.attrelid = :oid
+  AND a.attnum > 0
+  AND NOT a.attisdropped
+ORDER BY a.attnum;
