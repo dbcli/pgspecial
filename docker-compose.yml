@@ -1,18 +1,48 @@
-version: '3.8'
+version: '3'
 
 services:
-  db:
-    image: postgres:15
-    restart: always
+  postgres11:
+    image: postgres:11.18-alpine
+    command: postgres -c shared_preload_libraries=pg_stat_statements
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
-      LC_COLLATE: "en_US.UTF-8"
-      LC_CTYPE: "en_US.UTF-8"
+      POSTGRES_DB: ecto_psql_extras_test
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432" # default port for postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
+      - '5441:5432'
+  postgres12:
+    image: postgres:12.13-alpine
+    command: postgres -c shared_preload_libraries=pg_stat_statements
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ecto_psql_extras_test
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5442:5432'
+  postgres13:
+    image: postgres:13.3-alpine
+    command: postgres -c shared_preload_libraries=pg_stat_statements
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ecto_psql_extras_test
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5443:5432'
+  postgres14:
+    image: postgres:14.6-alpine
+    command: postgres -c shared_preload_libraries=pg_stat_statements
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ecto_psql_extras_test
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5444:5432'
+  postgres15:
+    image: postgres:15.1-alpine
+    command: postgres -c shared_preload_libraries=pg_stat_statements
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: ecto_psql_extras_test
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5445:5432'
