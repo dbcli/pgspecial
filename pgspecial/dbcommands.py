@@ -1996,7 +1996,4 @@ def list_foreign_tables(cur, pattern, verbose):
 
 
 def titleize(column):
-    if column:
-        return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
-    else:
-        return column
+    return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
