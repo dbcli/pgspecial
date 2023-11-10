@@ -1,29 +1,29 @@
 -- name: version
 SELECT version()
 -- name: list_databases
-SELECT d.datname AS "Name",
-       pg_catalog.pg_get_userbyid(d.datdba) AS "Owner",
-       pg_catalog.pg_encoding_to_char(d.encoding) AS "Encoding",
-       d.datcollate AS "Collate",
-       d.datctype AS "Ctype",
-       pg_catalog.array_to_string(d.datacl, e'\n') AS "Access privileges"
+SELECT d.datname AS name,
+       pg_catalog.pg_get_userbyid(d.datdba) AS owner,
+       pg_catalog.pg_encoding_to_char(d.encoding) AS encoding,
+       d.datcollate AS collate,
+       d.datctype AS ctype,
+       pg_catalog.array_to_string(d.datacl, e'\n') AS access_privileges
 FROM pg_catalog.pg_database d
 WHERE d.datname ~ %s
 ORDER BY 1
 -- name: list_databases_verbose
-SELECT d.datname AS "Name",
-       pg_catalog.pg_get_userbyid(d.datdba) AS "Owner",
-       pg_catalog.pg_encoding_to_char(d.encoding) AS "Encoding",
-       d.datcollate AS "Collate",
-       d.datctype AS "Ctype",
-       pg_catalog.array_to_string(d.datacl, e'\n') AS "Access privileges",
+SELECT d.datname AS name,
+       pg_catalog.pg_get_userbyid(d.datdba) AS owner,
+       pg_catalog.pg_encoding_to_char(d.encoding) AS encoding,
+       d.datcollate AS collate,
+       d.datctype AS ctype,
+       pg_catalog.array_to_string(d.datacl, e'\n') AS access_privileges,
        CASE
            WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
            THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
            ELSE 'No Access'
-       END AS "Size",
-       t.spcname AS "Tablespace",
-       pg_catalog.shobj_description(d.oid, 'pg_database') AS "Description"
+       END AS size,
+       t.spcname AS tablespace,
+       pg_catalog.shobj_description(d.oid, 'pg_database') AS description
 FROM pg_catalog.pg_database d
 JOIN pg_catalog.pg_tablespace t ON d.dattablespace = t.oid
 WHERE d.datname ~ %s
@@ -70,8 +70,8 @@ SELECT u.usename AS rolname,
 FROM pg_catalog.pg_user u
 -- name:  list_privileges
 -- docs: ("\\dp", "\\dp [pattern]", "List roles.", aliases=("\\z",))
-SELECT n.nspname AS "Schema",
-       c.relname AS "Name",
+SELECT n.nspname AS schema,
+       c.relname AS name,
        CASE c.relkind
            WHEN 'r' THEN 'table'
            WHEN 'v' THEN 'view'
@@ -84,14 +84,14 @@ SELECT n.nspname AS "Schema",
            WHEN 'f' THEN 'foreign table'
            WHEN 't' THEN 'toast table'
            WHEN 'c' THEN 'composite type'
-       END AS "Type",
-       pg_catalog.array_to_string(c.relacl, e'\n') AS "Access privileges",
+       END AS type,
+       pg_catalog.array_to_string(c.relacl, e'\n') AS access_privileges,
        pg_catalog.array_to_string(ARRAY
          (SELECT attname || e':\n  ' || pg_catalog.array_to_string(attacl, e'\n  ')
           FROM pg_catalog.pg_attribute a
           WHERE attrelid = c.oid
             AND NOT attisdropped
-            AND attacl IS NOT NULL), e'\n') AS "Column privileges",
+            AND attacl IS NOT NULL), e'\n') AS column_privileges,
        pg_catalog.array_to_string(ARRAY
          (SELECT polname ||
              CASE
@@ -116,7 +116,7 @@ SELECT n.nspname AS "Schema",
                  ELSE e''
              END
           FROM pg_catalog.pg_policy pol
-          WHERE polrelid = c.oid), e'\n') AS "Policies"
+          WHERE polrelid = c.oid), e'\n') AS policies
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 WHERE c.relkind IN ('r', 'v', 'm', 'S', 'f', 'p')
@@ -130,16 +130,16 @@ ORDER BY 1, 2
 
 -- name:  list_default_privileges
 -- docs: ("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
-SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
-       n.nspname AS "Schema",
+SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS owner,
+       n.nspname AS schema,
        CASE d.defaclobjtype
        WHEN 'r' THEN 'table'
        WHEN 'S' THEN 'sequence'
        WHEN 'f' THEN 'function'
        WHEN 'T' THEN 'type'
        WHEN 'n' THEN 'schema'
-       END as "Type",
-       pg_catalog.array_to_string(d.defaclacl, e'\n') AS "Access privileges"
+       END as Type,
+       pg_catalog.array_to_string(d.defaclacl, e'\n') AS access_privileges
 FROM pg_catalog.pg_default_acl d
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
 WHERE (n.nspname OPERATOR(pg_catalog. ~) %s COLLATE pg_catalog.default
@@ -149,13 +149,13 @@ ORDER BY 1, 2, 3
 -- name:  list_tablespaces
 -- docs: ("\\db", "\\db[+] [pattern]", "List tablespaces.")
 SELECT
-    n.spcname AS "Name",
-    pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
+    n.spcname AS name,
+    pg_catalog.pg_get_userbyid(n.spcowner) AS owner,
     CASE
         WHEN (EXISTS ( SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location'))
         THEN pg_catalog.pg_tablespace_location(n.oid)
         ELSE 'Not supported'
-    END AS "Location"
+    END AS location
 FROM
     pg_catalog.pg_tablespace n
 WHERE
@@ -164,10 +164,10 @@ ORDER BY 1
 -- name:  list_schemas_verbose
 -- docs: ("\\dn", "\\dn[+] [pattern]", "List schemas.")
 SELECT
-    n.nspname AS "Name",
-    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner",
-    pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges",
-    pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"
+    n.nspname AS name,
+    pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
+    pg_catalog.array_to_string(n.nspacl, E'\\n') AS access_privileges,
+    pg_catalog.obj_description(n.oid, 'pg_namespace') AS description
 FROM
     pg_catalog.pg_namespace n
 WHERE
@@ -179,8 +179,8 @@ ORDER BY 1
 -- name:  list_schemas
 -- docs: ("\\dn", "\\dn[+] [pattern]", "List schemas.")
 SELECT
-    n.nspname AS "Name",
-    pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+    n.nspname AS name,
+    pg_catalog.pg_get_userbyid(n.nspowner) AS owner
 FROM
     pg_catalog.pg_namespace n
 WHERE
@@ -198,7 +198,7 @@ WHERE e.extname ~ :schema
 ORDER BY 1,
          2;
 -- name: describe_extension
-SELECT pg_catalog.pg_describe_object(classid, objid, 0) AS "Object Description"
+SELECT pg_catalog.pg_describe_object(classid, objid, 0) AS object_description
 FROM pg_catalog.pg_depend
 WHERE refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
   AND refobjid = :oid
@@ -206,10 +206,10 @@ WHERE refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
 ORDER BY 1
 -- name:  list_extensions
 SELECT
-    e.extname AS "Name",
-    e.extversion AS "Version",
-    n.nspname AS "Schema",
-    c.description AS "Description"
+    e.extname AS name,
+    e.extversion AS version,
+    n.nspname AS schema,
+    c.description AS description
 FROM
     pg_catalog.pg_extension e
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = e.extnamespace
@@ -237,13 +237,13 @@ ORDER BY 1,
 SELECT
   (SELECT t.alias
    FROM pg_catalog.ts_token_type(c.cfgparser) AS t
-   WHERE t.tokid = m.maptokentype ) AS "Token",
+   WHERE t.tokid = m.maptokentype ) AS token,
        pg_catalog.btrim(ARRAY
                           (SELECT mm.mapdict::pg_catalog.regdictionary
                            FROM pg_catalog.pg_ts_config_map AS mm
                            WHERE mm.mapcfg = m.mapcfg
                              AND mm.maptokentype = m.maptokentype
-                           ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
+                           ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS dictionaries
 FROM pg_catalog.pg_ts_config AS c,
      pg_catalog.pg_ts_config_map AS m
 WHERE c.oid = :oid
@@ -253,9 +253,9 @@ GROUP BY m.mapcfg,
          c.cfgparser
 ORDER BY 1;
 -- name: list_text_search_configurations
-SELECT n.nspname AS "Schema",
-       c.cfgname AS "Name",
-       pg_catalog.obj_description(c.oid, 'pg_ts_config') AS "Description"
+SELECT n.nspname AS schema,
+       c.cfgname AS name,
+       pg_catalog.obj_description(c.oid, 'pg_ts_config') AS description
 FROM pg_catalog.pg_ts_config c
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
 WHERE c.cfgname ~ :schema
@@ -264,8 +264,8 @@ ORDER BY 1,
 -- name:  list_objects_verbose
 -- docs: This method is used by list_tables, list_views, list_materialized views and list_indexes
 SELECT
-    n.nspname AS "Schema",
-    c.relname AS "Name",
+    n.nspname AS schema,
+    c.relname AS name,
     CASE c.relkind
       WHEN 'r' THEN 'table'
       WHEN 'v' THEN 'view'
@@ -275,10 +275,10 @@ SELECT
       WHEN 'S' THEN 'sequence'
       WHEN 's' THEN 'special'
       WHEN 'f' THEN 'foreign table' END
-    as "Type",
-    pg_catalog.pg_get_userbyid(c.relowner) AS "Owner",
-    pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-    pg_catalog.obj_description(c.oid, 'pg_class') as "Description"
+    AS type,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as size,
+    pg_catalog.obj_description(c.oid, 'pg_class') as description
 FROM
     pg_catalog.pg_class c
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -297,8 +297,8 @@ ORDER BY 1, 2
 -- name:  list_objects
 -- docs: This method is used by list_tables, list_views, list_materialized views and list_indexes
 SELECT
-    n.nspname AS "Schema",
-    c.relname AS "Name",
+    n.nspname AS schema,
+    c.relname AS name,
     CASE c.relkind
       WHEN 'r' THEN 'table'
       WHEN 'v' THEN 'view'
@@ -308,8 +308,8 @@ SELECT
       WHEN 'S' THEN 'sequence'
       WHEN 's' THEN 'special'
       WHEN 'f' THEN 'foreign table' END
-    as "Type",
-    pg_catalog.pg_get_userbyid(c.relowner) AS "Owner"
+    as type,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner
 FROM
     pg_catalog.pg_class c
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -328,21 +328,21 @@ ORDER BY 1, 2
 
 -- name:  list_functions
 -- docs: ("\\df", "\\df[+] [pattern]", "List functions.")
-SELECT n.nspname AS "schema",
-       p.proname AS "name",
-       pg_catalog.pg_get_function_result(p.oid) AS "result_data_type",
-       pg_catalog.pg_get_function_arguments(p.oid) AS "argument_data_types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.pg_get_function_result(p.oid) AS result_data_type,
+       pg_catalog.pg_get_function_arguments(p.oid) AS argument_data_types,
        CASE
            WHEN p.prokind = 'a' THEN 'agg'
            WHEN p.prokind = 'w' THEN 'window'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "type",
-       :provolatile AS "volatility",
-       pg_catalog.pg_get_userbyid(p.proowner) AS "owner",
-       l.lanname AS "language",
-       p.prosrc AS "source_code",
-       pg_catalog.obj_description(p.oid, 'pg_proc') AS "description"
+       END AS type,
+       :provolatile AS volatility,
+       pg_catalog.pg_get_userbyid(p.proowner) AS owner,
+       l.lanname AS language,
+       p.prosrc AS source_code,
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS description
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
@@ -352,25 +352,25 @@ ORDER BY 1,
          2,
          4 -- name: list_functions__verbose_11
 
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
-       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.pg_get_function_result(p.oid) AS result_data_type,
+       pg_catalog.pg_get_function_arguments(p.oid) AS argument_data_types,
        CASE
            WHEN p.prokind = 'a' THEN 'agg'
            WHEN p.prokind = 'w' THEN 'window'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type",
+       END AS type,
        CASE
            WHEN p.provolatile = 'i' THEN 'immutable'
            WHEN p.provolatile = 's' THEN 'stable'
            WHEN p.provolatile = 'v' THEN 'volatile'
-       END AS "Volatility",
-       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
-       l.lanname AS "Language",
-       p.prosrc AS "Source code",
-       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+       END AS volatility,
+       pg_catalog.pg_get_userbyid(p.proowner) AS owner,
+       l.lanname AS language,
+       p.prosrc AS source_code,
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS description
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
@@ -391,25 +391,25 @@ ORDER BY 1,
 
 -- name: list_functions_verbose_9
 
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
-       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.pg_get_function_result(p.oid) AS result_data_type,
+       pg_catalog.pg_get_function_arguments(p.oid) AS argument_data_types,
        CASE
            WHEN p.proisagg THEN 'agg'
            WHEN p.proiswindow THEN 'window'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type",
+       END AS type,
        CASE
            WHEN p.provolatile = 'i' THEN 'immutable'
            WHEN p.provolatile = 's' THEN 'stable'
            WHEN p.provolatile = 'v' THEN 'volatile'
-       END AS "Volatility",
-       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
-       l.lanname AS "Language",
-       p.prosrc AS "Source code",
-       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+       END AS volatility,
+       pg_catalog.pg_get_userbyid(p.proowner) AS owner,
+       l.lanname AS language,
+       p.prosrc AS source_code,
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS description
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
@@ -430,23 +430,23 @@ ORDER BY 1,
 
 -- name: list_functions__verbose_9
 
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.format_type(p.prorettype, NULL) AS "Result data type",
-       pg_catalog.oidvectortypes(p.proargtypes) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.format_type(p.prorettype, NULL) AS result_data_type,
+       pg_catalog.oidvectortypes(p.proargtypes) AS argument_data_types,
        CASE
            WHEN p.proisagg THEN 'agg'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type" CASE
+       END AS type CASE
                          WHEN p.provolatile = 'i' THEN 'immutable'
                          WHEN p.provolatile = 's' THEN 'stable'
                          WHEN p.provolatile = 'v' THEN 'volatile'
-                     END AS "Volatility",
-       pg_catalog.pg_get_userbyid(p.proowner) AS "Owner",
-       l.lanname AS "Language",
-       p.prosrc AS "Source code",
-       pg_catalog.obj_description(p.oid, 'pg_proc') AS "Description"
+                     END AS volatility,
+       pg_catalog.pg_get_userbyid(p.proowner) AS owner,
+       l.lanname AS language,
+       p.prosrc AS source_code,
+       pg_catalog.obj_description(p.oid, 'pg_proc') AS description
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 LEFT JOIN pg_catalog.pg_language l ON l.oid = p.prolang
@@ -466,16 +466,16 @@ ORDER BY 1,
          4
 
 -- name: list_functions_11
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
-       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.pg_get_function_result(p.oid) AS result_data_type,
+       pg_catalog.pg_get_function_arguments(p.oid) AS argument_data_types,
        CASE
            WHEN p.prokind = 'a' THEN 'agg'
            WHEN p.prokind = 'w' THEN 'window'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type"
+       END AS type
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 WHERE p.proname ~ :function_pattern
@@ -494,16 +494,16 @@ ORDER BY 1,
          4
 
 -- name: list_functions_9
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.pg_get_function_result(p.oid) AS "Result data type",
-       pg_catalog.pg_get_function_arguments(p.oid) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.pg_get_function_result(p.oid) AS result_data_type,
+       pg_catalog.pg_get_function_arguments(p.oid) AS argument_data_types,
        CASE
            WHEN p.proisagg THEN 'agg'
            WHEN p.proiswindow THEN 'window'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type"
+       END AS type
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 WHERE p.proname ~ :function_pattern
@@ -522,15 +522,15 @@ ORDER BY 1,
          4
 
 -- name: list_functions_9
-SELECT n.nspname AS "Schema",
-       p.proname AS "Name",
-       pg_catalog.format_type(p.prorettype, NULL) AS "Result data type",
-       pg_catalog.oidvectortypes(p.proargtypes) AS "Argument data types",
+SELECT n.nspname AS schema,
+       p.proname AS name,
+       pg_catalog.format_type(p.prorettype, NULL) AS result_data_type,
+       pg_catalog.oidvectortypes(p.proargtypes) AS argument_data_types,
        CASE
            WHEN p.proisagg THEN 'agg'
            WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
            ELSE 'normal'
-       END AS "Type"
+       END AS type
 FROM pg_catalog.pg_proc p
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
 WHERE p.proname ~ :function_pattern
@@ -552,19 +552,19 @@ ORDER BY 1,
 -- name:  list_datatype_verbose_9
 -- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
 SELECT
-    n.nspname AS "Schema",
-    pg_catalog.format_type(t.oid, NULL) AS "Name",
-    t.typname AS "Internal name",
+    n.nspname AS schema,
+    pg_catalog.format_type(t.oid, NULL) AS name,
+    t.typname AS internal_name,
     CASE
     WHEN t.typrelid != 0 THEN CAST('tuple' AS pg_catalog.text)
     WHEN t.typlen < 0 THEN CAST('var' AS pg_catalog.text)
     ELSE CAST(t.typlen AS pg_catalog.text)
-    END AS "Size",
+    END AS size,
     pg_catalog.array_to_string(ARRAY (
             SELECT e.enumlabel FROM pg_catalog.pg_enum e WHERE
-                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS "Elements",
-    pg_catalog.array_to_string(t.typacl, E'\n') AS "Access_privileges",
-    pg_catalog.obj_description(t.oid, 'pg_type') AS "Description"
+                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS elements,
+    pg_catalog.array_to_string(t.typacl, E'\n') AS access_privileges,
+    pg_catalog.obj_description(t.oid, 'pg_type') AS description
 FROM
     pg_catalog.pg_type t
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -595,9 +595,9 @@ ORDER BY 1, 2
 -- name:  list_datatypes_9
 -- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
 SELECT
-    n.nspname AS "Schema",
-    pg_catalog.format_type(t.oid, NULL) AS "Name",
-    pg_catalog.obj_description(t.oid, 'pg_type') as "Description"
+    n.nspname AS schema,
+    pg_catalog.format_type(t.oid, NULL) AS name,
+    pg_catalog.obj_description(t.oid, 'pg_type') as description
 FROM pg_catalog.pg_type t
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE (t.typrelid = 0
@@ -626,19 +626,19 @@ ORDER BY 1, 2
 -- name:  list_datatype_verbose
 -- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
 SELECT
-    n.nspname AS "Schema",
-    pg_catalog.format_type(t.oid, NULL) AS "Name",
-    t.typname AS "Internal name",
+    n.nspname AS schema,
+    pg_catalog.format_type(t.oid, NULL) AS name,
+    t.typname AS internal_name,
     CASE
     WHEN t.typrelid != 0 THEN CAST('tuple' AS pg_catalog.text)
     WHEN t.typlen < 0 THEN CAST('var' AS pg_catalog.text)
     ELSE CAST(t.typlen AS pg_catalog.text)
-    END AS "Size",
+    END AS size,
     pg_catalog.array_to_string(ARRAY (
             SELECT e.enumlabel FROM pg_catalog.pg_enum e WHERE
-                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS "Elements",
-    pg_catalog.array_to_string(t.typacl, E'\n') AS "Access_privileges",
-    pg_catalog.obj_description(t.oid, 'pg_type') AS "Description"
+                e.enumtypid = t.oid ORDER BY e.enumsortorder), E'\n') AS elements,
+    pg_catalog.array_to_string(t.typacl, E'\n') AS access_privileges,
+    pg_catalog.obj_description(t.oid, 'pg_type') AS description
 FROM
     pg_catalog.pg_type t
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
@@ -670,9 +670,9 @@ ORDER BY 1, 2
 -- name:  list_datatypes
 -- docs: ("\\dT", "\\dT[S+] [pattern]", "List data types")
 SELECT
-    n.nspname AS "Schema",
-    pg_catalog.format_type(t.oid, NULL) AS "Name",
-    pg_catalog.obj_description(t.oid, 'pg_type') as "Description"
+    n.nspname AS schema,
+    pg_catalog.format_type(t.oid, NULL) AS name,
+    pg_catalog.obj_description(t.oid, 'pg_type') as description
 FROM pg_catalog.pg_type t
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
 WHERE (t.typrelid = 0
@@ -703,9 +703,9 @@ ORDER BY 1, 2
 -- name:  list_domains_verbose
 -- docs: ("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
 SELECT
-    n.nspname AS "Schema",
-    t.typname AS "Name",
-    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+    n.nspname AS schema,
+    t.typname AS name,
+    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS type,
     pg_catalog.ltrim((COALESCE((
             SELECT
                 (' collate ' || c.collname)
@@ -715,14 +715,14 @@ SELECT
                 AND bt.oid = t.typbasetype
                 AND t.typcollation <> bt.typcollation), '') ||
         CASE WHEN t.typnotnull THEN ' not null' ELSE '' END) ||
-    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS "Modifier",
+    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS modifier,
     pg_catalog.array_to_string(ARRAY (
             SELECT
                 pg_catalog.pg_get_constraintdef(r.oid, TRUE)
             FROM pg_catalog.pg_constraint AS r
-            WHERE t.oid = r.contypid), ' ') AS "Check",
-        pg_catalog.array_to_string(t.typacl, E'\n') AS "Access privileges",
-    d.description AS "Description"
+            WHERE t.oid = r.contypid), ' ') AS check,
+        pg_catalog.array_to_string(t.typacl, E'\n') AS access_privileges,
+    d.description AS description
 FROM
     pg_catalog.pg_type AS t
     LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
@@ -743,9 +743,9 @@ ORDER BY 1, 2
 -- name:  list_domains
 -- docs: ("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
 SELECT
-    n.nspname AS "Schema",
-    t.typname AS "Name",
-    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+    n.nspname AS schema,
+    t.typname AS name,
+    pg_catalog.format_type(t.typbasetype, t.typtypmod) AS type,
     pg_catalog.ltrim((COALESCE((
             SELECT
                 (' collate ' || c.collname)
@@ -755,12 +755,12 @@ SELECT
                 AND bt.oid = t.typbasetype
                 AND t.typcollation <> bt.typcollation), '') ||
         CASE WHEN t.typnotnull THEN ' not null' ELSE '' END) ||
-    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS "Modifier",
+    CASE WHEN t.typdefault IS NOT NULL THEN (' default ' || t.typdefault) ELSE '' END) AS modifier,
     pg_catalog.array_to_string(ARRAY (
             SELECT
                 pg_catalog.pg_get_constraintdef(r.oid, TRUE)
             FROM pg_catalog.pg_constraint AS r
-            WHERE t.oid = r.contypid), ' ') AS "Check"
+            WHERE t.oid = r.contypid), ' ') AS check
 FROM
     pg_catalog.pg_type AS t
     LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace
@@ -790,14 +790,14 @@ ORDER BY 2,3
 
 -- name: get_column_info
 SELECT
-    a.attname AS "name",
-    a.attnotnull AS "not_null",
-    a.attidentity AS "identity",
-    a.attgenerated AS "generated",
-    pg_catalog.format_type(a.atttypid, a.atttypmod) AS "data_type",
-    pg_catalog.col_description(a.attrelid, a.attnum) AS "description",
-    pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS "index_definition",
-    pg_catalog.pg_get_viewdef(:oid::pg_catalog.oid, TRUE) AS "view_definition",
+    a.attname AS name,
+    a.attnotnull AS not_null,
+    a.attidentity AS identity,
+    a.attgenerated AS generated,
+    pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+    pg_catalog.col_description(a.attrelid, a.attnum) AS description,
+    pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) AS index_definition,
+    pg_catalog.pg_get_viewdef(:oid::pg_catalog.oid, TRUE) AS view_definition,
     (
         SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE) FOR 128)
         FROM
@@ -805,7 +805,7 @@ SELECT
         WHERE
             d.adrelid = a.attrelid
             AND d.adnum = a.attnum
-            AND a.atthasdef) AS "default_value",
+            AND a.atthasdef) AS default_value,
     (
         SELECT
             c.collname
@@ -815,20 +815,20 @@ SELECT
         WHERE
             c.oid = a.attcollation
             AND t.oid = a.atttypid
-            AND a.attcollation <> t.typcollation) AS "collation",
+            AND a.attcollation <> t.typcollation) AS collation,
     CASE
         WHEN a.attnum <= (SELECT i.indnkeyatts FROM pg_catalog.pg_index i WHERE i.indexrelid = :oid) THEN 'yes'
         ELSE 'no'
-    END AS "is_key",
+    END AS is_key,
     CASE
         WHEN a.attstattarget = - 1 THEN NULL
         ELSE a.attstattarget
-    END AS "stat_target",
+    END AS stat_target,
     CASE
         WHEN attfdwoptions IS NULL THEN ''
         ELSE '(' || array_to_string(ARRAY
             (SELECT quote_ident(option_name) || ' ' || quote_literal(option_value) FROM pg_options_to_table(attfdwoptions)), ', ') || ')'
-    END AS "fdw_options"
+    END AS fdw_options
 FROM
     pg_catalog.pg_attribute a
 WHERE
@@ -878,7 +878,7 @@ WHERE
 SELECT
     pg_catalog.quote_ident(nspname) || '.' ||
     pg_catalog.quote_ident(relname) || '.' ||
-    pg_catalog.quote_ident(attname) AS "column"
+    pg_catalog.quote_ident(attname) AS column
 FROM
     pg_catalog.pg_class c
     INNER JOIN pg_catalog.pg_depend d ON c.oid = d.refobjid
@@ -1020,12 +1020,12 @@ pg_catalog.pg_get_functiondef(
 -- name:  list_foreign_tables_verbose
 -- docs: ("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
 SELECT
-    n.nspname AS "Schema",
-    c.relname AS "Name",
-    'foreign table' AS "Type",
-    pg_catalog.pg_get_userbyid(c.relowner) AS "Owner",
-    pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) AS "Size",
-    pg_catalog.obj_description(c.oid, 'pg_class') AS "Description"
+    n.nspname AS schema,
+    c.relname AS name,
+    'foreign table' AS type,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) AS size,
+    pg_catalog.obj_description(c.oid, 'pg_class') AS description
 FROM
     pg_catalog.pg_class c
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -1040,10 +1040,10 @@ ORDER BY 1, 2
 -- name:  list_foreign_tables
 -- docs: ("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
 SELECT
-    n.nspname AS "Schema",
-    c.relname AS "Name",
-    'foreign table' AS "Type",
-    pg_catalog.pg_get_userbyid(c.relowner) AS "Owner"
+    n.nspname AS schema,
+    c.relname AS name,
+    'foreign table' AS type,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner
 FROM
     pg_catalog.pg_class c
     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -1387,7 +1387,7 @@ WHERE c.oid = i.inhrelid
 ORDER BY c.oid;
 -- name: get_footer_info_12
 SELECT a.attname,
-       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
+       pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype,
   (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
                     FOR 128)
    FROM pg_catalog.pg_attrdef d
@@ -1474,7 +1474,6 @@ ORDER BY a.attnum;
 -- name: get_footer_info_10
 SELECT a.attname,
        pg_catalog.format_type(a.atttypid, a.atttypmod) AS atttype ,
-
   (SELECT substring(pg_catalog.pg_get_expr(d.adbin, d.adrelid, TRUE)
                     FOR 128)
    FROM pg_catalog.pg_attrdef d

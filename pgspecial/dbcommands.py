@@ -37,7 +37,7 @@ def list_databases(cur, pattern, verbose):
     else:
         cur.execute(queries.list_databases.sql, (pattern,))
 
-    headers = [x.name for x in cur.description] if cur.description else None
+    headers = [titleize(x.name) for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -71,7 +71,7 @@ def list_privileges(cur, pattern, verbose):
         (param, table, schema),
     )
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -82,7 +82,7 @@ def list_default_privileges(cur, pattern, verbose):
     pattern = f"^({pattern})$" if pattern else ".*"
     cur.execute(queries.list_default_privileges.sql, (pattern, pattern))
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -93,7 +93,7 @@ def list_tablespaces(cur, pattern, **_):
     pattern = pattern or ".*"
     cur.execute(queries.list_tablespaces.sql, {"pattern": pattern})
 
-    headers = [x.name for x in cur.description] if cur.description else None
+    headers = [titleize(x.name) for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -107,7 +107,7 @@ def list_schemas(cur, pattern, verbose):
         cur.execute(queries.list_schemas.sql, {"pattern": pattern})
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -123,7 +123,7 @@ def list_extensions(cur, pattern, verbose):
     def _describe_extension(cur, oid):
         cur.execute(queries.describe_extension.sql, {"oid": oid})
 
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return cur, headers, cur.statusmessage
 
     if cur.connection.info.server_version < 90100:
@@ -152,7 +152,7 @@ def list_extensions(cur, pattern, verbose):
     cur.execute(queries.list_extensions.sql, {"pattern": pattern})
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -181,7 +181,7 @@ def list_objects(cur, pattern, verbose, relkinds):
         cur.execute(queries.list_objects.sql, params)
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -235,7 +235,7 @@ def list_functions(cur, pattern, verbose):
             cur.execute(queries.list_functions.sql, params)
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -259,7 +259,7 @@ def list_datatypes(cur, pattern, verbose):
             cur.execute(queries.list_datatypes.sql, params)
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -272,7 +272,7 @@ def list_domains(cur, pattern, verbose):
     else:
         cur.execute(queries.list_domains.sql, params)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -286,7 +286,7 @@ def list_text_search_configurations(cur, pattern, verbose):
 
     def _fetch_oid_details(cur, oid):
         cur.execute(queries.fetch_oid_details.sql, {"oid": oid})
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return cur, headers, cur.statusmessage
 
     if cur.connection.info.server_version < 80300:
@@ -318,7 +318,7 @@ def list_text_search_configurations(cur, pattern, verbose):
     cur.execute(queries.list_text_search_configurations.sql, {"schema": schema})
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -575,7 +575,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Indexes:\n")
             for row in cur:
-                # /* untranslated index name */
+                # /* untranslated indetitleize(x.name) */
                 status.append(f'''    "{row[0]}"''')
 
                 # /* If exclusion constraint, print the constraintdef */
@@ -923,7 +923,7 @@ def show_function_definition(cur, pattern, verbose):
         {"pattern": pattern},
     )
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         if verbose:
             (source,) = cur.fetchone()
             rows = _FakeCursor()
@@ -958,7 +958,11 @@ def list_foreign_tables(cur, pattern, verbose):
     else:
         cur.execute(queries.list_foreign_tables.sql, {"pattern": pattern})
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
+
+
+def titleize(column):
+    return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
