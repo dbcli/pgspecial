@@ -781,7 +781,7 @@ SELECT c.relchecks,
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_class tc ON (c.reltoastrelid = tc.oid)
 WHERE c.oid = :oid
--- name: describe_one_table_details_10
+-- name: describe_one_table_details_11
 SELECT c.relchecks,
        c.relkind,
        c.relhasindex,
