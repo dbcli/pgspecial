@@ -32,13 +32,10 @@ log = logging.getLogger(__name__)
 @special_command("\\l", "\\l[+] [pattern]", "List databases.", aliases=("\\list",))
 def list_databases(cur, pattern, verbose):
     pattern = pattern or ".*"
-    if verbose:
-        cur.execute(queries.list_databases_verbose.sql, (pattern,))
-    else:
-        cur.execute(queries.list_databases.sql, (pattern,))
-
-    headers = [titleize(x.name) for x in cur.description] if cur.description else None
-    return [(None, cur, headers, cur.statusmessage)]
+    cur.execute(queries.list_databases.sql, {"pattern": pattern})
+    hidden_columns = ["size", "tablespace", "description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
 @special_command("\\du", "\\du[+] [pattern]", "List roles.")
@@ -47,21 +44,19 @@ def list_roles(cur, pattern, verbose):
 
     pattern = pattern or ".*"
     if cur.connection.info.server_version > 90000:
-        if verbose:
-            cur.execute(queries.list_roles_9_verbose.sql, (pattern,))
-        else:
-            cur.execute(queries.list_roles_9.sql, (pattern,))
+        cur.execute(queries.list_roles_9.sql, {"pattern": pattern})
     else:
         cur.execute(queries.list_roles.sql)
 
-    if cur.description:
-        headers = [x.name for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    hidden_columns = ["description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns, pretty=False)
+    return results
 
 
 @special_command("\\dp", "\\dp [pattern]", "List privileges.", aliases=("\\z",))
 def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
+
     param = bool(pattern)
     schema, table = sql_name_pattern(pattern)
     schema = schema or ".*"
@@ -70,9 +65,8 @@ def list_privileges(cur, pattern, verbose):
         queries.list_privileges.sql,
         (param, table, schema),
     )
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    results = prepare_results(cur)
+    return results
 
 
 @special_command("\\ddp", "\\ddp [pattern]", "Lists default access privilege settings.")
@@ -81,9 +75,8 @@ def list_default_privileges(cur, pattern, verbose):
 
     pattern = f"^({pattern})$" if pattern else ".*"
     cur.execute(queries.list_default_privileges.sql, (pattern, pattern))
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    results = prepare_results(cur)
+    return results
 
 
 @special_command("\\db", "\\db[+] [pattern]", "List tablespaces.")
@@ -92,23 +85,19 @@ def list_tablespaces(cur, pattern, **_):
 
     pattern = pattern or ".*"
     cur.execute(queries.list_tablespaces.sql, {"pattern": pattern})
-
-    headers = [titleize(x.name) for x in cur.description] if cur.description else None
-    return [(None, cur, headers, cur.statusmessage)]
+    results = prepare_results(cur)
+    return results
 
 
 @special_command("\\dn", "\\dn[+] [pattern]", "List schemas.")
 def list_schemas(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
     pattern = pattern or ".*"
-    if verbose:
-        cur.execute(queries.list_schemas_verbose.sql, {"pattern": pattern})
-    else:
-        cur.execute(queries.list_schemas.sql, {"pattern": pattern})
+    cur.execute(queries.list_schemas.sql, {"pattern": pattern})
 
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    hidden_columns = ["access_privileges", "description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
 # https://github.com/postgres/postgres/blob/master/src/bin/psql/describe.c#L5471-L5638
@@ -175,10 +164,10 @@ def list_objects(cur, pattern, verbose, relkinds):
         "table_pattern": table_pattern,
         "relkinds": relkinds,
     }
-    if verbose:
-        cur.execute(queries.list_objects_verbose.sql, params)
-    else:
-        cur.execute(queries.list_objects.sql, params)
+    cur.execute(queries.list_objects.sql, params)
+    hidden_columns = ["size", "description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns)
+    return results
 
     if cur.description:
         headers = [titleize(x.name) for x in cur.description]
@@ -219,24 +208,19 @@ def list_functions(cur, pattern, verbose):
     }
 
     if cur.connection.info.server_version >= 110000:
-        if verbose:
-            cur.execute(queries.list_functions_verbose_11.sql, params)
-        else:
-            cur.execute(queries.list_functions_11.sql, params)
+        cur.execute(queries.list_functions_11.sql, params)
     elif cur.connection.info.server_version > 90000:
-        if verbose:
-            cur.execute(queries.list_functions_verbose_9.sql, params)
-        else:
-            cur.execute(queries.list_functions_9.sql, params)
+        cur.execute(queries.list_functions_9.sql, params)
     else:
-        if verbose:
-            cur.execute(queries.list_functions_verbose.sql, params)
-        else:
-            cur.execute(queries.list_functions.sql, params)
+        cur.execute(queries.list_functions.sql, params)
 
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    hidden_columns = (
+        ["volatility", "owner", "language", "source_code", "description"]
+        if not verbose
+        else []
+    )
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
 @special_command("\\dT", "\\dT[S+] [pattern]", "List data types")
@@ -248,32 +232,27 @@ def list_datatypes(cur, pattern, verbose):
         "type_pattern": type_pattern or ".*",
     }
     if cur.connection.info.server_version > 90000:
-        if verbose:
-            cur.execute(queries.list_datatypes_verbose_9.sql, params)
-        else:
-            cur.execute(queries.list_datatypes_9.sql, params)
+        cur.execute(queries.list_datatypes_9.sql, params)
     else:
-        if verbose:
-            cur.execute(queries.list_datatypes_verbose.sql, params)
-        else:
-            cur.execute(queries.list_datatypes.sql, params)
+        cur.execute(queries.list_datatypes.sql, params)
 
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    hidden_columns = (
+        ["internal_name", "size", "elements", "access_privileges"]
+        if not verbose
+        else []
+    )
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
 @special_command("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
 def list_domains(cur, pattern, verbose):
     schema_pattern, name_pattern = sql_name_pattern(pattern)
     params = {"schema_pattern": schema_pattern or ".*", "pattern": name_pattern or ".*"}
-    if verbose:
-        cur.execute(queries.list_domains_verbose.sql, params)
-    else:
-        cur.execute(queries.list_domains.sql, params)
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
+    cur.execute(queries.list_domains.sql, params)
+    hidden_columns = ["access_privileges", "description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
 @special_command("\\dF", "\\dF[+] [pattern]", "List text search configurations.")
@@ -953,16 +932,34 @@ def shell_command(cur, pattern, verbose):
 def list_foreign_tables(cur, pattern, verbose):
     _, tbl_name = sql_name_pattern(pattern)
     pattern = f"^({tbl_name})$" if tbl_name else ".*"
-    if verbose:
-        cur.execute(queries.list_foreign_tables_verbose.sql, {"pattern": pattern})
-    else:
-        cur.execute(queries.list_foreign_tables.sql, {"pattern": pattern})
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
-    else:
-        return [(None, None, None, cur.statusmessage)]
+    cur.execute(queries.list_foreign_tables.sql, {"pattern": pattern})
+    hidden_columns = ["size", "description"] if not verbose else []
+    results = prepare_results(cur, hidden_columns)
+    return results
 
 
-def titleize(column):
-    return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
+def prepare_results(cur, hidden_columns=[], pretty=True):
+    headers = [
+        titleize(h.name, pretty)
+        for h in cur.description
+        if h.name not in hidden_columns
+    ]
+    rows = map(
+        lambda row: tuple(
+            [
+                item
+                for item, header in zip(row, cur.description)
+                if header.name not in hidden_columns
+            ]
+        ),
+        cur,
+    )
+
+    return [(None, rows, headers, cur.statusmessage)]
+
+
+def titleize(column, pretty=True):
+    if pretty:
+        return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
+    else:
+        return column
