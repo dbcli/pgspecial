@@ -1,5 +1,5 @@
 -- name: version
-SELECT version()
+SELECT setting FROM pg_settings WHERE name = 'server_version_num'
 -- name: list_databases
 SELECT d.datname AS name,
        pg_catalog.pg_get_userbyid(d.datdba) AS owner,
