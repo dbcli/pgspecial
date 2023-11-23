@@ -7,7 +7,7 @@ from collections import namedtuple
 import aiosql
 from .main import special_command
 
-queries = aiosql.from_path("dbcommands.sql", "psycopg2")
+queries = aiosql.from_path("pgspecial/dbcommands.sql", "psycopg2")
 
 TableInfo = namedtuple(
     "TableInfo",
