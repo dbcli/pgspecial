@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import logging
+from pathlib import Path
 import shlex
 import subprocess
 from collections import namedtuple
@@ -7,7 +8,10 @@ from collections import namedtuple
 import aiosql
 from .main import special_command
 
-queries = aiosql.from_path("pgspecial/dbcommands.sql", "psycopg2")
+
+dir_path = Path(__file__).parent
+sql_path = dir_path / "sql" / "dbcommands.sql"
+queries = aiosql.from_path(sql_path, "psycopg2")
 
 TableInfo = namedtuple(
     "TableInfo",
