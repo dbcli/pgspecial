@@ -997,7 +997,7 @@ FROM pg_catalog.pg_constraint r
 WHERE r.conrelid = :oid
   AND r.contype = 'c'
 ORDER BY 1;
--- name: get_foreign_key_constratints
+-- name: get_foreign_key_constraints
 SELECT conname,
        pg_catalog.pg_get_constraintdef(r.oid, TRUE) AS condef
 FROM pg_catalog.pg_constraint r
