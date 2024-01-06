@@ -17,8 +17,8 @@ TableInfo = namedtuple(
         "hasrules",
         "hastriggers",
         "hasoids",
-        "tablespace",
         "reloptions",
+        "tablespace",
         "reloftype",
         "relpersistence",
         "relispartition",
@@ -32,12 +32,12 @@ log = logging.getLogger(__name__)
 def list_databases(cur, pattern, verbose):
     params = {}
     query = SQL(
-        """SELECT d.datname as "Name",
-        pg_catalog.pg_get_userbyid(d.datdba) as "Owner",
-        pg_catalog.pg_encoding_to_char(d.encoding) as "Encoding",
-        d.datcollate as "Collate",
-        d.datctype as "Ctype",
-        pg_catalog.array_to_string(d.datacl, E'\n') AS "Access privileges"
+        """SELECT d.datname as name,
+        pg_catalog.pg_get_userbyid(d.datdba) as owner,
+        pg_catalog.pg_encoding_to_char(d.encoding) as encoding,
+        d.datcollate as collate,
+        d.datctype as ctype,
+        pg_catalog.array_to_string(d.datacl, E'\n') AS access_privileges
         {verbose_fields}
         FROM pg_catalog.pg_database d
         {verbose_tables}
@@ -46,13 +46,13 @@ def list_databases(cur, pattern, verbose):
     )
     if verbose:
         params["verbose_fields"] = SQL(
-            ''',
+            """,
             CASE WHEN pg_catalog.has_database_privilege(d.datname, 'CONNECT')
                     THEN pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname))
                     ELSE 'No Access'
-            END as "Size",
+            END as size,
             t.spcname as "Tablespace",
-            pg_catalog.shobj_description(d.oid, 'pg_database') as "Description"'''
+            pg_catalog.shobj_description(d.oid, 'pg_database') as description"""
         )
         params["verbose_tables"] = SQL(
             """JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid"""
@@ -70,7 +70,7 @@ def list_databases(cur, pattern, verbose):
     log.debug(formatted_query.as_string(cur))
     cur.execute(formatted_query)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
@@ -144,20 +144,21 @@ def list_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
     sql = SQL(
         """
-        SELECT n.nspname as "Schema",
-          c.relname as "Name",
+        SELECT n.nspname as schema,
+          c.relname as name,
           CASE c.relkind WHEN 'r' THEN 'table'
                          WHEN 'v' THEN 'view'
                          WHEN 'm' THEN 'materialized view'
                          WHEN 'S' THEN 'sequence'
                          WHEN 'f' THEN 'foreign table'
-                         WHEN 'p' THEN 'partitioned table' END as "Type",
-          pg_catalog.array_to_string(c.relacl, E'\n') AS "Access privileges",
+                         WHEN 'p' THEN 'partitioned table' END as type,
+          pg_catalog.array_to_string(c.relacl, E'\n') AS access_privileges,
+
           pg_catalog.array_to_string(ARRAY(
             SELECT attname || E':\n  ' || pg_catalog.array_to_string(attacl, E'\n  ')
             FROM pg_catalog.pg_attribute a
             WHERE attrelid = c.oid AND NOT attisdropped AND attacl IS NOT NULL
-          ), E'\n') AS "Column privileges",
+          ), E'\n') AS column_privileges,
           pg_catalog.array_to_string(ARRAY(
             SELECT polname
             || CASE WHEN NOT polpermissive THEN
@@ -186,7 +187,7 @@ def list_privileges(cur, pattern, verbose):
                END
             FROM pg_catalog.pg_policy pol
             WHERE polrelid = c.oid), E'\n')
-            AS "Policies"
+            AS policies
         FROM pg_catalog.pg_class c
              LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
     """
@@ -218,7 +219,7 @@ def list_privileges(cur, pattern, verbose):
     log.debug(sql.as_string(cur))
     cur.execute(sql)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -227,14 +228,14 @@ def list_default_privileges(cur, pattern, verbose):
     """Returns (title, rows, headers, status)"""
     sql = SQL(
         """
-    SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS "Owner",
-    n.nspname AS "Schema",
+    SELECT pg_catalog.pg_get_userbyid(d.defaclrole) AS owner,
+    n.nspname AS schema,
     CASE d.defaclobjtype WHEN 'r' THEN 'table'
                          WHEN 'S' THEN 'sequence'
                          WHEN 'f' THEN 'function'
                          WHEN 'T' THEN 'type'
-                         WHEN 'n' THEN 'schema' END AS "Type",
-    pg_catalog.array_to_string(d.defaclacl, E'\n') AS "Access privileges"
+                         WHEN 'n' THEN 'schema' END as type,
+    pg_catalog.array_to_string(d.defaclacl, E'\n') AS access_privileges
     FROM pg_catalog.pg_default_acl d
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.defaclnamespace
         {where_clause}
@@ -256,7 +257,7 @@ def list_default_privileges(cur, pattern, verbose):
     log.debug(sql.format(**params).as_string(cur))
     cur.execute(sql.format(**params))
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -273,8 +274,8 @@ def list_tablespaces(cur, pattern, **_):
     (is_location,) = cur.fetchone()
 
     sql = SQL(
-        """SELECT n.spcname AS "Name", pg_catalog.pg_get_userbyid(n.spcowner) AS "Owner",
-                {location} AS "Location" FROM pg_catalog.pg_tablespace n
+        """SELECT n.spcname AS name, pg_catalog.pg_get_userbyid(n.spcowner) AS owner,
+                {location} AS location FROM pg_catalog.pg_tablespace n
                 {pattern}
                 ORDER BY 1
               """
@@ -295,7 +296,7 @@ def list_tablespaces(cur, pattern, **_):
     log.debug(formatted_query.as_string(cur))
     cur.execute(formatted_query)
 
-    headers = [x.name for x in cur.description] if cur.description else None
+    headers = [titleize(x.name) for x in cur.description] if cur.description else None
     return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -307,7 +308,7 @@ def list_schemas(cur, pattern, verbose):
 
     params = {}
     sql = SQL(
-        """SELECT n.nspname AS "Name", pg_catalog.pg_get_userbyid(n.nspowner) AS "Owner"
+        """SELECT n.nspname AS name, pg_catalog.pg_get_userbyid(n.nspowner) AS owner
                 {verbose}
               FROM pg_catalog.pg_namespace n WHERE n.nspname
                 {pattern}
@@ -317,7 +318,7 @@ def list_schemas(cur, pattern, verbose):
 
     if verbose:
         params["verbose"] = SQL(
-            ''', pg_catalog.array_to_string(n.nspacl, E'\\n') AS "Access privileges", pg_catalog.obj_description(n.oid, 'pg_namespace') AS "Description"'''
+            """, pg_catalog.array_to_string(n.nspacl, E'\\n') AS access_privileges, pg_catalog.obj_description(n.oid, 'pg_namespace') AS description"""
         )
     else:
         params["verbose"] = SQL("")
@@ -332,7 +333,7 @@ def list_schemas(cur, pattern, verbose):
     log.debug(formatted_query.as_string(cur))
     cur.execute(formatted_query)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -342,7 +343,8 @@ def list_extensions(cur, pattern, verbose):
     def _find_extensions(cur, pattern):
         sql = SQL(
             """
-            SELECT e.extname, e.oid FROM pg_catalog.pg_extension e
+            SELECT e.extname, e.oid
+            FROM pg_catalog.pg_extension e
             {pattern}
             ORDER BY 1, 2;
         """
@@ -364,7 +366,7 @@ def list_extensions(cur, pattern, verbose):
         sql = SQL(
             """
             SELECT  pg_catalog.pg_describe_object(classid, objid, 0)
-                    AS "Object Description"
+                    AS object_description
             FROM    pg_catalog.pg_depend
             WHERE   refclassid = 'pg_catalog.pg_extension'::pg_catalog.regclass
                     AND refobjid = {}
@@ -374,7 +376,7 @@ def list_extensions(cur, pattern, verbose):
         log.debug(sql.as_string(cur))
         cur.execute(sql)
 
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return cur, headers, cur.statusmessage
 
     if cur.connection.info.server_version < 90100:
@@ -397,10 +399,10 @@ def list_extensions(cur, pattern, verbose):
 
     sql = SQL(
         """
-      SELECT e.extname AS "Name",
-             e.extversion AS "Version",
-             n.nspname AS "Schema",
-             c.description AS "Description"
+      SELECT e.extname AS name,
+             e.extversion AS version,
+             n.nspname AS schema,
+             c.description AS description
       FROM pg_catalog.pg_extension e
            LEFT JOIN pg_catalog.pg_namespace n
              ON n.oid = e.extnamespace
@@ -423,7 +425,7 @@ def list_extensions(cur, pattern, verbose):
     log.debug(formatted_query.as_string(cur))
     cur.execute(formatted_query)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -443,23 +445,23 @@ def list_objects(cur, pattern, verbose, relkinds):
     if verbose:
         params["verbose_columns"] = SQL(
             """
-            ,pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+            ,pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as size,
+            pg_catalog.obj_description(c.oid, 'pg_class') as description """
         )
     else:
         params["verbose_columns"] = SQL("")
 
     sql = SQL(
-        """SELECT n.nspname as "Schema",
-                    c.relname as "Name",
+        """SELECT n.nspname as schema,
+                    c.relname as name,
                     CASE c.relkind
                       WHEN 'r' THEN 'table' WHEN 'v' THEN 'view'
                       WHEN 'p' THEN 'partitioned table'
                       WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index'
                       WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special'
                       WHEN 'f' THEN 'foreign table' END
-                    as "Type",
-                    pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
+                    as type,
+                    pg_catalog.pg_get_userbyid(c.relowner) as owner
                     {verbose_columns}
             FROM    pg_catalog.pg_class c
                     LEFT JOIN pg_catalog.pg_namespace n
@@ -492,7 +494,7 @@ def list_objects(cur, pattern, verbose, relkinds):
     cur.execute(formatted_query)
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -530,10 +532,10 @@ def list_functions(cur, pattern, verbose):
                  WHEN p.provolatile = 's' THEN 'stable'
                  WHEN p.provolatile = 'v' THEN 'volatile'
             END as "Volatility",
-            pg_catalog.pg_get_userbyid(p.proowner) as "Owner",
+            pg_catalog.pg_get_userbyid(p.proowner) as owner,
           l.lanname as "Language",
           p.prosrc as "Source code",
-          pg_catalog.obj_description(p.oid, 'pg_proc') as "Description" """
+          pg_catalog.obj_description(p.oid, 'pg_proc') as description """
 
         verbose_table = """ LEFT JOIN pg_catalog.pg_language l
                                 ON l.oid = p.prolang"""
@@ -543,8 +545,8 @@ def list_functions(cur, pattern, verbose):
     if cur.connection.info.server_version >= 110000:
         sql = (
             """
-            SELECT  n.nspname as "Schema",
-                    p.proname as "Name",
+            SELECT  n.nspname as schema,
+                    p.proname as name,
                     pg_catalog.pg_get_function_result(p.oid)
                       as "Result data type",
                     pg_catalog.pg_get_function_arguments(p.oid)
@@ -555,7 +557,7 @@ def list_functions(cur, pattern, verbose):
                         WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
                             THEN 'trigger'
                         ELSE 'normal'
-                    END as "Type" """
+                    END as type """
             + verbose_columns
             + """
             FROM    pg_catalog.pg_proc p
@@ -568,8 +570,8 @@ def list_functions(cur, pattern, verbose):
     elif cur.connection.info.server_version > 90000:
         sql = (
             """
-            SELECT  n.nspname as "Schema",
-                    p.proname as "Name",
+            SELECT  n.nspname as schema,
+                    p.proname as name,
                     pg_catalog.pg_get_function_result(p.oid)
                       as "Result data type",
                     pg_catalog.pg_get_function_arguments(p.oid)
@@ -580,7 +582,7 @@ def list_functions(cur, pattern, verbose):
                         WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype
                             THEN 'trigger'
                         ELSE 'normal'
-                    END as "Type" """
+                    END as type """
             + verbose_columns
             + """
             FROM    pg_catalog.pg_proc p
@@ -593,15 +595,15 @@ def list_functions(cur, pattern, verbose):
     else:
         sql = (
             """
-            SELECT  n.nspname as "Schema",
-                    p.proname as "Name",
+            SELECT  n.nspname as schema,
+                    p.proname as name,
                     pg_catalog.format_type(p.prorettype, NULL) as "Result data type",
                     pg_catalog.oidvectortypes(p.proargtypes) as "Argument data types",
                      CASE
                         WHEN p.proisagg THEN 'agg'
                         WHEN p.prorettype = 'pg_catalog.trigger'::pg_catalog.regtype THEN 'trigger'
                         ELSE 'normal'
-                    END as "Type" """
+                    END as type """
             + verbose_columns
             + """
             FROM    pg_catalog.pg_proc p
@@ -635,38 +637,38 @@ def list_functions(cur, pattern, verbose):
     cur.execute(sql, params)
 
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
 @special_command("\\dT", "\\dT[S+] [pattern]", "List data types")
 def list_datatypes(cur, pattern, verbose):
-    sql = """SELECT n.nspname as "Schema",
-                    pg_catalog.format_type(t.oid, NULL) AS "Name", """
+    sql = """SELECT n.nspname as schema,
+                    pg_catalog.format_type(t.oid, NULL) AS name, """
 
     if verbose:
-        sql += r''' t.typname AS "Internal name",
+        sql += r""" t.typname AS internal_name,
                     CASE
                         WHEN t.typrelid != 0
                             THEN CAST('tuple' AS pg_catalog.text)
                         WHEN t.typlen < 0
                             THEN CAST('var' AS pg_catalog.text)
                         ELSE CAST(t.typlen AS pg_catalog.text)
-                    END AS "Size",
+                    END AS size,
                     pg_catalog.array_to_string(
                         ARRAY(
                               SELECT e.enumlabel
                               FROM pg_catalog.pg_enum e
                               WHERE e.enumtypid = t.oid
                               ORDER BY e.enumsortorder
-                          ), E'\n') AS "Elements",
+                          ), E'\n') AS elements,
                     pg_catalog.array_to_string(t.typacl, E'\n')
-                        AS "Access privileges",
+                        AS access_privileges,
                     pg_catalog.obj_description(t.oid, 'pg_type')
-                        AS "Description"'''
+                        AS description"""
     else:
         sql += """  pg_catalog.obj_description(t.oid, 'pg_type')
-                        as "Description" """
+                        as description """
 
     if cur.connection.info.server_version > 90000:
         sql += """  FROM    pg_catalog.pg_type t
@@ -712,16 +714,16 @@ def list_datatypes(cur, pattern, verbose):
     log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
 @special_command("\\dD", "\\dD[+] [pattern]", "List or describe domains.")
 def list_domains(cur, pattern, verbose):
     if verbose:
-        extra_cols = r''',
-               pg_catalog.array_to_string(t.typacl, E'\n') AS "Access privileges",
-               d.description as "Description"'''
+        extra_cols = r""",
+               pg_catalog.array_to_string(t.typacl, E'\n') AS access_privileges,
+               d.description as description"""
         extra_joins = """
            LEFT JOIN pg_catalog.pg_description d ON d.classoid = t.tableoid
                                                 AND d.objoid = t.oid AND d.objsubid = 0"""
@@ -729,9 +731,9 @@ def list_domains(cur, pattern, verbose):
         extra_cols = extra_joins = ""
 
     sql = f"""\
-        SELECT n.nspname AS "Schema",
-               t.typname AS "Name",
-               pg_catalog.format_type(t.typbasetype, t.typtypmod) AS "Type",
+        SELECT n.nspname AS schema,
+               t.typname AS name,
+               pg_catalog.format_type(t.typbasetype, t.typtypmod) as type,
                pg_catalog.ltrim((COALESCE((SELECT (' collate ' || c.collname)
                                            FROM pg_catalog.pg_collation AS c,
                                                 pg_catalog.pg_type AS bt
@@ -746,11 +748,11 @@ def list_domains(cur, pattern, verbose):
                                              WHEN t.typdefault IS NOT NULL
                                                THEN(' default ' || t.typdefault)
                                              ELSE ''
-                                           END) AS "Modifier",
+                                           END) AS modifier,
                pg_catalog.array_to_string(ARRAY(
                  SELECT pg_catalog.pg_get_constraintdef(r.oid, TRUE)
                  FROM pg_catalog.pg_constraint AS r
-                 WHERE t.oid = r.contypid), ' ') AS "Check"{extra_cols}
+                 WHERE t.oid = r.contypid), ' ') AS check {extra_cols}
         FROM pg_catalog.pg_type AS t
            LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = t.typnamespace{extra_joins}
         WHERE t.typtype = 'd' """
@@ -774,7 +776,7 @@ def list_domains(cur, pattern, verbose):
     log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
 
 
@@ -811,13 +813,13 @@ def list_text_search_configurations(cur, pattern, verbose):
             SELECT
               (SELECT t.alias
                FROM pg_catalog.ts_token_type(c.cfgparser) AS t
-               WHERE t.tokid = m.maptokentype ) AS "Token",
+               WHERE t.tokid = m.maptokentype ) AS token,
                    pg_catalog.btrim(ARRAY
                                       (SELECT mm.mapdict::pg_catalog.regdictionary
                                        FROM pg_catalog.pg_ts_config_map AS mm
                                        WHERE mm.mapcfg = m.mapcfg
                                          AND mm.maptokentype = m.maptokentype
-                                       ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS "Dictionaries"
+                                       ORDER BY mapcfg, maptokentype, mapseqno) :: pg_catalog.text, '{}') AS dictionaries
             FROM pg_catalog.pg_ts_config AS c,
                  pg_catalog.pg_ts_config_map AS m
             WHERE c.oid = %(oid)s
@@ -831,7 +833,7 @@ def list_text_search_configurations(cur, pattern, verbose):
         log.debug("%s, %s", sql, params)
         cur.execute(sql, params)
 
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return cur, headers, cur.statusmessage
 
     if cur.connection.info.server_version < 80300:
@@ -851,15 +853,18 @@ def list_text_search_configurations(cur, pattern, verbose):
                 cur, headers, status = _fetch_oid_details(cur, oid)
                 yield title, cur, headers, status
         else:
-            yield None, None, None, 'Did not find any results for pattern "{}".'.format(
-                pattern
+            yield (
+                None,
+                None,
+                None,
+                'Did not find any results for pattern "{}".'.format(pattern),
             )
         return
 
     sql = """
-        SELECT n.nspname AS "Schema",
-               c.cfgname AS "Name",
-               pg_catalog.obj_description(c.oid, 'pg_ts_config') AS "Description"
+        SELECT n.nspname AS schema,
+               c.cfgname AS name,
+               pg_catalog.obj_description(c.oid, 'pg_ts_config') AS description
         FROM pg_catalog.pg_ts_config c
         LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
         """
@@ -874,7 +879,7 @@ def list_text_search_configurations(cur, pattern, verbose):
     log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         yield None, cur, headers, cur.statusmessage
 
 
@@ -980,7 +985,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     c.relhasoids,
                     {suffix},
                     c.reltablespace,
-                    0 AS reloftype,
+                    '' AS reloftype,
                     'p' AS relpersistence,
                     false as relispartition
                  FROM pg_catalog.pg_class c
@@ -996,7 +1001,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     c.relhasoids,
                     {suffix},
                     c.reltablespace,
-                    0 AS reloftype,
+                    '' AS reloftype,
                     'p' AS relpersistence,
                     false as relispartition
                  FROM pg_catalog.pg_class c
@@ -1437,7 +1442,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Indexes:\n")
             for row in cur:
-                # /* untranslated index name */
+                # /* untranslated indextname */
                 status.append(f'''    "{row[0]}"''')
 
                 # /* If exclusion constraint, print the constraintdef */
@@ -1915,7 +1920,7 @@ def show_function_definition(cur, pattern, verbose):
     log.debug("%s, %s", sql, params)
     cur.execute(sql, params)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         if verbose:
             (source,) = cur.fetchone()
             rows = _FakeCursor()
@@ -1946,10 +1951,10 @@ def list_foreign_tables(cur, pattern, verbose):
     params = {}
     query = SQL(
         """
-        SELECT n.nspname as "Schema",
-        c.relname as "Name",
-        CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as "Type",
-        pg_catalog.pg_get_userbyid(c.relowner) as "Owner"
+        SELECT n.nspname as schema,
+        c.relname as name,
+        CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as type,
+        pg_catalog.pg_get_userbyid(c.relowner) as owner
         {verbose_cols}
         FROM pg_catalog.pg_class c
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -1966,8 +1971,8 @@ def list_foreign_tables(cur, pattern, verbose):
     if verbose:
         params["verbose_cols"] = SQL(
             """
-            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as "Size",
-            pg_catalog.obj_description(c.oid, 'pg_class') as "Description" """
+            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as size,
+            pg_catalog.obj_description(c.oid, 'pg_class') as description """
         )
     else:
         params["verbose_cols"] = SQL("")
@@ -1984,7 +1989,11 @@ def list_foreign_tables(cur, pattern, verbose):
     log.debug(formatted_query.as_string(cur))
     cur.execute(formatted_query)
     if cur.description:
-        headers = [x.name for x in cur.description]
+        headers = [titleize(x.name) for x in cur.description]
         return [(None, cur, headers, cur.statusmessage)]
     else:
         return [(None, None, None, cur.statusmessage)]
+
+
+def titleize(column):
+    return column[0].capitalize() + " ".join(c for c in column[1:].split("_"))
