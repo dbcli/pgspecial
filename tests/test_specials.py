@@ -631,7 +631,7 @@ def test_slash_dx_verbose(executor):
         ("function plpgsql_validator(oid)",),
         ("language plpgsql",),
     ]
-    headers = ["Object description"]
+    headers = ["Object Description"]
     status = "SELECT %s" % len(row)
     expected = [title, row, headers, status]
     assert results == expected
@@ -1046,7 +1046,7 @@ def test_slash_sf(executor):
             "AS $function$select 1$function$\n",
         ),
     ]
-    headers = ["Source"]
+    headers = ["source"]
     status = None
     expected = [title, rows, headers, status]
     assert results == expected
@@ -1074,7 +1074,7 @@ def test_slash_sf_parens(executor):
             "AS $function$select 1$function$\n",
         ),
     ]
-    headers = ["Source"]
+    headers = ["source"]
     status = None
     expected = [title, rows, headers, status]
     assert results == expected
@@ -1092,7 +1092,7 @@ def test_slash_sf_verbose(executor):
             "1       AS $function$select 2$function$\n",
         ),
     ]
-    headers = ["Source"]
+    headers = ["source"]
     status = None
     expected = [title, rows, headers, status]
     assert results == expected
