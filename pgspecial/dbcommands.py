@@ -558,7 +558,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Indexes:\n")
             for row in cur:
-                # /* untranslated index titleize(x.name) */
+                # /* untranslated index name */
                 status.append(f'''    "{row[0]}"''')
 
                 # /* If exclusion constraint, print the constraintdef */
