@@ -22,10 +22,14 @@ setup(
     packages=find_packages(),
     description=description,
     long_description=open("README.rst").read(),
+    package_data={
+        "pgspecial": ["sql/dbcommands.sql"],
+    },
     install_requires=[
         "click >= 4.1",
         "sqlparse >= 0.1.19",
         "psycopg >= 3.0.10",
+        "aiosql >= 9.0",
     ],
     classifiers=[
         "Intended Audience :: Developers",

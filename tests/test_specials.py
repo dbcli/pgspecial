@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from dbutils import dbtest, POSTGRES_USER, SERVER_VERSION, foreign_db_environ, fdw_test
+from dbutils import dbtest, POSTGRES_USER, foreign_db_environ, fdw_test, SERVER_VERSION
 import itertools
 import locale
 
@@ -21,7 +21,7 @@ LC_CTYPE = locale.setlocale(locale.LC_CTYPE, None)
 @dbtest
 def test_slash_l(executor):
     results = executor(r"\l")
-    row = ("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)
+    row = ("_local_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row in results[1]
     assert headers == results[2]
@@ -29,8 +29,8 @@ def test_slash_l(executor):
 
 @dbtest
 def test_slash_l_pattern(executor):
-    results = executor(r"\l _test*")
-    row = [("_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)]
+    results = executor(r"\l local_test*")
+    row = [("_local_test_db", "postgres", "UTF8", LC_COLLATE, LC_CTYPE, None)]
     headers = ["Name", "Owner", "Encoding", "Collate", "Ctype", "Access privileges"]
     assert row == results[1]
     assert headers == results[2]
@@ -322,24 +322,18 @@ def test_slash_dn(executor):
     """List all schemas."""
     results = executor(r"\dn")
     title = None
-    if SERVER_VERSION >= 150001:
-        rows = [
-            ("public", "pg_database_owner"),
-            ("schema1", POSTGRES_USER),
-            ("schema2", POSTGRES_USER),
-            ("schema3", POSTGRES_USER),
-        ]
-    else:
-        rows = [
-            ("public", POSTGRES_USER),
-            ("schema1", POSTGRES_USER),
-            ("schema2", POSTGRES_USER),
-            ("schema3", POSTGRES_USER),
-        ]
+    owner = "pg_database_owner" if SERVER_VERSION >= 150001 else POSTGRES_USER
+    rows = [
+        ("public", owner),
+        ("schema1", POSTGRES_USER),
+        ("schema2", POSTGRES_USER),
+        ("schema3", POSTGRES_USER),
+    ]
 
     headers = ["Name", "Owner"]
     status = "SELECT %s" % len(rows)
     expected = [title, rows, headers, status]
+
     assert results == expected
 
 
@@ -347,8 +341,8 @@ def test_slash_dn(executor):
 def test_slash_dp(executor):
     """List all schemas."""
     results = executor(r"\dp")
-    title = None
-    rows = [
+    expected_title = None
+    expected_rows = [
         ("public", "Inh1", "table", None, "", ""),
         ("public", "inh2", "table", None, "", ""),
         ("public", "mvw1", "materialized view", None, "", ""),
@@ -359,7 +353,7 @@ def test_slash_dp(executor):
         ("public", "vw1", "view", None, "", ""),
     ]
 
-    headers = [
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -367,9 +361,11 @@ def test_slash_dp(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest
@@ -395,12 +391,12 @@ def test_slash_dp_pattern_table(executor):
 def test_slash_dp_pattern_schema(executor):
     """List all schemas."""
     results = executor(r"\dp schema2.*")
-    title = None
-    rows = [
+    expected_title = None
+    expected_rows = [
         ("schema2", "tbl2", "table", None, "", ""),
         ("schema2", "tbl2_id2_seq", "sequence", None, "", ""),
     ]
-    headers = [
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -408,18 +404,20 @@ def test_slash_dp_pattern_schema(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest
 def test_slash_dp_pattern_alias(executor):
     """List all schemas."""
     results = executor(r"\z i*2")
-    title = None
-    rows = [("public", "inh2", "table", None, "", "")]
-    headers = [
+    expected_title = None
+    expected_rows = [("public", "inh2", "table", None, "", "")]
+    expected_headers = [
         "Schema",
         "Name",
         "Type",
@@ -427,9 +425,11 @@ def test_slash_dp_pattern_alias(executor):
         "Column privileges",
         "Policies",
     ]
-    status = "SELECT %s" % len(rows)
-    expected = [title, rows, headers, status]
-    assert results == expected
+    expected_status = "SELECT %s" % len(expected_rows)
+    assert results[0] == expected_title
+    assert results[1] == expected_rows
+    assert results[2] == expected_headers
+    assert results[3] == expected_status
 
 
 @dbtest

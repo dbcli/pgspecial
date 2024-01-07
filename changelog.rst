@@ -1,3 +1,7 @@
+unrelased
+==================
+* refactor dbcommands.py to use queries stored in external file
+
 2.1.1 (2023-10-29)
 ==================
 
