@@ -1,3 +1,10 @@
+Upcoming
+========
+
+Bug fixes:
+----------
+* Fix `\d` when used with a pattern
+
 2.1.1 (2023-10-29)
 ==================
 
