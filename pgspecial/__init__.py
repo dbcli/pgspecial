@@ -1,5 +1,5 @@
 __all__ = []
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 
 
 def export(defn):
@@ -9,5 +9,4 @@ def export(defn):
     return defn
 
 
-from . import dbcommands
-from . import iocommands
+from . import dbcommands, iocommands
