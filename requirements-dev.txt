@@ -6,6 +6,6 @@ codecov>=1.5.1
 pre-commit>=1.16.0
 black>=20.8b1
 configobj>=5.0.6
-twine==1.11.0
-wheel==0.38.1
-build==1.0.3
+twine>=1.11.0
+wheel>=0.38.1
+build>=1.0.3
