@@ -1,3 +1,8 @@
+Upcoming
+========
+
+* Made `\copy` case-insensitive, as it is in `psql`.
+
 2.1.2 (2024-05-15)
 ==================
 

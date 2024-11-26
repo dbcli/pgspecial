@@ -132,6 +132,7 @@ def _index_of_file_name(tokenlist):
     "\\copy",
     "\\copy [tablename] to/from [filename]",
     "Copy data between a file and a table.",
+    case_sensitive=False,
 )
 def copy(cur, pattern, verbose):
     """Copies table data to/from files"""

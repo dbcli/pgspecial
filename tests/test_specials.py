@@ -1035,6 +1035,18 @@ def test_slash_copy_from_csv(executor, connection, tmpdir):
 
 
 @dbtest
+def test_slash_copy_case_insensitive(executor, tmpdir):
+    filepath = tmpdir.join("pycons.tsv")
+    executor(
+        r"\COPY (SELECT 'Montréal', 'Portland', 'Cleveland') TO '{0}' ".format(filepath)
+    )
+    infile = filepath.open(encoding="utf-8")
+    contents = infile.read()
+    assert len(contents.splitlines()) == 1
+    assert "Montréal" in contents
+
+
+@dbtest
 def test_slash_sf(executor):
     results = executor(r"\sf func1")
     title = None
