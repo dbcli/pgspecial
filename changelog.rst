@@ -1,5 +1,5 @@
-Upcoming
-========
+2.1.3 (2024-11-25)
+==================
 
 * Made `\copy` case-insensitive, as it is in `psql`.
 
