@@ -11,4 +11,4 @@ def export(defn):
     return defn
 
 
-from . import dbcommands, iocommands
+from . import dbcommands, iocommands  # type: ignore[import]

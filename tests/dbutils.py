@@ -38,18 +38,14 @@ except:
 
 dbtest = pytest.mark.skipif(
     not CAN_CONNECT_TO_DB,
-    reason="Need a postgres instance at localhost accessible by user "
-    "'%s'" % POSTGRES_USER,
+    reason="Need a postgres instance at localhost accessible by user '%s'" % POSTGRES_USER,
 )
 
 
 def create_db(dbname=TEST_DB_NAME):
     with db_connection(dbname=None).cursor() as cur:
         try:
-            cur.execute(
-                """CREATE DATABASE %s encoding UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8' template template0"""
-                % dbname
-            )
+            cur.execute("""CREATE DATABASE %s encoding UTF8 LC_COLLATE 'en_US.UTF-8' LC_CTYPE 'en_US.UTF-8' template template0""" % dbname)
         except:
             pass
 
@@ -62,9 +58,7 @@ def setup_db(conn):
         cur.execute("create schema schema3")
 
         # tables
-        cur.execute(
-            "create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))"
-        )
+        cur.execute("create table tbl1(id1 integer, txt1 text, CONSTRAINT id_text PRIMARY KEY(id1, txt1))")
         cur.execute("create table tbl2(id2 serial, txt2 text)")
         cur.execute("create table schema2.tbl2(id2 serial, txt2 text)")
         cur.execute("create table schema1.tbl2(id2 serial, txt2 text)")
@@ -106,19 +100,15 @@ def setup_db(conn):
         )
 
         # domains
-        cur.execute("create domain gender_t char(1)" " check (value in ('F', 'M'))")
+        cur.execute("create domain gender_t char(1) check (value in ('F', 'M'))")
         cur.execute("create domain schema1.smallint_t smallint")
         cur.execute("create domain schema1.bigint_t bigint")
-        cur.execute("comment on domain schema1.bigint_t is" " 'a really large integer'")
+        cur.execute("comment on domain schema1.bigint_t is 'a really large integer'")
 
         # privileges
         cur.execute("CREATE ROLE test_role;")
-        cur.execute(
-            "ALTER DEFAULT PRIVILEGES IN SCHEMA schema1 GRANT SELECT ON TABLES TO test_role;"
-        )
-        cur.execute(
-            "ALTER DEFAULT PRIVILEGES IN SCHEMA schema2 GRANT ALL ON TABLES TO test_role;"
-        )
+        cur.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA schema1 GRANT SELECT ON TABLES TO test_role;")
+        cur.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA schema2 GRANT ALL ON TABLES TO test_role;")
 
 
 def teardown_db(conn):
@@ -147,11 +137,7 @@ def setup_foreign(conn):
             "foreign data wrapper postgres_fdw "
             f"options (host '127.0.0.1', dbname '{FOREIGN_TEST_DB_NAME}') "
         )
-        cur.execute(
-            "create user mapping if not exists for current_user "
-            "server foreign_db_server "
-            "options (user 'postgres') "
-        )
+        cur.execute("create user mapping if not exists for current_user server foreign_db_server options (user 'postgres') ")
         cur.execute(
             "create foreign table if not exists foreign_foo (a int, b text) "
             "server foreign_db_server "
@@ -181,6 +167,4 @@ try:
 except:
     CAN_CREATE_FDW_EXTENSION = False
 
-fdw_test = pytest.mark.skipif(
-    not CAN_CREATE_FDW_EXTENSION, reason="Unable to create a postgres_fdw extension."
-)
+fdw_test = pytest.mark.skipif(not CAN_CREATE_FDW_EXTENSION, reason="Unable to create a postgres_fdw extension.")

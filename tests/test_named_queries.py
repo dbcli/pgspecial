@@ -1,7 +1,6 @@
 """Tests for named queries."""
 
 import pytest
-import configparser
 import tempfile
 
 from pgspecial.namedqueries import NamedQueries
