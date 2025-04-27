@@ -1666,10 +1666,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     # */
                     tgenabled = row[2]
                     if category == 0:
-                        if tgenabled == "O" or tgenabled == True:
+                        if tgenabled == "O" or tgenabled is True:
                             list_trigger = True
                     elif category == 1:
-                        if tgenabled == "D" or tgenabled == False:
+                        if tgenabled == "D" or tgenabled is False:
                             list_trigger = True
                     elif category == 2:
                         if tgenabled == "A":
@@ -1677,7 +1677,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     elif category == 3:
                         if tgenabled == "R":
                             list_trigger = True
-                    if list_trigger == False:
+                    if list_trigger is False:
                         continue
 
                     # /* Print the category heading once */

@@ -711,12 +711,12 @@ def test_slash_dF(executor):
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "spanish", "configuration for spanish language") in rows
 
-    results = executor(r"\dD *ian")
+    _ = executor(r"\dD *ian")
     assert title is None
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "russian", "configuration for russian language") in rows
 
-    results = executor(r"\dD ge*")
+    _ = executor(r"\dD ge*")
     assert title is None
     assert header == ["Schema", "Name", "Description"]
     assert ("pg_catalog", "german", "configuration for german language") in rows

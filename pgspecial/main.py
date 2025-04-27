@@ -301,7 +301,7 @@ def register_special_command(
         )
 
 
-def chunks(l, n):
+def chunks(l, n):  # noqa
     n = max(1, n)
     return [l[i : i + n] for i in range(0, len(l), n)]
 
