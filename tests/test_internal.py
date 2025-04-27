@@ -1,6 +1,7 @@
 """
 Tests for specific internal functions, not overall integration tests.
 """
+
 import pytest
 
 from pgspecial import iocommands
@@ -42,18 +43,14 @@ def test_edit_view_command_detected():
 
 def test_subst_favorite_query_args():
     template_query = "select * from foo where bar = $2 and zoo = '$1'"
-    subst_query, error = iocommands.subst_favorite_query_args(
-        template_query, ("postgres", "42")
-    )
+    subst_query, error = iocommands.subst_favorite_query_args(template_query, ("postgres", "42"))
     assert error is None
     assert subst_query == "select * from foo where bar = 42 and zoo = 'postgres'"
 
 
 def test_subst_favorite_query_args_bad_arg_positional():
     template_query = "select * from foo where bar = $1"
-    subst_query, error = iocommands.subst_favorite_query_args(
-        template_query, ("1337", "42")
-    )
+    subst_query, error = iocommands.subst_favorite_query_args(template_query, ("1337", "42"))
     assert subst_query is None
     assert error.startswith("query does not have substitution parameter $2")
 
@@ -113,8 +110,6 @@ def test_subst_favorite_query_args_missing_arg(named_query, query_args):
     ids=["raw aggregation", "string aggregation", "positional and aggregation"],
 )
 def test_subst_favorite_query_args_aggregation(template_query, query_args, query):
-    subst_query, error = iocommands.subst_favorite_query_args(
-        template_query, query_args
-    )
+    subst_query, error = iocommands.subst_favorite_query_args(template_query, query_args)
     assert error is None
     assert subst_query == query

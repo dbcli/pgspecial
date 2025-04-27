@@ -194,10 +194,7 @@ def subst_favorite_query_args(query, args):
 
             return [
                 None,
-                "query does not have substitution parameter "
-                + subst_var
-                + ":\n  "
-                + query,
+                "query does not have substitution parameter " + subst_var + ":\n  " + query,
             ]
 
         query = query.replace(subst_var, val)
@@ -223,9 +220,7 @@ def subst_favorite_query_args(query, args):
     return [query, None]
 
 
-@special_command(
-    "\\n", "\\n[+] [name] [param1 param2 ...]", "List or execute named queries."
-)
+@special_command("\\n", "\\n[+] [name] [param1 param2 ...]", "List or execute named queries.")
 def execute_named_query(cur, pattern, **_):
     """Returns (title, rows, headers, status)"""
     if pattern == "":
@@ -248,10 +243,7 @@ def execute_named_query(cur, pattern, **_):
         cur.execute(query)
     except psycopg.errors.SyntaxError:
         if "%s" in query:
-            raise Exception(
-                "Bad arguments: "
-                'please use "$1", "$2", etc. for named queries instead of "%s"'
-            )
+            raise Exception('Bad arguments: please use "$1", "$2", etc. for named queries instead of "%s"')
         else:
             raise
     except (IndexError, TypeError):
@@ -299,11 +291,7 @@ def get_named_query(pattern, **_):
         return [(None, None, None, usage + "Err: A name is required.")]
 
     headers = ["Name", "Query"]
-    rows = [
-        (r, NamedQueries.instance.get(r))
-        for r in NamedQueries.instance.list()
-        if re.search(name, r)
-    ]
+    rows = [(r, NamedQueries.instance.get(r)) for r in NamedQueries.instance.list() if re.search(name, r)]
 
     status = ""
     if not rows:

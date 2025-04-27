@@ -6,7 +6,7 @@ from collections import namedtuple
 
 from psycopg.sql import SQL
 
-from .main import special_command, RAW_QUERY
+from .main import special_command
 
 TableInfo = namedtuple(
     "TableInfo",
@@ -54,9 +54,7 @@ def list_databases(cur, pattern, verbose):
             t.spcname as "Tablespace",
             pg_catalog.shobj_description(d.oid, 'pg_database') as description"""
         )
-        params["verbose_tables"] = SQL(
-            """JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid"""
-        )
+        params["verbose_tables"] = SQL("""JOIN pg_catalog.pg_tablespace t on d.dattablespace = t.oid""")
     else:
         params["verbose_fields"] = SQL("")
         params["verbose_tables"] = SQL("")
@@ -104,9 +102,7 @@ def list_roles(cur, pattern, verbose):
             """
         )
         if verbose:
-            params["verbose"] = SQL(
-                """pg_catalog.shobj_description(r.oid, 'pg_authid') AS description, """
-            )
+            params["verbose"] = SQL("""pg_catalog.shobj_description(r.oid, 'pg_authid') AS description, """)
         else:
             params["verbose"] = SQL("")
     else:
@@ -196,13 +192,9 @@ def list_privileges(cur, pattern, verbose):
     if pattern:
         schema, table = sql_name_pattern(pattern)
         if table:
-            pattern = SQL(
-                " AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
-            ).format(table)
+            pattern = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(table)
         if schema:
-            pattern += SQL(
-                " AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default "
-            ).format(schema)
+            pattern += SQL(" AND n.nspname OPERATOR(pg_catalog.~) {} COLLATE pg_catalog.default ").format(schema)
     else:
         pattern = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
 
@@ -268,9 +260,7 @@ def list_tablespaces(cur, pattern, **_):
     """
 
     params = {}
-    cur.execute(
-        "SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')"
-    )
+    cur.execute("SELECT EXISTS(SELECT * FROM pg_proc WHERE proname = 'pg_tablespace_location')")
     (is_location,) = cur.fetchone()
 
     sql = SQL(
@@ -883,12 +873,8 @@ def list_text_search_configurations(cur, pattern, verbose):
         yield None, cur, headers, cur.statusmessage
 
 
-@special_command(
-    "describe", "DESCRIBE [pattern]", "", hidden=True, case_sensitive=False
-)
-@special_command(
-    "\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences."
-)
+@special_command("describe", "DESCRIBE [pattern]", "", hidden=True, case_sensitive=False)
+@special_command("\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences.")
 def describe_table_details(cur, pattern, verbose):
     """
     Returns (title, rows, headers, status)
@@ -1100,10 +1086,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             or tableinfo.relkind == "f"
             or tableinfo.relkind == "p"
         ):
-            sql += (
-                ",\n  CASE WHEN a.attstattarget=-1 THEN "
-                "NULL ELSE a.attstattarget END AS attstattarget"
-            )
+            sql += ",\n  CASE WHEN a.attstattarget=-1 THEN NULL ELSE a.attstattarget END AS attstattarget"
             att_cols["attstattarget"] = cols
             cols += 1
         if (
@@ -1151,11 +1134,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
 
     if verbose:
         headers.append("Storage")
-        if (
-            tableinfo.relkind == "r"
-            or tableinfo.relkind == "m"
-            or tableinfo.relkind == "f"
-        ):
+        if tableinfo.relkind == "r" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
             headers.append("Stats target")
         #  Column comments, if the relkind supports this feature. */
         if (
@@ -1225,11 +1204,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             else:
                 cell.append("???")
 
-            if (
-                tableinfo.relkind == "r"
-                or tableinfo.relkind == "m"
-                or tableinfo.relkind == "f"
-            ):
+            if tableinfo.relkind == "r" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
                 cell.append(row[att_cols["attstattarget"]])
 
             #  /* Column comments, if the relkind supports this feature. */
@@ -1375,12 +1350,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         # * don't print anything.
         # */
 
-    elif (
-        tableinfo.relkind == "r"
-        or tableinfo.relkind == "p"
-        or tableinfo.relkind == "m"
-        or tableinfo.relkind == "f"
-    ):
+    elif tableinfo.relkind == "r" or tableinfo.relkind == "p" or tableinfo.relkind == "m" or tableinfo.relkind == "f":
         # /* Footer information about a table */
 
         if tableinfo.hasindex:
@@ -1535,9 +1505,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             if cur.rowcount > 0:
                 status.append("Referenced by:\n")
             for row in cur:
-                status.append(
-                    f"""    TABLE "{row[0]}" CONSTRAINT "{row[1]}" {row[2]}\n"""
-                )
+                status.append(f"""    TABLE "{row[0]}" CONSTRAINT "{row[1]}" {row[2]}\n""")
 
         # /* print rules */
         if tableinfo.hasrules and tableinfo.relkind != "m":
@@ -1635,10 +1603,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                         else:
                             status.append(f"            {row[0]}\n")
                 else:
-                    status.append(
-                        "Number of partitions %i: (Use \\d+ to list them.)\n"
-                        % cur.rowcount
-                    )
+                    status.append("Number of partitions %i: (Use \\d+ to list them.)\n" % cur.rowcount)
 
     if view_def:
         # /* Footer information about a view */
@@ -1701,10 +1666,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     # */
                     tgenabled = row[2]
                     if category == 0:
-                        if tgenabled == "O" or tgenabled == True:
+                        if tgenabled == "O" or tgenabled is True:
                             list_trigger = True
                     elif category == 1:
-                        if tgenabled == "D" or tgenabled == False:
+                        if tgenabled == "D" or tgenabled is False:
                             list_trigger = True
                     elif category == 2:
                         if tgenabled == "A":
@@ -1712,7 +1677,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
                     elif category == 3:
                         if tgenabled == "R":
                             list_trigger = True
-                    if list_trigger == False:
+                    if list_trigger is False:
                         continue
 
                     # /* Print the category heading once */
@@ -1809,10 +1774,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
         if not verbose:
             # /* print the number of child tables, if any */
             if cur.rowcount > 0:
-                status.append(
-                    "Number of child tables: %d (Use \\d+ to list"
-                    " them.)\n" % cur.rowcount
-                )
+                status.append("Number of child tables: %d (Use \\d+ to list them.)\n" % cur.rowcount)
         else:
             if cur.rowcount > 0:
                 status.append("Child tables")
@@ -1979,9 +1941,7 @@ def list_foreign_tables(cur, pattern, verbose):
 
     if pattern:
         _, tbl_name = sql_name_pattern(pattern)
-        params["filter"] = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} ").format(
-            f"^({tbl_name})$"
-        )
+        params["filter"] = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} ").format(f"^({tbl_name})$")
     else:
         params["filter"] = SQL("")
 

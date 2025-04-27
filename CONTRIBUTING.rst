@@ -12,19 +12,19 @@ Make the changes and create the commits in your local machine. Then push those
 changes to your fork. Then click on the pull request icon on github and create
 a new pull request. Add a description about the change and send it along. I
 promise to review the pull request in a reasonable window of time and get back
-to you. 
+to you.
 
 In order to keep your fork up to date with any changes from mainline, add a new
 git remote to your local copy called 'upstream' and point it to the main
 ``pgspecial`` repo.
 
-:: 
+::
 
    $ git remote add upstream git@github.com:dbcli/pgspecial.git
 
 Once the 'upstream' end point is added you can then periodically do a ``git
 pull upstream master`` to update your local copy and then do a ``git push
-origin master`` to keep your own fork up to date. 
+origin master`` to keep your own fork up to date.
 
 Local Setup
 -----------
@@ -34,16 +34,12 @@ The installation instructions in the README file are intended for users of
 a slightly different way so you can see the effects of your changes right away
 without having to go through the install cycle every time you change the code.
 
-It is highly recommended to use virtualenv for development. If you don't know
-what a virtualenv is, this `guide
-<http://docs.python-guide.org/en/latest/dev/virtualenvs/#virtual-environments>`_
-will help you get started.
-
-Create a virtualenv (let's call it ``pgspecial-dev``). Activate it:
+Set up [uv](https://docs.astral.sh/uv/getting-started/installation/) for development:
 
 ::
 
-    virtualenv ./pgspecial-dev
+    cd pgspecial
+    uv venv
     source ./pgspecial-dev/bin/activate
 
 Once the virtualenv is activated, `cd` into the local clone of pgspecial folder
@@ -51,11 +47,11 @@ and install pgspecial using pip as follows:
 
 ::
 
-    $ pip install --editable .
+    $ uv pip install --editable .[dev]
 
     or
 
-    $ pip install -e .
+    $ pip install -e .[dev]
 
 This will install the necessary dependencies as well as install pgspecial from
 the working folder into the virtualenv. By installing it using `pip install -e`
@@ -111,41 +107,32 @@ First, install the requirements for testing:
 
 ::
 
-    $ pip install -r requirements-dev.txt
+    uv pip install -e .[dev]
 
 After that, tests can be run with:
 
 ::
 
-    $ py.test
+    pytest
 
 Pytest configuration can be found in the ``tool.pytest.ini_options`` table of the ``pyproject.toml`` file.
 
 Enforcing the code style (linting)
-------------------------------
+----------------------------------
 
 When you submit a PR, the changeset is checked for pep8 compliance using
-`black <https://github.com/psf/black>`_. If you see a build failing because
-of these checks, install ``black`` and apply style fixes:
+`ruff <https://docs.astral.sh/ruff/>`_. You can run the linter and formatter locally:
 
 ::
 
-    $ pip install black
-    $ black .
+    $ tox -e style
 
 Then commit and push the fixes.
 
-To enforce ``black`` applied on every commit, we also suggest installing ``pre-commit`` and
+To enforce ``ruff`` applied on every commit, we also suggest installing ``pre-commit`` and
 using the ``pre-commit`` hooks available in this repo:
 
 ::
 
     $ pip install pre-commit
     $ pre-commit install
-
-Git blame
----------
-
-Use ``git blame my_file.py --ignore-revs-file .git-blame-ignore-revs`` to exclude irrelevant commits
-(specifically Black) from ``git blame``. For more information,
-see `here <https://github.com/psf/black#migrating-your-code-style-without-ruining-git-blame>`_.

@@ -49,9 +49,7 @@ class PGSpecial(object):
         self.pager_config = PAGER_ALWAYS
         self.pager = os.environ.get("PAGER", "")
 
-        self.register(
-            self.show_help, "\\?", "\\?", "Show Commands.", arg_type=PARSED_QUERY
-        )
+        self.register(self.show_help, "\\?", "\\?", "Show Commands.", arg_type=PARSED_QUERY)
 
         self.register(
             self.toggle_expanded_output,
@@ -290,9 +288,7 @@ def register_special_command(
     command_dict=None,
 ):
     cmd = command.lower() if not case_sensitive else command
-    command_dict[cmd] = SpecialCommand(
-        handler, syntax, description, arg_type, hidden, case_sensitive
-    )
+    command_dict[cmd] = SpecialCommand(handler, syntax, description, arg_type, hidden, case_sensitive)
     for alias in aliases:
         cmd = alias.lower() if not case_sensitive else alias
         command_dict[cmd] = SpecialCommand(
@@ -305,14 +301,12 @@ def register_special_command(
         )
 
 
-def chunks(l, n):
+def chunks(l, n):  # noqa
     n = max(1, n)
     return [l[i : i + n] for i in range(0, len(l), n)]
 
 
-@special_command(
-    "\\e", "\\e [file]", "Edit the query with external editor.", arg_type=NO_QUERY
-)
+@special_command("\\e", "\\e [file]", "Edit the query with external editor.", arg_type=NO_QUERY)
 @special_command(
     "\\ef",
     "\\ef [funcname [line]]",
@@ -332,9 +326,7 @@ def doc_only():
     raise RuntimeError
 
 
-@special_command(
-    "\\do", "\\do[S] [pattern]", "List operators.", arg_type=NO_QUERY, hidden=True
-)
+@special_command("\\do", "\\do[S] [pattern]", "List operators.", arg_type=NO_QUERY, hidden=True)
 @special_command(
     "\\dp",
     "\\dp [pattern]",
@@ -342,8 +334,6 @@ def doc_only():
     arg_type=NO_QUERY,
     hidden=True,
 )
-@special_command(
-    "\\z", "\\z [pattern]", "Same as \\dp.", arg_type=NO_QUERY, hidden=True
-)
+@special_command("\\z", "\\z [pattern]", "Same as \\dp.", arg_type=NO_QUERY, hidden=True)
 def place_holder():
     raise NotImplementedError

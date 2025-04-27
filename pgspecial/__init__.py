@@ -1,5 +1,7 @@
+import importlib.metadata
+
+__version__ = importlib.metadata.version("pgspecial")
 __all__ = []
-__version__ = "2.1.3"
 
 
 def export(defn):
@@ -9,4 +11,4 @@ def export(defn):
     return defn
 
 
-from . import dbcommands, iocommands
+from . import dbcommands, iocommands  # noqa

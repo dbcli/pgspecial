@@ -1,32 +1,45 @@
+[project]
+name = "pgspecial"
+dynamic = ["version"]
+description = "Meta-commands handler for Postgres Database."
+readme = "README.rst"
+requires-python = ">=3.9"
+license = { text = "BSD" }
+authors = [{ name = "Pgcli Core Team", email = "pgcli-dev@googlegroups.com" }]
+keywords = ["postgres", "database", "cli", "meta-commands"]
+dependencies = ["click>=4.1", "sqlparse>=0.1.19", "psycopg>=3.0.10"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.2.4",
+    "coverage",
+    "codecov>=1.5.1",
+    "pre-commit>=1.16.0",
+    "configobj>=5.0.6",
+    "ruff>=0.11.7",
+    "tox>=4.8.0",
+    "pdbpp>=0.10.3",
+]
+
+[project.scripts]
+litecli = "litecli.main:cli"
+
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=64.0", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 88
-target-version = ['py37']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | \.cache
-  | \.pytest_cache
-  | _build
-  | buck-out
-  | build
-  | dist
-  | tests/data
-)/
-'''
+[tool.setuptools_scm]
+
+
+[tool.ruff]
+target-version = 'py39'
+line-length = 140
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ['pgspecial', 'tests']
 
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--capture=sys --showlocals -rxs"
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
