@@ -1,3 +1,11 @@
+
+Unreleased (TBD)
+==================
+
+* Moderize the repository
+  * Use uv instead of pip
+  * Use github trusted publisher for pypi release
+
 2.1.3 (2024-11-25)
 ==================
 
