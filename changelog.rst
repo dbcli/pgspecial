@@ -1,4 +1,9 @@
 
+2.2.1 (2025-04-27)
+==================
+
+* Fix the bogus script section that was copy/pasted from litecli.
+
 2.2.0 (2025-04-27)
 ==================
 
