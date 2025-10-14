@@ -11,4 +11,4 @@ def export(defn):
     return defn
 
 
-from . import dbcommands, iocommands  # noqa
+from . import dbcommands, iocommands, llm  # noqa
