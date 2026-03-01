@@ -25,7 +25,7 @@ TableInfo = namedtuple(
     ],
 )
 
-RELKIND_TO_NAME = {
+_RELKIND_TO_NAME = {
     "r": "Table",
     "p": "Partitioned table",
     "v": "View",
@@ -1818,7 +1818,7 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if verbose and tableinfo.reloptions:
         status.append(f"Options: {tableinfo.reloptions}\n")
 
-    relkind_name = RELKIND_TO_NAME.get(tableinfo.relkind, "Relation")
+    relkind_name = _RELKIND_TO_NAME.get(tableinfo.relkind, "Relation")
     title = f'{relkind_name} "{schema_name}.{relation_name}"'
 
     return (title, cells, headers, "".join(status))
