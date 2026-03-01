@@ -185,6 +185,22 @@ def test_slash_d_table_2(executor):
 
 
 @dbtest
+def test_slash_d_wildcard(executor):
+    results = executor(r"\d tbl*")
+    # tbl* matches tbl1, tbl2, tbl2_id2_seq (sequence), tbl3, tbl3_c3_excl (index)
+    # executor flattens each block as [title, rows, headers, status]
+    # so titles appear at indices 0, 4, 8, ...
+    titles = results[0::4]
+    assert titles == [
+        'Table "public.tbl1"',
+        'Table "public.tbl2"',
+        'Sequence "public.tbl2_id2_seq"',
+        'Table "public.tbl3"',
+        'Index "public.tbl3_c3_excl"',
+    ]
+
+
+@dbtest
 def test_slash_d_test_generated_default(executor):
     results = executor(r"\d schema3.test_generated_default")
     headers = ["Column", "Type", "Modifiers"]
