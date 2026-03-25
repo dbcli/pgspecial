@@ -25,6 +25,19 @@ TableInfo = namedtuple(
     ],
 )
 
+_RELKIND_TO_NAME = {
+    "r": "Table",
+    "p": "Partitioned table",
+    "v": "View",
+    "m": "Materialized view",
+    "i": "Index",
+    "I": "Partitioned index",
+    "S": "Sequence",
+    "f": "Foreign table",
+    "c": "Composite type",
+    "t": "TOAST table",
+}
+
 log = logging.getLogger(__name__)
 
 
@@ -1805,7 +1818,10 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
     if verbose and tableinfo.reloptions:
         status.append(f"Options: {tableinfo.reloptions}\n")
 
-    return (None, cells, headers, "".join(status))
+    relkind_name = _RELKIND_TO_NAME.get(tableinfo.relkind, "Relation")
+    title = f'{relkind_name} "{schema_name}.{relation_name}"'
+
+    return (title, cells, headers, "".join(status))
 
 
 def sql_name_pattern(pattern):

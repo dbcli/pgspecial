@@ -159,7 +159,7 @@ def test_slash_d_verbose(executor):
 @dbtest
 def test_slash_d_table_1(executor):
     results = executor(r"\d tbl1")
-    title = None
+    title = 'Table "public.tbl1"'
     rows = [
         ["id1", "integer", " not null"],
         ["txt1", "text", " not null"],
@@ -173,7 +173,7 @@ def test_slash_d_table_1(executor):
 @dbtest
 def test_slash_d_table_2(executor):
     results = executor(r"\d tbl2")
-    title = None
+    title = 'Table "public.tbl2"'
     rows = [
         ["id2", "integer", " not null default nextval('tbl2_id2_seq'::regclass)"],
         ["txt2", "text", ""],
@@ -182,6 +182,22 @@ def test_slash_d_table_2(executor):
     status = "Number of child tables: 1 (Use \\d+ to list them.)\n"
     expected = [title, rows, headers, status]
     assert results == expected
+
+
+@dbtest
+def test_slash_d_wildcard(executor):
+    results = executor(r"\d tbl*")
+    # tbl* matches tbl1, tbl2, tbl2_id2_seq (sequence), tbl3, tbl3_c3_excl (index)
+    # executor flattens each block as [title, rows, headers, status]
+    # so titles appear at indices 0, 4, 8, ...
+    titles = results[0::4]
+    assert titles == [
+        'Table "public.tbl1"',
+        'Table "public.tbl2"',
+        'Sequence "public.tbl2_id2_seq"',
+        'Table "public.tbl3"',
+        'Index "public.tbl3_c3_excl"',
+    ]
 
 
 @dbtest
@@ -200,10 +216,10 @@ def test_slash_d_test_generated_default(executor):
 
 @dbtest
 def test_slash_d_table_verbose_1(executor):
-    title = None
     headers = ["Column", "Type", "Modifiers", "Storage", "Stats target", "Description"]
 
     results = executor(r"\d+ tbl1")
+    title = 'Table "public.tbl1"'
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -213,6 +229,7 @@ def test_slash_d_table_verbose_1(executor):
     assert results == expected
 
     results = executor(r'\d+ "Inh1"')
+    title = 'Table "public.Inh1"'
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -225,10 +242,10 @@ def test_slash_d_table_verbose_1(executor):
 
 @dbtest
 def test_slash_d_table_verbose_2(executor):
-    title = None
     headers = ["Column", "Type", "Modifiers", "Storage", "Stats target", "Description"]
 
     results = executor(r"\d+ tbl2")
+    title = 'Table "public.tbl2"'
     rows = [
         [
             "id2",
@@ -245,6 +262,7 @@ def test_slash_d_table_verbose_2(executor):
     assert results == expected
 
     results = executor(r"\d+ inh2")
+    title = 'Table "public.inh2"'
     rows = [
         ["id1", "integer", " not null", "plain", None, None],
         ["txt1", "text", " not null", "extended", None, None],
@@ -266,7 +284,7 @@ def test_slash_d_table_verbose_2(executor):
 
 @dbtest
 def test_slash_d_view_verbose(executor):
-    title = None
+    title = 'View "public.vw1"'
     headers = ["Column", "Type", "Modifiers", "Storage", "Description"]
 
     results = executor(r"\d+ vw1")
@@ -283,7 +301,7 @@ def test_slash_d_view_verbose(executor):
 @dbtest
 def test_slash_d_table_with_exclusion(executor):
     results = executor(r"\d tbl3")
-    title = None
+    title = 'Table "public.tbl3"'
     rows = [["c3", "circle", ""]]
     headers = ["Column", "Type", "Modifiers"]
     status = 'Indexes:\n    "tbl3_c3_excl" EXCLUDE USING gist (c3 WITH &&)\n'
@@ -294,7 +312,7 @@ def test_slash_d_table_with_exclusion(executor):
 @dbtest
 def test_slash_d_table_2_in_schema(executor):
     results = executor(r"\d schema2.tbl2")
-    title = None
+    title = 'Table "schema2.tbl2"'
     rows = [
         [
             "id2",
