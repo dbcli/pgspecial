@@ -432,7 +432,7 @@ def list_extensions(cur, pattern, verbose):
         yield None, cur, headers, cur.statusmessage
 
 
-def list_objects(cur, pattern, verbose, relkinds):
+def list_objects(cur, pattern, verbose, relkinds, show_system=False):
     """
     Returns (title, rows, header, status)
 
@@ -440,6 +440,7 @@ def list_objects(cur, pattern, verbose, relkinds):
     and list_indexes
 
     relkinds is a list of strings to filter pg_class.relkind
+    show_system includes pg_catalog and information_schema objects (S suffix)
 
     """
     schema_pattern, table_pattern = sql_name_pattern(pattern)
@@ -478,6 +479,11 @@ def list_objects(cur, pattern, verbose, relkinds):
 
     if schema_pattern:
         params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
+    elif show_system:
+        params["schema_pattern"] = SQL(
+            """
+            AND n.nspname !~ '^pg_toast' """
+        )
     else:
         params["schema_pattern"] = SQL(
             """
@@ -506,9 +512,19 @@ def list_tables(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["r", "p", ""])
 
 
+@special_command("\\dtS", "\\dtS[+] [pattern]", "List tables, including system tables.")
+def list_tables_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["r", "p", ""], show_system=True)
+
+
 @special_command("\\dv", "\\dv[+] [pattern]", "List views.")
 def list_views(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["v", "s", ""])
+
+
+@special_command("\\dvS", "\\dvS[+] [pattern]", "List views, including system views.")
+def list_views_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["v", "s", ""], show_system=True)
 
 
 @special_command("\\dm", "\\dm[+] [pattern]", "List materialized views.")
@@ -516,14 +532,39 @@ def list_materialized_views(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["m", "s", ""])
 
 
+@special_command("\\dmS", "\\dmS[+] [pattern]", "List materialized views, including system.")
+def list_materialized_views_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["m", "s", ""], show_system=True)
+
+
 @special_command("\\ds", "\\ds[+] [pattern]", "List sequences.")
 def list_sequences(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["S", "s", ""])
 
 
+@special_command("\\dsS", "\\dsS[+] [pattern]", "List sequences, including system.")
+def list_sequences_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["S", "s", ""], show_system=True)
+
+
 @special_command("\\di", "\\di[+] [pattern]", "List indexes.")
 def list_indexes(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["i", "s", ""])
+
+
+@special_command("\\diS", "\\diS[+] [pattern]", "List indexes, including system indexes.")
+def list_indexes_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["i", "s", ""], show_system=True)
+
+
+@special_command(
+    "\\dS", "\\dS[+] [pattern]", "List all relations, including system objects."
+)
+def list_all_system(cur, pattern, verbose):
+    return list_objects(
+        cur, pattern, verbose, ["r", "p", "v", "m", "S", "s", "f", "i", ""],
+        show_system=True,
+    )
 
 
 @special_command("\\df", "\\df[+] [pattern]", "List functions.")
