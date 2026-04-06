@@ -2,6 +2,10 @@
 Unreleased
 ==========
 
+Features:
+---------
+* Add ``\dS`` suffix metacommands (``\dtS``, ``\dvS``, ``\dmS``, ``\dsS``, ``\diS``, ``\dS``) to include system objects from pg_catalog and information_schema, matching psql behavior.
+
 Bug fixes:
 ----------
 * Include relation type/name titles in `\d` and `\d+` describe output so wildcard describe results retain per-relation context.
