@@ -111,8 +111,8 @@ def setup_db(conn):
             """create function trigger_noop() returns trigger language plpgsql as
                        $$ begin return new; end $$"""
         )
-        cur.execute("create trigger trig_enabled after insert on tbl_with_triggers for each row execute function trigger_noop()")
-        cur.execute("create trigger trig_disabled after insert on tbl_with_triggers for each row execute function trigger_noop()")
+        cur.execute("create trigger trig_enabled after insert on tbl_with_triggers for each row execute procedure trigger_noop()")
+        cur.execute("create trigger trig_disabled after insert on tbl_with_triggers for each row execute procedure trigger_noop()")
         cur.execute("alter table tbl_with_triggers disable trigger trig_disabled")
 
         # privileges
