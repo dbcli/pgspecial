@@ -338,9 +338,13 @@ def test_slash_d_table_with_triggers(executor):
     assert "trig_enabled" in status
     assert "Disabled triggers:" in status
     assert "trig_disabled" in status
-    # trig_disabled must not appear in the enabled section
+    # trig_enabled must appear in the enabled section, trig_disabled must not
     enabled_section = status[: status.index("Disabled triggers:")]
+    assert "trig_enabled" in enabled_section
     assert "trig_disabled" not in enabled_section
+    # trig_disabled must appear in the disabled section
+    disabled_section = status[status.index("Disabled triggers:") :]
+    assert "trig_disabled" in disabled_section
 
 
 @dbtest
