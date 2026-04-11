@@ -5,6 +5,7 @@ Unreleased
 Bug fixes:
 ----------
 * Include relation type/name titles in `\d` and `\d+` describe output so wildcard describe results retain per-relation context.
+* Fix `\d table` not showing disabled triggers under a separate "Disabled triggers:" section.
 
 2.2.1 (2025-04-27)
 ==================
