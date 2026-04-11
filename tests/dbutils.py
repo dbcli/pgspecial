@@ -105,6 +105,16 @@ def setup_db(conn):
         cur.execute("create domain schema1.bigint_t bigint")
         cur.execute("comment on domain schema1.bigint_t is 'a really large integer'")
 
+        # triggers
+        cur.execute("create table tbl_with_triggers(id integer)")
+        cur.execute(
+            """create function trigger_noop() returns trigger language plpgsql as
+                       $$ begin return new; end $$"""
+        )
+        cur.execute("create trigger trig_enabled after insert on tbl_with_triggers for each row execute function trigger_noop()")
+        cur.execute("create trigger trig_disabled after insert on tbl_with_triggers for each row execute function trigger_noop()")
+        cur.execute("alter table tbl_with_triggers disable trigger trig_disabled")
+
         # privileges
         cur.execute("CREATE ROLE test_role;")
         cur.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA schema1 GRANT SELECT ON TABLES TO test_role;")
