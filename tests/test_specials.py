@@ -126,10 +126,11 @@ def test_slash_d(executor):
         ("public", "tbl2", "table", POSTGRES_USER),
         ("public", "tbl2_id2_seq", "sequence", POSTGRES_USER),
         ("public", "tbl3", "table", POSTGRES_USER),
+        ("public", "tbl_with_triggers", "table", POSTGRES_USER),
         ("public", "vw1", "view", POSTGRES_USER),
     ]
     headers = objects_listing_headers[:-2]
-    status = "SELECT 8"
+    status = "SELECT 9"
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -147,10 +148,11 @@ def test_slash_d_verbose(executor):
         ("public", "tbl2", "table", POSTGRES_USER, "8192 bytes", None),
         ("public", "tbl2_id2_seq", "sequence", POSTGRES_USER, "8192 bytes", None),
         ("public", "tbl3", "table", POSTGRES_USER, "0 bytes", None),
+        ("public", "tbl_with_triggers", "table", POSTGRES_USER, "0 bytes", None),
         ("public", "vw1", "view", POSTGRES_USER, "0 bytes", None),
     ]
     headers = objects_listing_headers
-    status = "SELECT 8"
+    status = "SELECT 9"
     expected = [title, rows, headers, status]
 
     assert results == expected
@@ -197,6 +199,7 @@ def test_slash_d_wildcard(executor):
         'Sequence "public.tbl2_id2_seq"',
         'Table "public.tbl3"',
         'Index "public.tbl3_c3_excl"',
+        'Table "public.tbl_with_triggers"',
     ]
 
 
@@ -328,6 +331,23 @@ def test_slash_d_table_2_in_schema(executor):
 
 
 @dbtest
+def test_slash_d_table_with_triggers(executor):
+    results = executor(r"\d tbl_with_triggers")
+    status = results[3]
+    assert "Triggers:" in status
+    assert "trig_enabled" in status
+    assert "Disabled triggers:" in status
+    assert "trig_disabled" in status
+    # trig_enabled must appear in the enabled section, trig_disabled must not
+    enabled_section = status[: status.index("Disabled triggers:")]
+    assert "trig_enabled" in enabled_section
+    assert "trig_disabled" not in enabled_section
+    # trig_disabled must appear in the disabled section
+    disabled_section = status[status.index("Disabled triggers:") :]
+    assert "trig_disabled" in disabled_section
+
+
+@dbtest
 def test_slash_dn(executor):
     """List all schemas."""
     results = executor(r"\dn")
@@ -366,6 +386,7 @@ def test_slash_dp(executor):
         ("public", "tbl2", "table", None, "", ""),
         ("public", "tbl2_id2_seq", "sequence", None, "", ""),
         ("public", "tbl3", "table", None, "", ""),
+        ("public", "tbl_with_triggers", "table", None, "", ""),
         ("public", "vw1", "view", None, "", ""),
     ]
 
@@ -491,6 +512,7 @@ def test_slash_dt(executor):
         ("public", "tbl1", "table", POSTGRES_USER),
         ("public", "tbl2", "table", POSTGRES_USER),
         ("public", "tbl3", "table", POSTGRES_USER),
+        ("public", "tbl_with_triggers", "table", POSTGRES_USER),
     ]
     headers = objects_listing_headers[:-2]
     status = "SELECT %s" % len(rows)
@@ -509,6 +531,7 @@ def test_slash_dt_verbose(executor):
         ("public", "tbl1", "table", POSTGRES_USER, "8192 bytes", None),
         ("public", "tbl2", "table", POSTGRES_USER, "8192 bytes", None),
         ("public", "tbl3", "table", POSTGRES_USER, "0 bytes", None),
+        ("public", "tbl_with_triggers", "table", POSTGRES_USER, "0 bytes", None),
     ]
     headers = objects_listing_headers
     status = "SELECT %s" % len(rows)
@@ -778,9 +801,12 @@ def test_slash_db_name(executor):
 def test_slash_df(executor):
     results = executor(r"\df")
     title = None
-    rows = [("public", "func1", "integer", "", "normal")]
+    rows = [
+        ("public", "func1", "integer", "", "normal"),
+        ("public", "trigger_noop", "trigger", "", "trigger"),
+    ]
     headers = ["Schema", "Name", "Result data type", "Argument data types", "Type"]
-    status = "SELECT 1"
+    status = "SELECT 2"
     expected = [title, rows, headers, status]
     assert results == expected
 

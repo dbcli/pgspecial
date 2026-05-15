@@ -1670,10 +1670,11 @@ def describe_one_table_details(cur, schema_name, relation_name, oid, verbose):
             # * disabled triggers and the two special ALWAYS and REPLICA
             # * configurations.
             # */
+            rows = cur.fetchall()
             for category in range(4):
                 have_heading = False
-                list_trigger = False
-                for row in cur:
+                for row in rows:
+                    list_trigger = False
                     # /*
                     # * Check if this trigger falls into the current category
                     # */
