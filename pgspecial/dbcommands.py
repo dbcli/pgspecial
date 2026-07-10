@@ -490,7 +490,7 @@ def list_objects(cur, pattern, verbose, relkinds, show_system=False):
 
     if schema_pattern:
         params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
-    elif show_system or pattern:
+    elif include_system_relations:
         params["schema_pattern"] = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
     else:
         params["schema_pattern"] = SQL(
