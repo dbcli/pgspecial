@@ -137,6 +137,22 @@ def test_slash_d(executor):
 
 
 @dbtest
+def test_slash_d_system(executor):
+    rows = executor(r"\dS")[1]
+
+    assert ("public", "tbl1", "table", POSTGRES_USER) in rows
+    assert ("pg_catalog", "pg_class", "table", POSTGRES_USER) in rows
+    assert not any(row[1] == "pg_class_oid_index" for row in rows)
+
+
+@dbtest
+def test_slash_d_system_pattern(executor):
+    results = executor(r"\dS pg_class")
+
+    assert results[0] == 'Table "pg_catalog.pg_class"'
+
+
+@dbtest
 def test_slash_d_verbose(executor):
     results = executor(r"\d+")
     title = None
@@ -518,6 +534,47 @@ def test_slash_dt(executor):
     status = "SELECT %s" % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected
+
+
+@pytest.mark.parametrize(
+    ("command", "user_object", "system_object"),
+    [
+        (r"\dtS", ("public", "tbl1", "table", POSTGRES_USER), ("pg_catalog", "pg_class", "table", POSTGRES_USER)),
+        (r"\dvS", ("public", "vw1", "view", POSTGRES_USER), ("pg_catalog", "pg_views", "view", POSTGRES_USER)),
+        (r"\dmS", ("public", "mvw1", "materialized view", POSTGRES_USER), None),
+        (r"\dsS", ("public", "tbl2_id2_seq", "sequence", POSTGRES_USER), None),
+        (r"\diS", ("public", "id_text", "index", POSTGRES_USER), ("pg_catalog", "pg_class_oid_index", "index", POSTGRES_USER)),
+    ],
+)
+@dbtest
+def test_slash_d_relation_system_variants(executor, command, user_object, system_object):
+    rows = executor(command)[1]
+
+    assert user_object in rows
+    if system_object:
+        assert system_object in rows
+
+
+@dbtest
+def test_slash_dt_pattern_includes_system_tables(executor):
+    rows = executor(r"\dt pg_class")[1]
+
+    assert rows == [("pg_catalog", "pg_class", "table", POSTGRES_USER)]
+
+
+@dbtest
+def test_slash_dt_system_respects_schema_visibility(executor):
+    rows = executor(r"\dtS")[1]
+
+    assert ("schema1", "s1_tbl1", "table", POSTGRES_USER) not in rows
+
+
+@dbtest
+def test_slash_dt_pattern_includes_toast_tables(executor):
+    rows = executor(r"\dt pg_toast.*")[1]
+
+    assert rows
+    assert all(schema == "pg_toast" and relation_type == "TOAST table" for schema, _, relation_type, _ in rows)
 
 
 @dbtest
