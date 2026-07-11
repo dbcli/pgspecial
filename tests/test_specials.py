@@ -556,6 +556,23 @@ def test_slash_d_relation_system_variants(executor, command, user_object, system
 
 
 @dbtest
+def test_slash_di_system_includes_partitioned_indexes(executor):
+    rows = executor(r"\diS schema1.partitioned_idx")[1]
+
+    assert rows == [("schema1", "partitioned_idx", "partitioned index", POSTGRES_USER)]
+
+
+@dbtest
+def test_slash_dt_system_verbose(executor):
+    _, rows, headers, status = executor(r"\dtS+ tbl1")
+
+    assert headers == objects_listing_headers
+    assert len(rows) == 1
+    assert rows[0][:4] == ("public", "tbl1", "table", POSTGRES_USER)
+    assert status == "SELECT 1"
+
+
+@dbtest
 def test_slash_dt_pattern_includes_system_tables(executor):
     rows = executor(r"\dt pg_class")[1]
 
