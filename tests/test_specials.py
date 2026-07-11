@@ -556,8 +556,15 @@ def test_slash_d_relation_system_variants(executor, command, user_object, system
 
 
 @dbtest
-def test_slash_di_system_includes_partitioned_indexes(executor):
-    rows = executor(r"\diS schema1.partitioned_idx")[1]
+@pytest.mark.skipif(SERVER_VERSION < 110000, reason="Partitioned indexes require PostgreSQL 11 or newer.")
+def test_slash_di_system_includes_partitioned_indexes(executor, connection):
+    with connection.cursor() as cursor:
+        cursor.execute("CREATE TABLE schema1.partitioned_tbl (id integer) PARTITION BY RANGE (id)")
+        cursor.execute("CREATE INDEX partitioned_idx ON schema1.partitioned_tbl (id)")
+        try:
+            rows = executor(r"\diS schema1.partitioned_idx")[1]
+        finally:
+            cursor.execute("DROP TABLE schema1.partitioned_tbl")
 
     assert rows == [("schema1", "partitioned_idx", "partitioned index", POSTGRES_USER)]
 
