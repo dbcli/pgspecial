@@ -1973,8 +1973,17 @@ def shell_command(cur, pattern, verbose):
     return [(None, cur, headers, subprocess.call(params))]
 
 
-@special_command("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
+@special_command("\\dE", "\\dE[S+] [pattern]", "List foreign tables.", aliases=())
 def list_foreign_tables(cur, pattern, verbose):
+    return _list_foreign_tables(cur, pattern, verbose)
+
+
+@special_command("\\dES", "\\dE[S+] [pattern]", "List user and system foreign tables.")
+def list_foreign_tables_system(cur, pattern, verbose):
+    return _list_foreign_tables(cur, pattern, verbose, show_system=True)
+
+
+def _list_foreign_tables(cur, pattern, verbose, show_system=False):
     params = {}
     query = SQL(
         """
@@ -1986,9 +1995,7 @@ def list_foreign_tables(cur, pattern, verbose):
         FROM pg_catalog.pg_class c
             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relkind IN ('f','')
-            AND n.nspname <> 'pg_catalog'
-            AND n.nspname <> 'information_schema'
-            AND n.nspname !~ '^pg_toast'
+            {schema_filter}
         AND pg_catalog.pg_table_is_visible(c.oid)
         {filter}
         ORDER BY 1,2;
@@ -2003,6 +2010,16 @@ def list_foreign_tables(cur, pattern, verbose):
         )
     else:
         params["verbose_cols"] = SQL("")
+
+    if show_system:
+        params["schema_filter"] = SQL("")
+    else:
+        params["schema_filter"] = SQL(
+            """
+            AND n.nspname <> 'pg_catalog'
+            AND n.nspname <> 'information_schema'
+            AND n.nspname !~ '^pg_toast'"""
+        )
 
     if pattern:
         _, tbl_name = sql_name_pattern(pattern)

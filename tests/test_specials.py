@@ -1219,6 +1219,18 @@ def test_slash_dE(executor):
 
 
 @fdw_test
+def test_slash_dE_system(executor):
+    with foreign_db_environ():
+        results = executor(r"\dES")
+        title = None
+        rows = [("public", "foreign_foo", "foreign table", "postgres")]
+        headers = ["Schema", "Name", "Type", "Owner"]
+        status = "SELECT 1"
+        expected = [title, rows, headers, status]
+        assert results == expected
+
+
+@fdw_test
 def test_slash_dE_with_pattern(executor):
     with foreign_db_environ():
         results = executor(r"\dE foreign_foo")
