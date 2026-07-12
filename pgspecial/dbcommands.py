@@ -1978,7 +1978,7 @@ def list_foreign_tables(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["f", ""])
 
 
-@special_command("\\dES", "\\dE[S+] [pattern]", "List user and system foreign tables.")
+@special_command("\\dES", "\\dES[+] [pattern]", "List user and system foreign tables.")
 def list_foreign_tables_system(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["f", ""], show_system=True)
 
