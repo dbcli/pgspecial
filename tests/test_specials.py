@@ -1231,6 +1231,20 @@ def test_slash_dE_system(executor):
 
 
 @fdw_test
+def test_slash_dE_system_with_schema_pattern(executor, connection):
+    with foreign_db_environ():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "CREATE FOREIGN TABLE schema1.foreign_foo (a int, b text) "
+                "SERVER foreign_db_server OPTIONS (schema_name 'public', table_name 'foreign_foo')"
+            )
+
+        results = executor(r"\dES schema1.foreign_foo")
+
+        assert results[1] == [("schema1", "foreign_foo", "foreign table", POSTGRES_USER)]
+
+
+@fdw_test
 def test_slash_dE_with_pattern(executor):
     with foreign_db_environ():
         results = executor(r"\dE foreign_foo")
