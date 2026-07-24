@@ -137,6 +137,22 @@ def test_slash_d(executor):
 
 
 @dbtest
+def test_slash_d_system(executor):
+    rows = executor(r"\dS")[1]
+
+    assert ("public", "tbl1", "table", POSTGRES_USER) in rows
+    assert ("pg_catalog", "pg_class", "table", POSTGRES_USER) in rows
+    assert not any(row[1] == "pg_class_oid_index" for row in rows)
+
+
+@dbtest
+def test_slash_d_system_pattern(executor):
+    results = executor(r"\dS pg_class")
+
+    assert results[0] == 'Table "pg_catalog.pg_class"'
+
+
+@dbtest
 def test_slash_d_verbose(executor):
     results = executor(r"\d+")
     title = None
@@ -518,6 +534,71 @@ def test_slash_dt(executor):
     status = "SELECT %s" % len(rows)
     expected = [title, rows, headers, status]
     assert results == expected
+
+
+@pytest.mark.parametrize(
+    ("command", "user_object", "system_object"),
+    [
+        (r"\dtS", ("public", "tbl1", "table", POSTGRES_USER), ("pg_catalog", "pg_class", "table", POSTGRES_USER)),
+        (r"\dvS", ("public", "vw1", "view", POSTGRES_USER), ("pg_catalog", "pg_views", "view", POSTGRES_USER)),
+        (r"\dmS", ("public", "mvw1", "materialized view", POSTGRES_USER), None),
+        (r"\dsS", ("public", "tbl2_id2_seq", "sequence", POSTGRES_USER), None),
+        (r"\diS", ("public", "id_text", "index", POSTGRES_USER), ("pg_catalog", "pg_class_oid_index", "index", POSTGRES_USER)),
+    ],
+)
+@dbtest
+def test_slash_d_relation_system_variants(executor, command, user_object, system_object):
+    rows = executor(command)[1]
+
+    assert user_object in rows
+    if system_object:
+        assert system_object in rows
+
+
+@dbtest
+@pytest.mark.skipif(SERVER_VERSION < 110000, reason="Partitioned indexes require PostgreSQL 11 or newer.")
+def test_slash_di_system_includes_partitioned_indexes(executor, connection):
+    with connection.cursor() as cursor:
+        cursor.execute("CREATE TABLE schema1.partitioned_tbl (id integer) PARTITION BY RANGE (id)")
+        cursor.execute("CREATE INDEX partitioned_idx ON schema1.partitioned_tbl (id)")
+        try:
+            rows = executor(r"\diS schema1.partitioned_idx")[1]
+        finally:
+            cursor.execute("DROP TABLE schema1.partitioned_tbl")
+
+    assert rows == [("schema1", "partitioned_idx", "partitioned index", POSTGRES_USER)]
+
+
+@dbtest
+def test_slash_dt_system_verbose(executor):
+    _, rows, headers, status = executor(r"\dtS+ tbl1")
+
+    assert headers == objects_listing_headers
+    assert len(rows) == 1
+    assert rows[0][:4] == ("public", "tbl1", "table", POSTGRES_USER)
+    assert status == "SELECT 1"
+
+
+@dbtest
+def test_slash_dt_pattern_includes_system_tables(executor):
+    rows = executor(r"\dt pg_class")[1]
+
+    assert rows == [("pg_catalog", "pg_class", "table", POSTGRES_USER)]
+
+
+@dbtest
+def test_slash_dt_system_respects_schema_visibility(executor):
+    rows = executor(r"\dtS")[1]
+
+    assert ("schema1", "s1_tbl1", "table", POSTGRES_USER) not in rows
+
+
+@dbtest
+def test_slash_dt_pattern_includes_toast_tables(executor):
+    rows = executor(r"\dt pg_toast.*")[1]
+
+    assert rows
+    assert all(schema == "pg_toast" and relation_type == "TOAST table" for schema, _, relation_type, _ in rows)
 
 
 @dbtest
@@ -1135,6 +1216,32 @@ def test_slash_dE(executor):
         status = "SELECT 1"
         expected = [title, rows, headers, status]
         assert results == expected
+
+
+@fdw_test
+def test_slash_dE_system(executor):
+    with foreign_db_environ():
+        results = executor(r"\dES")
+        title = None
+        rows = [("public", "foreign_foo", "foreign table", "postgres")]
+        headers = ["Schema", "Name", "Type", "Owner"]
+        status = "SELECT 1"
+        expected = [title, rows, headers, status]
+        assert results == expected
+
+
+@fdw_test
+def test_slash_dE_system_with_schema_pattern(executor, connection):
+    with foreign_db_environ():
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "CREATE FOREIGN TABLE schema1.foreign_foo (a int, b text) "
+                "SERVER foreign_db_server OPTIONS (schema_name 'public', table_name 'foreign_foo')"
+            )
+
+        results = executor(r"\dES schema1.foreign_foo")
+
+        assert results[1] == [("schema1", "foreign_foo", "foreign table", POSTGRES_USER)]
 
 
 @fdw_test

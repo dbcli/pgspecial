@@ -2,6 +2,10 @@
 Unreleased
 ==========
 
+Features:
+---------
+* Add the ``S`` modifier to relation commands so they can include system objects.
+
 Bug fixes:
 ----------
 * Include relation type/name titles in `\d` and `\d+` describe output so wildcard describe results retain per-relation context.

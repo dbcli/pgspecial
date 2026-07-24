@@ -432,7 +432,7 @@ def list_extensions(cur, pattern, verbose):
         yield None, cur, headers, cur.statusmessage
 
 
-def list_objects(cur, pattern, verbose, relkinds):
+def list_objects(cur, pattern, verbose, relkinds, show_system=False):
     """
     Returns (title, rows, header, status)
 
@@ -440,9 +440,20 @@ def list_objects(cur, pattern, verbose, relkinds):
     and list_indexes
 
     relkinds is a list of strings to filter pg_class.relkind
+    show_system includes objects from system schemas
 
     """
     schema_pattern, table_pattern = sql_name_pattern(pattern)
+    include_system_relations = show_system or bool(pattern)
+
+    # Match psql: system searches include legacy special relations and,
+    # for table listings, TOAST relations.
+    relkinds = list(relkinds)
+    if include_system_relations:
+        relkinds.append("s")
+
+        if "r" in relkinds:
+            relkinds.append("t")
 
     params = {"relkind": relkinds}
     if verbose:
@@ -460,9 +471,10 @@ def list_objects(cur, pattern, verbose, relkinds):
                     CASE c.relkind
                       WHEN 'r' THEN 'table' WHEN 'v' THEN 'view'
                       WHEN 'p' THEN 'partitioned table'
-                      WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index'
+                      WHEN 'm' THEN 'materialized view'
+                      WHEN 'i' THEN 'index' WHEN 'I' THEN 'partitioned index'
                       WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special'
-                      WHEN 'f' THEN 'foreign table' END
+                      WHEN 'f' THEN 'foreign table' WHEN 't' THEN 'TOAST table' END
                     as type,
                     pg_catalog.pg_get_userbyid(c.relowner) as owner
                     {verbose_columns}
@@ -478,6 +490,8 @@ def list_objects(cur, pattern, verbose, relkinds):
 
     if schema_pattern:
         params["schema_pattern"] = SQL(" AND n.nspname ~ {}").format(schema_pattern)
+    elif include_system_relations:
+        params["schema_pattern"] = SQL(" AND pg_catalog.pg_table_is_visible(c.oid) ")
     else:
         params["schema_pattern"] = SQL(
             """
@@ -506,24 +520,49 @@ def list_tables(cur, pattern, verbose):
     return list_objects(cur, pattern, verbose, ["r", "p", ""])
 
 
+@special_command("\\dtS", "\\dtS[+] [pattern]", "List user and system tables.")
+def list_tables_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["r", "p", ""], show_system=True)
+
+
 @special_command("\\dv", "\\dv[+] [pattern]", "List views.")
 def list_views(cur, pattern, verbose):
-    return list_objects(cur, pattern, verbose, ["v", "s", ""])
+    return list_objects(cur, pattern, verbose, ["v", ""])
+
+
+@special_command("\\dvS", "\\dvS[+] [pattern]", "List user and system views.")
+def list_views_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["v", ""], show_system=True)
 
 
 @special_command("\\dm", "\\dm[+] [pattern]", "List materialized views.")
 def list_materialized_views(cur, pattern, verbose):
-    return list_objects(cur, pattern, verbose, ["m", "s", ""])
+    return list_objects(cur, pattern, verbose, ["m", ""])
+
+
+@special_command("\\dmS", "\\dmS[+] [pattern]", "List user and system materialized views.")
+def list_materialized_views_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["m", ""], show_system=True)
 
 
 @special_command("\\ds", "\\ds[+] [pattern]", "List sequences.")
 def list_sequences(cur, pattern, verbose):
-    return list_objects(cur, pattern, verbose, ["S", "s", ""])
+    return list_objects(cur, pattern, verbose, ["S", ""])
+
+
+@special_command("\\dsS", "\\dsS[+] [pattern]", "List user and system sequences.")
+def list_sequences_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["S", ""], show_system=True)
 
 
 @special_command("\\di", "\\di[+] [pattern]", "List indexes.")
 def list_indexes(cur, pattern, verbose):
-    return list_objects(cur, pattern, verbose, ["i", "s", ""])
+    return list_objects(cur, pattern, verbose, ["i", "I", ""])
+
+
+@special_command("\\diS", "\\diS[+] [pattern]", "List user and system indexes.")
+def list_indexes_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["i", "I", ""], show_system=True)
 
 
 @special_command("\\df", "\\df[+] [pattern]", "List functions.")
@@ -889,13 +928,22 @@ def list_text_search_configurations(cur, pattern, verbose):
 @special_command("describe", "DESCRIBE [pattern]", "", hidden=True, case_sensitive=False)
 @special_command("\\d", "\\d[+] [pattern]", "List or describe tables, views and sequences.")
 def describe_table_details(cur, pattern, verbose):
+    return _describe_table_details(cur, pattern, verbose)
+
+
+@special_command("\\dS", "\\dS[+] [pattern]", "List or describe user and system relations.")
+def describe_table_details_system(cur, pattern, verbose):
+    return _describe_table_details(cur, pattern, verbose, show_system=True)
+
+
+def _describe_table_details(cur, pattern, verbose, show_system=False):
     """
     Returns (title, rows, headers, status)
     """
 
     # This is a simple \d[+] command. No table name to follow.
     if not pattern:
-        return list_objects(cur, pattern, verbose, ["r", "p", "v", "m", "S", "f", ""])
+        return list_objects(cur, pattern, verbose, ["r", "p", "v", "m", "S", "f", ""], show_system=show_system)
 
     # This is a \d <tablename> command. A royal pain in the ass.
     schema, relname = sql_name_pattern(pattern)
@@ -1925,51 +1973,14 @@ def shell_command(cur, pattern, verbose):
     return [(None, cur, headers, subprocess.call(params))]
 
 
-@special_command("\\dE", "\\dE[+] [pattern]", "List foreign tables.", aliases=())
+@special_command("\\dE", "\\dE[S+] [pattern]", "List foreign tables.", aliases=())
 def list_foreign_tables(cur, pattern, verbose):
-    params = {}
-    query = SQL(
-        """
-        SELECT n.nspname as schema,
-        c.relname as name,
-        CASE c.relkind WHEN 'r' THEN 'table' WHEN 'v' THEN 'view' WHEN 'm' THEN 'materialized view' WHEN 'i' THEN 'index' WHEN 'S' THEN 'sequence' WHEN 's' THEN 'special' WHEN 'f' THEN 'foreign table' WHEN 'p' THEN 'table' WHEN 'I' THEN 'index' END as type,
-        pg_catalog.pg_get_userbyid(c.relowner) as owner
-        {verbose_cols}
-        FROM pg_catalog.pg_class c
-            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-        WHERE c.relkind IN ('f','')
-            AND n.nspname <> 'pg_catalog'
-            AND n.nspname <> 'information_schema'
-            AND n.nspname !~ '^pg_toast'
-        AND pg_catalog.pg_table_is_visible(c.oid)
-        {filter}
-        ORDER BY 1,2;
-        """
-    )
+    return list_objects(cur, pattern, verbose, ["f", ""])
 
-    if verbose:
-        params["verbose_cols"] = SQL(
-            """
-            , pg_catalog.pg_size_pretty(pg_catalog.pg_table_size(c.oid)) as size,
-            pg_catalog.obj_description(c.oid, 'pg_class') as description """
-        )
-    else:
-        params["verbose_cols"] = SQL("")
 
-    if pattern:
-        _, tbl_name = sql_name_pattern(pattern)
-        params["filter"] = SQL(" AND c.relname OPERATOR(pg_catalog.~) {} ").format(f"^({tbl_name})$")
-    else:
-        params["filter"] = SQL("")
-
-    formatted_query = query.format(**params)
-    log.debug(formatted_query.as_string(cur))
-    cur.execute(formatted_query)
-    if cur.description:
-        headers = [titleize(x.name) for x in cur.description]
-        return [(None, cur, headers, cur.statusmessage)]
-    else:
-        return [(None, None, None, cur.statusmessage)]
+@special_command("\\dES", "\\dES[+] [pattern]", "List user and system foreign tables.")
+def list_foreign_tables_system(cur, pattern, verbose):
+    return list_objects(cur, pattern, verbose, ["f", ""], show_system=True)
 
 
 def titleize(column):
