@@ -3,8 +3,16 @@ import os
 import logging
 from collections import namedtuple
 
-from . import export
 from .help.commands import helpcommands
+from . import export
+from enum import Enum
+
+
+class Verbosity(Enum):
+    SUCCINCT = "succinct"
+    NORMAL = "normal"
+    VERBOSE = "verbose"
+
 
 log = logging.getLogger(__name__)
 
@@ -96,7 +104,7 @@ class PGSpecial(object):
 
     def execute(self, cur, sql):
         commands = self.commands
-        command, verbose, pattern = parse_special_command(sql)
+        command, verbosity, pattern = parse_special_command(sql)
 
         if (command not in commands) and (command.lower() not in commands):
             raise CommandNotFound
@@ -111,7 +119,8 @@ class PGSpecial(object):
         if special_cmd.arg_type == NO_QUERY:
             return special_cmd.handler()
         elif special_cmd.arg_type == PARSED_QUERY:
-            return special_cmd.handler(cur=cur, pattern=pattern, verbose=verbose)
+            # Keep existing handlers working: convert Verbosity -> bool
+            return special_cmd.handler(cur=cur, pattern=pattern, verbose=(verbosity == Verbosity.VERBOSE))
         elif special_cmd.arg_type == RAW_QUERY:
             return special_cmd.handler(cur=cur, query=sql)
 
@@ -225,10 +234,14 @@ def content_exceeds_width(row, width):
 @export
 def parse_special_command(sql):
     command, _, arg = sql.partition(" ")
-    verbose = "+" in command
+    verbosity = Verbosity.NORMAL
+    if "+" in command:
+        verbosity = Verbosity.VERBOSE
+    elif "-" in command:
+        verbosity = Verbosity.SUCCINCT
 
-    command = command.strip().replace("+", "")
-    return (command, verbose, arg.strip())
+    command = command.strip().strip("+-")
+    return (command, verbosity, arg.strip())
 
 
 def show_extra_help_command(command, syntax, description):
