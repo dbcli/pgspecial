@@ -1,16 +1,16 @@
-from __future__ import unicode_literals
-import re
-import sys
 import logging
-import click
-import io
-import shlex
-import sqlparse
-import psycopg
 from os.path import expanduser
-from .namedqueries import NamedQueries
+import re
+import shlex
+import sys
+
+import click
+import psycopg
+import sqlparse
+
 from . import export
 from .main import show_extra_help_command, special_command
+from .namedqueries import NamedQueries
 
 NAMED_QUERY_PLACEHOLDERS = frozenset({"$1", "$*", "$@"})
 
@@ -93,7 +93,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
     # Populate the editor buffer with the partial sql (if available) and a
     # placeholder comment.
     query = click.edit(
-        "{sql}\n\n{marker}".format(sql=sql, marker=MARKER),
+        f"{sql}\n\n{MARKER}",
         filename=filename,
         extension=".sql",
         editor=editor,
@@ -102,7 +102,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
     if filename:
         try:
             query = read_from_file(filename)
-        except IOError:
+        except OSError:
             message = "Error reading file: %s." % filename
 
     if query is not None:
@@ -116,7 +116,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
 
 
 def read_from_file(path):
-    with io.open(expanduser(path), encoding="utf-8") as f:
+    with open(expanduser(path), encoding="utf-8") as f:
         contents = f.read()
     return contents
 
@@ -150,7 +150,7 @@ def copy(cur, pattern, verbose):
     query = f"{before_file_name} {replacement_file_name} {after_file_name}"
     open_mode = "r" if direction == "FROM" else "wb"
     if file_name.startswith("'") and file_name.endswith("'"):
-        file = io.open(expanduser(file_name.strip("'")), mode=open_mode)
+        file = open(expanduser(file_name.strip("'")), mode=open_mode)
     elif "stdin" in file_name.lower():
         file = sys.stdin.buffer
     elif "stdout" in file_name.lower():
@@ -178,7 +178,12 @@ def copy(cur, pattern, verbose):
 
 
 def subst_favorite_query_args(query, args):
-    """replace positional parameters ($1,$2,...$n) in query."""
+    """replace positional parameters in query.
+
+    Regular parameters ($1, $2, ... $n) must be given an argument.
+    Optional parameters ($?1, $?2, ...) are replaced by an argument
+    when it is supplied, and by null when it is not.
+    """
     is_query_with_aggregation = ("$*" in query) or ("$@" in query)
 
     # In case of arguments aggregation we replace all positional arguments until the
@@ -186,18 +191,22 @@ def subst_favorite_query_args(query, args):
     # replace the placeholder with them.
     for idx, val in enumerate(args, start=1):
         subst_var = "$" + str(idx)
-        if subst_var not in query:
-            if is_query_with_aggregation:
-                # remove consumed arguments ( - 1 to include current value)
-                args = args[idx - 1 :]
-                break
-
+        optional_subst_var = "$?" + str(idx)
+        if subst_var in query:
+            query = query.replace(subst_var, val)
+        elif optional_subst_var in query:
+            # Optional parameter ($?N) with an argument supplied for it.
+            query = query.replace(optional_subst_var, val)
+        elif is_query_with_aggregation:
+            # remove consumed arguments ( - 1 to include current value)
+            args = args[idx - 1 :]
+            break
+        else:
             return [
                 None,
-                "query does not have substitution parameter " + subst_var + ":\n  " + query,
+                "query does not have substitution parameter " + subst_var + " or " + optional_subst_var + ":\n  " + query,
             ]
 
-        query = query.replace(subst_var, val)
     # we consumed all arguments
     else:
         args = []
@@ -217,6 +226,9 @@ def subst_favorite_query_args(query, args):
             "missing substitution for " + match.group(0) + " in query:\n  " + query,
         ]
 
+    # Optional parameters the caller did not supply become null.
+    query = re.sub(r"\$\?\d+", "null", query)
+
     return [query, None]
 
 
@@ -230,13 +242,13 @@ def execute_named_query(cur, pattern, **_):
     pattern = params.pop(0)
 
     query = NamedQueries.instance.get(pattern)
-    title = "> {}".format(query)
+    title = f"> {query}"
     if query is None:
-        message = "No named query: {}".format(pattern)
+        message = f"No named query: {pattern}"
         return [(None, None, None, message)]
 
     try:
-        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS):
+        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS) or "$?" in query:
             query, params = subst_favorite_query_args(query, params)
             if query is None:
                 raise Exception("Bad arguments\n" + params)

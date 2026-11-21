@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-class NamedQueries(object):
+class NamedQueries:
     section_name = "named queries"
 
     usage = """Named Queries are a way to save frequently used queries
@@ -16,6 +15,11 @@ Examples:
     |--------+----------------------------------------|
     | simple | SELECT * FROM xyzb where a is not null |
     +--------+----------------------------------------+
+
+    # Save a named query with optional parameters ($?1, ...). Missing
+    # arguments are substituted by null, so this query lists everything
+    # when it is run without arguments:
+    > \\ns opt select * from abc where ($?1 is null or a like %\\'$?1%\\');
 
     # Run a named query.
     > \\n simple
