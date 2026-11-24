@@ -1,16 +1,16 @@
-import logging
-from os.path import expanduser
+from __future__ import unicode_literals
 import re
-import shlex
 import sys
-
+import logging
 import click
-import psycopg
+import io
+import shlex
 import sqlparse
-
+import psycopg
+from os.path import expanduser
+from .namedqueries import NamedQueries
 from . import export
 from .main import show_extra_help_command, special_command
-from .namedqueries import NamedQueries
 
 NAMED_QUERY_PLACEHOLDERS = frozenset({"$1", "$*", "$@"})
 
@@ -93,7 +93,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
     # Populate the editor buffer with the partial sql (if available) and a
     # placeholder comment.
     query = click.edit(
-        f"{sql}\n\n{MARKER}",
+        "{sql}\n\n{marker}".format(sql=sql, marker=MARKER),
         filename=filename,
         extension=".sql",
         editor=editor,
@@ -102,7 +102,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
     if filename:
         try:
             query = read_from_file(filename)
-        except OSError:
+        except IOError:
             message = "Error reading file: %s." % filename
 
     if query is not None:
@@ -116,7 +116,7 @@ def open_external_editor(filename=None, sql=None, editor=None):
 
 
 def read_from_file(path):
-    with open(expanduser(path), encoding="utf-8") as f:
+    with io.open(expanduser(path), encoding="utf-8") as f:
         contents = f.read()
     return contents
 
@@ -150,7 +150,7 @@ def copy(cur, pattern, verbose):
     query = f"{before_file_name} {replacement_file_name} {after_file_name}"
     open_mode = "r" if direction == "FROM" else "wb"
     if file_name.startswith("'") and file_name.endswith("'"):
-        file = open(expanduser(file_name.strip("'")), mode=open_mode)
+        file = io.open(expanduser(file_name.strip("'")), mode=open_mode)
     elif "stdin" in file_name.lower():
         file = sys.stdin.buffer
     elif "stdout" in file_name.lower():
@@ -242,9 +242,9 @@ def execute_named_query(cur, pattern, **_):
     pattern = params.pop(0)
 
     query = NamedQueries.instance.get(pattern)
-    title = f"> {query}"
+    title = "> {}".format(query)
     if query is None:
-        message = f"No named query: {pattern}"
+        message = "No named query: {}".format(pattern)
         return [(None, None, None, message)]
 
     try:

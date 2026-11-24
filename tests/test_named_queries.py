@@ -1,14 +1,13 @@
 """Tests for named queries."""
 
+import pytest
 import tempfile
 
+from pgspecial.namedqueries import NamedQueries
+from pgspecial.main import PGSpecial
+from pgspecial.iocommands import subst_favorite_query_args
 from configobj import ConfigObj
 from dbutils import dbtest
-import pytest
-
-from pgspecial.iocommands import subst_favorite_query_args
-from pgspecial.main import PGSpecial
-from pgspecial.namedqueries import NamedQueries
 
 
 @pytest.fixture(scope="module")
