@@ -178,7 +178,12 @@ def copy(cur, pattern, verbose):
 
 
 def subst_favorite_query_args(query, args):
-    """replace positional parameters ($1,$2,...$n) in query."""
+    """replace positional parameters in query.
+
+    Regular parameters ($1, $2, ... $n) must be given an argument.
+    Optional parameters ($?1, $?2, ...) are replaced by an argument
+    when it is supplied, and by null when it is not.
+    """
     is_query_with_aggregation = ("$*" in query) or ("$@" in query)
 
     # In case of arguments aggregation we replace all positional arguments until the
@@ -186,18 +191,22 @@ def subst_favorite_query_args(query, args):
     # replace the placeholder with them.
     for idx, val in enumerate(args, start=1):
         subst_var = "$" + str(idx)
-        if subst_var not in query:
-            if is_query_with_aggregation:
-                # remove consumed arguments ( - 1 to include current value)
-                args = args[idx - 1 :]
-                break
-
+        optional_subst_var = "$?" + str(idx)
+        if subst_var in query:
+            query = query.replace(subst_var, val)
+        elif optional_subst_var in query:
+            # Optional parameter ($?N) with an argument supplied for it.
+            query = query.replace(optional_subst_var, val)
+        elif is_query_with_aggregation:
+            # remove consumed arguments ( - 1 to include current value)
+            args = args[idx - 1 :]
+            break
+        else:
             return [
                 None,
-                "query does not have substitution parameter " + subst_var + ":\n  " + query,
+                "query does not have substitution parameter " + subst_var + " or " + optional_subst_var + ":\n  " + query,
             ]
 
-        query = query.replace(subst_var, val)
     # we consumed all arguments
     else:
         args = []
@@ -216,6 +225,9 @@ def subst_favorite_query_args(query, args):
             None,
             "missing substitution for " + match.group(0) + " in query:\n  " + query,
         ]
+
+    # Optional parameters the caller did not supply become null.
+    query = re.sub(r"\$\?\d+", "null", query)
 
     return [query, None]
 
@@ -236,7 +248,7 @@ def execute_named_query(cur, pattern, **_):
         return [(None, None, None, message)]
 
     try:
-        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS):
+        if any(p in query for p in NAMED_QUERY_PLACEHOLDERS) or "$?" in query:
             query, params = subst_favorite_query_args(query, params)
             if query is None:
                 raise Exception("Bad arguments\n" + params)

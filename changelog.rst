@@ -1,4 +1,12 @@
 
+Unreleased
+==========
+
+Features:
+---------
+* Named queries: support optional parameters written ``$?1``, ``$?2``, ...: a supplied argument is substituted like a regular parameter, while a missing one is replaced by ``null``, so one saved query can serve both filtered and unfiltered runs (#143).
+
+
 2.3.0 (2026-09-14)
 ==================
 
